@@ -1,0 +1,50 @@
+version: "3"
+
+networks:
+  private:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 168.137.11.0/24
+
+services:
+  postgres:
+    image: effectivesecurity/postgres15:sha-0bbf105
+    platform: linux/amd64
+    networks:
+      private:
+        ipv4_address: 168.137.11.101
+    volumes:
+      # Mounts the volumes from build container to the container in test
+      # docker-compose command runs with ./sql as CWD,
+      # the source path in the volume definitions are relative to ./sql
+      - ./testdata/sql/pgsql:/pgsql
+    ports:
+      - "127.0.0.1:5432:5432" # SQL
+    environment:
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /start_postgres.sh
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    networks:
+      private:
+        ipv4_address: 168.137.11.102
+    volumes:
+      # Mounts the volumes from build container to the container in test
+      # docker-compose command runs with ./sql as CWD,
+      # the source path in the volume definitions are relative to ./sql
+      - ./testdata/sql/sqlserver:/sqlserver
+    ports:
+      # TODO: port override if collision with another local SQL
+      - "127.0.0.1:1433:1433"
+    environment:
+      MSSQL_SA_PASSWORD: "notUsed123_P"
+      ACCEPT_EULA: "Y"

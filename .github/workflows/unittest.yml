@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+
+jobs:
+ 
+  UnitTest:
+    runs-on: ubuntu-latest
+    env:
+      ITEST_IMAGE_TAG: rc-${{ github.event.number }}
+      COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+      RUN_ID: ${{ github.run_id }}
+      PULL_NUMBER: ${{ github.event.pull_request.number }}
+      MIN_TESTCOV: 80
+
+    steps:
+      - name: Create code coverage status for the current commit
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "User ${GIT_USER}, ${GITHUB_REPOSITORY}, ${COMMIT_SHA}"
+          curl "https://${GIT_USER}:${GIT_TOKEN}@api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${COMMIT_SHA}" -d "{\"state\": \"pending\",\"target_url\": \"https://github.com/${GITHUB_REPOSITORY}/pull/${PULL_NUMBER}/checks?check_run_id=${RUN_ID}\",\"description\": \"in progress — This check has started... \",\"context\": \"code cov\"}"
+        env:
+          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_USER: ${{ github.actor }}
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+
+      - name: Prepare
+        run: make vars tools generate start-localstack start-sql covtest
+
+      - name: UnitTest
+        run: make build covtest
+
+      - name: Report CovTest
+        if: github.event_name == 'pull_request'
+        run: |
+          set -x
+          total=`go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+'`
+          echo "${GIT_USER}: total cov: $total"
+          (( $(echo "$total > ${MIN_TESTCOV}" | bc -l) )) && STATE=success || STATE=failure
+          curl "https://${GIT_USER}:${GIT_TOKEN}@api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${COMMIT_SHA}" -d "{\"state\": \"${STATE}\",\"target_url\": \"https://github.com/${GITHUB_REPOSITORY}/pull/${PULL_NUMBER}/checks?check_run_id=${RUN_ID}\",\"description\": \"${total}%\",\"context\": \"code cov\"}"
+        env:
+          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_USER: ${{ github.actor }}

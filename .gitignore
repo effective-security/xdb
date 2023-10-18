@@ -1,0 +1,12 @@
+/.coverage
+coverage.out
+
+bin/
+.idea/
+.tmp/
+.docker/
+.DS_Store
+
+debug
+debug.test
+.vscode/launch.json

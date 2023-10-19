@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate mockgen -source=db.go -destination=./mock/xdb_mock.go -package mockxdb
+//go:generate mockgen -source=db.go -destination=./mocks/mockxdb/xdb_mock.go -package mockxdb
 
 // IDGenerator defines an interface to generate unique ID accross the cluster
 type IDGenerator interface {
@@ -166,4 +166,21 @@ func NewProvider(provider, dataSourceName, dbName string, idGen flake.IDGenerato
 
 func isWindows() bool {
 	return os.PathSeparator == '\\' && os.PathListSeparator == ';'
+}
+
+// TableInfo defines a table info
+type TableInfo struct {
+	Schema     string
+	Name       string
+	PrimaryKey string
+	Columns    []string
+	Indexes    []string
+
+	// SchemaName is FQN in schema.name format
+	SchemaName string `json:"-" yaml:"-"`
+}
+
+// ColumnsList returns list of columns separated by comma
+func (t *TableInfo) ColumnsList() string {
+	return strings.Join(t.Columns, ", ")
 }

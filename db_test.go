@@ -3,6 +3,7 @@ package xdb_test
 import (
 	"context"
 	"database/sql"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -13,9 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-const pgDataSource = "host=localhost port=5432 user=postgres password=postgres sslmode=disable"
-const msDataSource = "sqlserver://localhost?user id=sa&password=notUsed123_P"
 
 // User provides basic user information
 type user struct {
@@ -42,11 +40,11 @@ func TestPG(t *testing.T) {
 	ctx := context.Background()
 	provider, err := xdb.NewProvider(
 		"postgres",
-		pgDataSource,
+		os.Getenv("XDB_PG_DATASOURCE"),
 		"testdb",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{
-			Source: "testdata/sql/pgsql/migrations",
+			Source: "testdata/sql/postgres/migrations",
 		},
 	)
 	require.NoError(t, err)
@@ -153,7 +151,7 @@ func TestMS(t *testing.T) {
 	ctx := context.Background()
 	provider, err := xdb.NewProvider(
 		"sqlserver",
-		msDataSource,
+		os.Getenv("XDB_SQL_DATASOURCE"),
 		"testdb",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{

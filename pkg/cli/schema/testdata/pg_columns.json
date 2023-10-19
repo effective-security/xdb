@@ -1,0 +1,203 @@
+[
+  {
+    "Schema": "public",
+    "Name": "org",
+    "Columns": [
+      {
+        "Name": "id",
+        "Type": "bigint",
+        "Nullable": "NO",
+        "MaxLength": null
+      },
+      {
+        "Name": "name",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 64
+      },
+      {
+        "Name": "email",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 160
+      },
+      {
+        "Name": "billing_email",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 160
+      },
+      {
+        "Name": "company",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 64
+      },
+      {
+        "Name": "street_address",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 256
+      },
+      {
+        "Name": "city",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 32
+      },
+      {
+        "Name": "postal_code",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 16
+      },
+      {
+        "Name": "region",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 16
+      },
+      {
+        "Name": "country",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 16
+      },
+      {
+        "Name": "phone",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 32
+      },
+      {
+        "Name": "created_at",
+        "Type": "timestamp with time zone",
+        "Nullable": "YES",
+        "MaxLength": null
+      },
+      {
+        "Name": "updated_at",
+        "Type": "timestamp with time zone",
+        "Nullable": "YES",
+        "MaxLength": null
+      },
+      {
+        "Name": "quota",
+        "Type": "jsonb",
+        "Nullable": "YES",
+        "MaxLength": null
+      },
+      {
+        "Name": "settings",
+        "Type": "jsonb",
+        "Nullable": "YES",
+        "MaxLength": null
+      }
+    ],
+    "Indexes": null,
+    "PrimaryKey": null
+  },
+  {
+    "Schema": "public",
+    "Name": "orgmember",
+    "Columns": [
+      {
+        "Name": "id",
+        "Type": "bigint",
+        "Nullable": "NO",
+        "MaxLength": null
+      },
+      {
+        "Name": "org_id",
+        "Type": "bigint",
+        "Nullable": "NO",
+        "MaxLength": null
+      },
+      {
+        "Name": "user_id",
+        "Type": "bigint",
+        "Nullable": "NO",
+        "MaxLength": null
+      },
+      {
+        "Name": "role",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 64
+      }
+    ],
+    "Indexes": [
+      {
+        "Name": "idx_orgmember_org_id",
+        "IsPrimary": false,
+        "IsUnique": false,
+        "ColumnNames": [
+          "org_id"
+        ]
+      },
+      {
+        "Name": "idx_orgmember_user_id",
+        "IsPrimary": false,
+        "IsUnique": false,
+        "ColumnNames": [
+          "user_id"
+        ]
+      },
+      {
+        "Name": "membership",
+        "IsPrimary": false,
+        "IsUnique": true,
+        "ColumnNames": [
+          "org_id",
+          "user_id"
+        ]
+      },
+      {
+        "Name": "orgmember_pkey",
+        "IsPrimary": true,
+        "IsUnique": true,
+        "ColumnNames": [
+          "id"
+        ]
+      }
+    ],
+    "PrimaryKey": {
+      "Name": "id",
+      "Type": "bigint",
+      "Nullable": "NO",
+      "MaxLength": null
+    }
+  },
+  {
+    "Schema": "public",
+    "Name": "user",
+    "Columns": [
+      {
+        "Name": "id",
+        "Type": "bigint",
+        "Nullable": "NO",
+        "MaxLength": null
+      },
+      {
+        "Name": "email",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 160
+      },
+      {
+        "Name": "email_verified",
+        "Type": "boolean",
+        "Nullable": "NO",
+        "MaxLength": null
+      },
+      {
+        "Name": "name",
+        "Type": "character varying",
+        "Nullable": "NO",
+        "MaxLength": 64
+      }
+    ],
+    "Indexes": null,
+    "PrimaryKey": null
+  }
+]

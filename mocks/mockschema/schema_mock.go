@@ -45,7 +45,7 @@ func (m *MockProvider) ListForeignKeys(ctx context.Context, schemaName string, t
 }
 
 // ListForeignKeys indicates an expected call of ListForeignKeys.
-func (mr *MockProviderMockRecorder) ListForeignKeys(ctx, schemaName, tableNames interface{}) *gomock.Call {
+func (mr *MockProviderMockRecorder) ListForeignKeys(ctx, schemaName, tableNames any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForeignKeys", reflect.TypeOf((*MockProvider)(nil).ListForeignKeys), ctx, schemaName, tableNames)
 }
@@ -60,7 +60,7 @@ func (m *MockProvider) ListTables(ctx context.Context, schemaName string, tableN
 }
 
 // ListTables indicates an expected call of ListTables.
-func (mr *MockProviderMockRecorder) ListTables(ctx, schemaName, tableNames, withDependencies interface{}) *gomock.Call {
+func (mr *MockProviderMockRecorder) ListTables(ctx, schemaName, tableNames, withDependencies any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTables", reflect.TypeOf((*MockProvider)(nil).ListTables), ctx, schemaName, tableNames, withDependencies)
 }

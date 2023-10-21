@@ -11,7 +11,6 @@ import (
 func SchemaTables(w io.Writer, r schema.Tables) {
 	for _, t := range r {
 		SchemaTable(w, t)
-		fmt.Fprintln(w)
 	}
 }
 
@@ -23,7 +22,7 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 	table.SetBorder(false)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAutoWrapText(false)
-	table.SetHeader([]string{"Name", "Type", "NULL", "Max", "Ref"})
+	table.SetHeader([]string{"Name", "Type", "UDT", "NULL", "Max", "Ref"})
 	table.SetHeaderLine(true)
 
 	for _, c := range r.Columns {
@@ -38,6 +37,7 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 		table.Append([]string{
 			c.Name,
 			c.Type,
+			c.UdtType,
 			c.Nullable,
 			maxL,
 			ref,

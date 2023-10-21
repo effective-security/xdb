@@ -16,8 +16,7 @@ export XDB_PG_USER=postgres
 export XDB_PG_PASSWORD=postgres
 
 export XDB_SQL_DATASOURCE="sqlserver://localhost?user id=sa&password=notUsed123_P"
-export XDB_PG_DATASOURCE="host=localhost port=5432 user=postgres password=postgres sslmode=disable"
-
+export XDB_PG_DATASOURCE="postgres://postgres:postgres@localhost:5432?sslmode=disable"
 
 .PHONY: *
 
@@ -62,3 +61,8 @@ drop-sql:
 	echo "*** dropping SQL tables "
 	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h $(XDB_PG_HOST) -p $(XDB_PG_PORT) -U $(XDB_PG_USER) -a -f /postgres/drop_local_db.sql
 	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/drop_local_db.sql
+
+gen-sql-schema:
+	xdbcli --provider postgres --sql-source=$(XDB_PG_DATASOURCE) schema generate --db testdb --package modelgen --dependencies
+	xdbcli --provider sqlserver --sql-source=$(XDB_SQL_DATASOURCE) schema generate --db testdb --package modelgen --dependencies
+

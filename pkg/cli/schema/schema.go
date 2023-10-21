@@ -105,6 +105,7 @@ type GenerateCmd struct {
 	Out          string   `help:"schema folder name to store files"`
 	Package      string   `help:"package name to override from --out path"`
 	Imports      []string `help:"optional go imports"`
+	UseSchema    bool     `help:"optional, use schema name in table name"`
 }
 
 // Run the command
@@ -129,8 +130,7 @@ func packageName(folder string) string {
 }
 
 var templateFuncMap = template.FuncMap{
-	"goName":      strcase.ToGoPascal,
-	"sqlToGoType": sqlToGoType,
+	"goName": strcase.ToGoPascal,
 	"concat": func(args ...string) string {
 		return strings.Join(args, "")
 	},
@@ -140,9 +140,16 @@ var templateFuncMap = template.FuncMap{
 
 func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) error {
 
+	templateFuncMap["sqlToGoType"] = sqlToGoType(ctx.Provider)
+
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeRowTemplateText))
 
 	packageName := slices.StringsCoalesce(a.Package, packageName(a.Out))
+
+	imports := a.Imports
+	if ctx.Provider == "postgres" {
+		imports = append(imports, "github.com/lib/pq")
+	}
 
 	var err error
 	schemas := map[string]schema.Tables{}
@@ -165,10 +172,14 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 				Indexes:    t.Indexes.Names(),
 				PrimaryKey: t.PrimaryKeyName(),
 			})
+			prefix := ""
+			if a.UseSchema && !slices.ContainsStringEqualFold([]string{"dbo", "public"}, schema) {
+				prefix = sName
+			}
 
 			w := ctx.Writer()
 			if a.Out != "" {
-				fn := filepath.Join(a.Out, sName+tName+".gen.go")
+				fn := filepath.Join(a.Out, prefix+tName+".gen.go")
 				f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 				if err != nil {
 					return err
@@ -182,9 +193,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 			td := tableDefinition{
 				DB:         dbName,
 				Package:    packageName,
-				Imports:    a.Imports,
-				Name:       sName + tName,
-				StructName: sName + tName + "Row",
+				Imports:    imports,
+				Name:       prefix + tName,
+				StructName: prefix + tName + "Row",
 				SchemaName: t.Schema,
 				TableName:  t.Name,
 				Columns:    t.Columns,

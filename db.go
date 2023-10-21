@@ -114,7 +114,11 @@ func Open(driverName string, dataSourceName, database string) (*sql.DB, string, 
 		case "sqlserver":
 			ds = ds + "&database=" + database
 		case "postgres":
-			ds = ds + " dbname=" + database
+			if strings.Contains(ds, "host=") {
+				ds = ds + " dbname=" + database
+			} else {
+				ds = ds + "&dbname=" + database
+			}
 		default:
 			return nil, ds, errors.Errorf("unsuppoprted driver %q", driverName)
 		}

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFKSchemaname(t *testing.T) {
+func TestModel(t *testing.T) {
 	var fk *ForeignKey
 	assert.Empty(t, fk.ColumnSchemaName())
 	assert.Empty(t, fk.RefColumnSchemaName())
@@ -27,6 +27,42 @@ func TestFKSchemaname(t *testing.T) {
 	}
 	assert.Equal(t, "dbo.t1.c1", fk.ColumnSchemaName())
 	assert.Equal(t, "smb.t2.c2", fk.RefColumnSchemaName())
+
+	idx := &Index{
+		Name:        "idx",
+		ColumnNames: []string{"id", "name"},
+		IsPrimary:   true,
+		IsUnique:    true,
+	}
+	idxs := Indexes{idx}
+	assert.Equal(t, []string{"idx"}, idxs.Names())
+
+	c := &Column{
+		Name:     "org_id",
+		Type:     "bigint",
+		UdtType:  "int8",
+		Nullable: "YES",
+	}
+	assert.False(t, c.IsIndex())
+	assert.False(t, c.IsPrimary())
+	assert.Equal(t, `db:"org_id,int8,null"`, c.Tag())
+
+	max := 32
+	c2 := &Column{
+		Name:      "id",
+		Type:      "bigint",
+		UdtType:   "int8",
+		Nullable:  "NO",
+		MaxLength: &max,
+		Ref:       fk,
+		Indexes:   idxs,
+	}
+	assert.True(t, c2.IsIndex())
+	assert.True(t, c2.IsPrimary())
+	assert.Equal(t, `db:"id,int8,max:32,index,primary,fk:smb.t2.c2"`, c2.Tag())
+
+	cols := Columns{c, c2}
+	assert.Equal(t, []string{"org_id", "id"}, cols.Names())
 }
 
 func TestListSQLServer(t *testing.T) {

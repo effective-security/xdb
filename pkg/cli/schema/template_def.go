@@ -20,7 +20,7 @@ package {{ .Package }}
 
 import (
 
-	"github.com/FlowbankSA/gapsys/pkg/db"
+	"github.com/effective-security/xdb"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
 	{{ end }}
@@ -28,7 +28,7 @@ import (
 
 {{ range .Tables }}
 // {{ .Name }}Table provides table info for '{{ .Name }}'
-var {{ .Name }}Table = db.TableInfo{
+var {{ .Name }}Table = xdb.TableInfo{
 	SchemaName : "{{ .SchemaName }}",
 	Schema     : "{{ .Schema }}",
 	Name       : "{{ .Name }}",
@@ -39,7 +39,7 @@ var {{ .Name }}Table = db.TableInfo{
 {{ end }}
 
 // {{ .DB }}Tables provides tables map for {{ .DB }}
-var {{ .DB }}Tables = map[string]*db.TableInfo{
+var {{ .DB }}Tables = map[string]*xdb.TableInfo{
 {{ range .Tables }}
  	"{{ .Name }}": &{{ .Name }}Table,
 {{- end }}

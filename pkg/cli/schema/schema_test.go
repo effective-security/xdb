@@ -35,6 +35,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 				{
 					Name:     "ID",
 					Type:     "uint64",
+					UdtType:  "int8",
 					Nullable: "NO",
 				},
 			},
@@ -53,12 +54,10 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	err := cmd.Run(s.Ctl)
 	require.NoError(err)
 	s.Equal("Schema: dbo\n"+
-		"Table: test\n"+
-		"\n"+
-		"  NAME |  TYPE  | NULL | MAX | REF  \n"+
-		"-------+--------+------+-----+------\n"+
-		"  ID   | uint64 | NO   |     |      \n"+
-		"\n\n", s.Out.String())
+		"Table: test\n\n"+
+		"  NAME |  TYPE  | UDT  | NULL | MAX | REF  \n"+
+		"-------+--------+------+------+-----+------\n"+
+		"  ID   | uint64 | int8 | NO   |     |      \n\n", s.Out.String())
 
 	s.Ctl.O = "json"
 	s.Out.Reset()
@@ -66,7 +65,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	err = cmd.Run(s.Ctl)
 	require.NoError(err)
 	s.Equal(
-		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"Nullable\": \"NO\",\n        \"MaxLength\": null\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
+		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": \"NO\",\n        \"MaxLength\": null\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
 		s.Out.String())
 
 	err = cmd.Run(s.Ctl)

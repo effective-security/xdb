@@ -39,7 +39,7 @@ func (p sqlserver) QueryTables(ctx context.Context) (*sql.Rows, error) {
 
 func (p sqlserver) QueryColumns(ctx context.Context, schema, table string) (*sql.Rows, error) {
 	qry := fmt.Sprintf(`
-	SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=N'%s' AND TABLE_NAME = N'%s'`,
+	SELECT COLUMN_NAME, DATA_TYPE, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=N'%s' AND TABLE_NAME = N'%s'`,
 		schema, table)
 
 	return p.db.QueryContext(ctx, qry)

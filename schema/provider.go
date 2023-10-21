@@ -134,7 +134,7 @@ func (r *SQLServerProvider) readColumnsSchema(ctx context.Context, schema, table
 	cc := Columns{}
 	for rows.Next() {
 		c := &Column{}
-		if err := rows.Scan(&c.Name, &c.Type, &c.Nullable, &c.MaxLength); err != nil {
+		if err := rows.Scan(&c.Name, &c.Type, &c.UdtType, &c.Nullable, &c.MaxLength); err != nil {
 			return nil, errors.WithStack(err)
 		}
 

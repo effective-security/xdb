@@ -32,7 +32,7 @@ func (p postgres) QueryTables(ctx context.Context) (*sql.Rows, error) {
 
 func (p postgres) QueryColumns(ctx context.Context, schema, table string) (*sql.Rows, error) {
 	qry := fmt.Sprintf(`
-	SELECT column_name, data_type, is_nullable, character_maximum_length
+	SELECT column_name, data_type, udt_name, is_nullable, character_maximum_length
   	FROM information_schema.columns
  	WHERE table_schema = '%s'
    	AND table_name = '%s';

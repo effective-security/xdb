@@ -115,6 +115,6 @@ func Migrate(provider, dbName, migrationsDir string, forceVersion, migrateVersio
 type migrateLog struct{}
 
 func (migrateLog) Verbose() bool { return true }
-func (migrateLog) Printf(format string, v ...interface{}) {
+func (migrateLog) Printf(format string, v ...any) {
 	logger.Debugf(format, v...)
 }

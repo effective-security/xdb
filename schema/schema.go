@@ -37,8 +37,9 @@ type Tables []*Table
 
 // Column definition
 type Column struct {
-	Name string
-	Type string
+	Name    string
+	Type    string
+	UdtType string
 	// GoName      string
 	// GoType    string
 	Nullable  string
@@ -57,10 +58,42 @@ func (c *Column) IsIndex() bool {
 	return len(c.Indexes) > 0
 }
 
-// // IsPrimary returns true if column is primary key
-// func (c *Column) IsPrimary() bool {
-// 	return c.Index != nil && c.Index.IsPrimary
-// }
+// IsPrimary returns true if column is primary key
+func (c *Column) IsPrimary() bool {
+	for _, idx := range c.Indexes {
+		if idx.IsPrimary {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Column) Tag() string {
+	ops := ""
+
+	if c.UdtType != "" {
+		ops += fmt.Sprintf(",%s", c.UdtType)
+	} else {
+		ops += fmt.Sprintf(",%s", c.Type)
+	}
+	if c.MaxLength != nil {
+		ops += fmt.Sprintf(",max:%d", *c.MaxLength)
+	}
+	if c.Nullable == "YES" {
+		ops += ",null"
+	}
+
+	if len(c.Indexes) > 0 {
+		ops += ",index"
+		if c.IsPrimary() {
+			ops += ",primary"
+		}
+	}
+	if c.Ref != nil {
+		ops += ",fk:" + c.Ref.RefColumnSchemaName()
+	}
+	return fmt.Sprintf("db:\"%s%s\"", c.Name, ops)
+}
 
 // Columns defines slice of Column
 type Columns []*Column

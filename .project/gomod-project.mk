@@ -65,7 +65,8 @@ GIT_VERSION := $(shell printf %s.%d%s ${PROD_VERSION} ${COMMITS_COUNT} ${GIT_DIR
 COVPATH=.coverage
 
 # List of all .go files in the project, excluding vendor and .tools
-#GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.tools/*" -not -path "./.gopath/*")
+GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.tools/*" -not -path "./.gopath/*")
+GOPACKAGES = $(shell go list ./...)
 
 export PROJ_DIR=$(PROJ_ROOT)
 export PROJ_BIN=$(PROJ_ROOT)/bin
@@ -185,10 +186,16 @@ bench:
 
 generate:
 	go generate ./...
+	gofmt -s -l -w -r 'interface{} -> any' .
 
 fmt:
 	echo "Running Fmt"
-	go fmt ./...
+	gofmt -s -l -w -r 'interface{} -> any' .
+
+fmt-check:
+	echo "Running Fmt check"
+	gofmt -d -l -r 'interface{} -> any' .
+	@test -z "$(shell gofmt -l -r 'interface{} -> any' . | tee /dev/stderr)"
 
 vet:
 	echo "Running vet"
@@ -196,19 +203,19 @@ vet:
 
 lint: fmt vet
 	echo "Running lint"
-	golangci-lint run --timeout 10m0s
+	golangci-lint run --timeout 20m0s ./...
 
 test:
-	echo "Running test ${TEST_FLAGS} ${TEST_RACEFLAG}"
+	echo "Running test"
 	go test ${TEST_FLAGS} ${TEST_RACEFLAG} ${PROJ_PACKAGE}/...
 
 testshort:
 	echo "Running testshort"
-	go test ${BUILD_FLAGS} ${TEST_RACEFLAG} ./... --test.short
+	go test ${TEST_FLAGS} ${TEST_RACEFLAG} ./... --test.short
 
 # you can run a subset of tests with make sometests testname=<testnameRegex>
 sometests:
-	go test ${BUILD_FLAGS} ${TEST_RACEFLAG} ./... --test.short -run $(testname)
+	go test ${TEST_FLAGS} ${TEST_RACEFLAG} ./... --test.short -run $(testname)
 
 covtest: fmt vet
 	echo "Running covtest"
@@ -256,4 +263,3 @@ help:
 	echo "make testshort - run test with -short flag"
 	echo "make covtest - run test with coverage report"
 	echo "make coverage - open coverage report"
-	echo "make coveralls - publish coverage to coveralls"

@@ -26,7 +26,7 @@ type Validator interface {
 }
 
 // Validate returns error if the model is not valid
-func Validate(m interface{}) error {
+func Validate(m any) error {
 	if v, ok := m.(Validator); ok {
 		return v.Validate()
 	}
@@ -77,7 +77,7 @@ func IDString(id uint64) string {
 type Strings []string
 
 // Scan implements the Scanner interface.
-func (n *Strings) Scan(value interface{}) error {
+func (n *Strings) Scan(value any) error {
 	if value == nil {
 		*n = nil
 		return nil
@@ -106,7 +106,7 @@ func (n Strings) Value() (driver.Value, error) {
 type Metadata map[string]string
 
 // Scan implements the Scanner interface.
-func (n *Metadata) Scan(value interface{}) error {
+func (n *Metadata) Scan(value any) error {
 	if value == nil {
 		*n = nil
 		return nil
@@ -135,7 +135,7 @@ func (n Metadata) Value() (driver.Value, error) {
 type NULLString string
 
 // Scan implements the Scanner interface.
-func (ns *NULLString) Scan(value interface{}) error {
+func (ns *NULLString) Scan(value any) error {
 	var v sql.NullString
 	if err := (&v).Scan(value); err != nil {
 		return errors.WithStack(err)

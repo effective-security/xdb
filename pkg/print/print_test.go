@@ -20,7 +20,7 @@ func TestObject(t *testing.T) {
 	}{
 		{"yaml", []string{"schema: dbo\nname: test\ncolumns: []\n"}},
 		{"json", []string{"{\n  \"Schema\": \"dbo\",\n  \"Name\": \"test\",\n  \"Columns\": null,\n  \"Indexes\": null,\n  \"PrimaryKey\": null\n}\n"}},
-		{"", []string{"Schema: dbo\nTable: test\n\n  NAME | TYPE | NULL | MAX | REF  \n-------+------+------+-----+------\n\n"}},
+		{"", []string{"Schema: dbo\nTable: test\n\n  NAME | TYPE | UDT | NULL | MAX | REF  \n-------+------+-----+------+-----+------\n\n"}},
 	}
 	w := bytes.NewBuffer([]byte{})
 	for _, tc := range tcases {
@@ -36,7 +36,12 @@ func TestObject(t *testing.T) {
 	// print value
 	w.Reset()
 	_ = print.Object(w, "", &ver)
-	assert.Equal(t, "Schema: dbo\nTable: test\n\n  NAME | TYPE | NULL | MAX | REF  \n-------+------+------+-----+------\n\n", w.String())
+	assert.Equal(t,
+		"Schema: dbo\n"+
+			"Table: test\n\n"+
+			"  NAME | TYPE | UDT | NULL | MAX | REF  \n"+
+			"-------+------+-----+------+-----+------\n\n",
+		w.String())
 }
 
 func checkFormat(t *testing.T, val any, has ...string) {
@@ -58,11 +63,13 @@ func TestPrintSchema(t *testing.T) {
 				{
 					Name:     "ID",
 					Type:     "uint64",
+					UdtType:  "int8",
 					Nullable: "NO",
 				},
 				{
 					Name:      "Name",
 					Type:      "string",
+					UdtType:   "varchar",
 					Nullable:  "YES",
 					MaxLength: &maxL,
 				},
@@ -70,12 +77,11 @@ func TestPrintSchema(t *testing.T) {
 		}
 		checkFormat(t, &o,
 			"Schema: dbo\n"+
-				"Table: test\n"+
-				"\n"+
-				"  NAME |  TYPE  | NULL | MAX | REF  \n"+
-				"-------+--------+------+-----+------\n"+
-				"  ID   | uint64 | NO   |     |      \n"+
-				"  Name | string | YES  | 255 |      \n\n",
+				"Table: test\n\n"+
+				"  NAME |  TYPE  |   UDT   | NULL | MAX | REF  \n"+
+				"-------+--------+---------+------+-----+------\n"+
+				"  ID   | uint64 | int8    | NO   |     |      \n"+
+				"  Name | string | varchar | YES  | 255 |      \n\n",
 		)
 	})
 

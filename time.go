@@ -14,7 +14,7 @@ import (
 type Time time.Time
 
 // Scan implements the Scanner interface.
-func (ns *Time) Scan(value interface{}) error {
+func (ns *Time) Scan(value any) error {
 	var v sql.NullTime
 	if err := (&v).Scan(value); err != nil {
 		return errors.WithStack(err)

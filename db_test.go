@@ -54,6 +54,9 @@ func TestPG(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
+	assert.EqualError(t, provider.Commit(), "no transaction started")
+	assert.EqualError(t, provider.Rollback(), "no transaction started")
+
 	id := provider.NextID()
 	assert.False(t, id.IsZero())
 	assert.False(t, provider.(*xdb.SQLProvider).IDTime(id.UInt64()).IsZero())
@@ -63,7 +66,7 @@ func TestPG(t *testing.T) {
 		require.NotNil(t, provider)
 		require.NotNil(t, provider.DB())
 		ctx := ctx
-		res, err := provider.DB().QueryContext(ctx, `
+		res, err := provider.QueryContext(ctx, `
 	SELECT
 		tablename
 	FROM
@@ -112,6 +115,10 @@ func TestPG(t *testing.T) {
 	t.Run("Tx", func(t *testing.T) {
 		ptx, err := provider.BeginTx(ctx, nil)
 		require.NoError(t, err)
+
+		_, err = ptx.BeginTx(ctx, nil)
+		assert.EqualError(t, err, "transaction already started")
+
 		var rs xdb.Result[user, *user]
 		err = rs.RunQueryResult(ctx,
 			ptx.DB(),
@@ -122,6 +129,32 @@ func TestPG(t *testing.T) {
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
 		assert.NoError(t, ptx.Tx().Commit())
+		assert.EqualError(t, provider.Commit(), "no transaction started")
+		assert.EqualError(t, provider.Rollback(), "no transaction started")
+
+		assert.NoError(t, ptx.Close())
+		assert.NoError(t, ptx.Close())
+	})
+
+	t.Run("TxRollback", func(t *testing.T) {
+		ptx, err := provider.BeginTx(ctx, nil)
+		require.NoError(t, err)
+
+		row := ptx.QueryRowContext(ctx, `SELECT id FROM public.orgmember WHERE id=$1`, 666666)
+		assert.NoError(t, row.Err())
+		var id uint64
+		assert.Error(t, row.Scan(&id))
+		assert.NoError(t, row.Err())
+
+		res, err := ptx.ExecContext(ctx, `DELETE FROM public.orgmember WHERE id=$1`, 12345)
+		require.NoError(t, err)
+		rows, err := res.RowsAffected()
+		assert.NoError(t, err)
+		assert.Equal(t, int64(0), rows)
+
+		assert.NoError(t, ptx.Close())
+		assert.EqualError(t, provider.Commit(), "no transaction started")
+		assert.EqualError(t, provider.Rollback(), "no transaction started")
 		assert.NoError(t, ptx.Close())
 	})
 }
@@ -165,12 +198,15 @@ func TestMS(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
+	assert.EqualError(t, provider.Commit(), "no transaction started")
+	assert.EqualError(t, provider.Rollback(), "no transaction started")
+
 	t.Run("ListTables", func(t *testing.T) {
 		expectedTables := []string{"org", "orgmember", "schema_migrations", "user"}
 		require.NotNil(t, provider)
 		require.NotNil(t, provider.DB())
 
-		res, err := provider.DB().QueryContext(ctx, mssqlTableNamesWithSchema)
+		res, err := provider.QueryContext(ctx, mssqlTableNamesWithSchema)
 		require.NoError(t, err)
 		defer func() {
 			err = res.Close()
@@ -223,6 +259,9 @@ func TestMS(t *testing.T) {
 	t.Run("Tx", func(t *testing.T) {
 		ptx, err := provider.BeginTx(ctx, nil)
 		require.NoError(t, err)
+		assert.NotNil(t, ptx.Tx())
+		assert.NotNil(t, ptx.DB())
+
 		var rs xdb.Result[user, *user]
 		err = rs.RunQueryResult(ctx,
 			provider.DB(),
@@ -237,8 +276,34 @@ func TestMS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
-		assert.NoError(t, ptx.Tx().Commit())
+		assert.NoError(t, ptx.Commit())
+
+		assert.EqualError(t, provider.Commit(), "no transaction started")
+		assert.EqualError(t, provider.Rollback(), "no transaction started")
+
+		assert.NoError(t, ptx.Close())
 		assert.NoError(t, ptx.Close())
 	})
 
+	t.Run("TxRollback", func(t *testing.T) {
+		ptx, err := provider.BeginTx(ctx, nil)
+		require.NoError(t, err)
+
+		row := ptx.QueryRowContext(ctx, `SELECT org_id FROM [dbo].[orgmember] WHERE org_id=$1;`, 666)
+		assert.NoError(t, row.Err())
+		var id uint64
+		assert.NoError(t, row.Scan(&id))
+
+		res, err := ptx.ExecContext(ctx, `DELETE FROM [dbo].[orgmember] WHERE org_id=$1;`, 666)
+		require.NoError(t, err)
+		rows, err := res.RowsAffected()
+		assert.NoError(t, err)
+		// TODO: why 2?
+		assert.Equal(t, int64(2), rows)
+
+		assert.NoError(t, ptx.Close())
+		assert.EqualError(t, provider.Commit(), "no transaction started")
+		assert.EqualError(t, provider.Rollback(), "no transaction started")
+		assert.NoError(t, ptx.Close())
+	})
 }

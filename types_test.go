@@ -13,6 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTableInfo(t *testing.T) {
+	ti := xdb.TableInfo{
+		Schema:  "public",
+		Columns: []string{"id", "name"},
+	}
+	assert.Equal(t, "id, name", ti.ColumnsList())
+}
+
 func TestNullTime(t *testing.T) {
 	v := xdb.NullTime(nil)
 	require.NotNil(t, v)

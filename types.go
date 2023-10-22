@@ -19,6 +19,23 @@ const (
 	MaxLenForShortURL = 256
 )
 
+// TableInfo defines a table info
+type TableInfo struct {
+	Schema     string
+	Name       string
+	PrimaryKey string
+	Columns    []string
+	Indexes    []string
+
+	// SchemaName is FQN in schema.name format
+	SchemaName string `json:"-" yaml:"-"`
+}
+
+// ColumnsList returns list of columns separated by comma
+func (t *TableInfo) ColumnsList() string {
+	return strings.Join(t.Columns, ", ")
+}
+
 // Validator provides schema validation interface
 type Validator interface {
 	// Validate returns error if the model is not valid

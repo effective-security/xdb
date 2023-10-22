@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/effective-security/porto/pkg/flake"
 	"github.com/effective-security/porto/x/fileutil"
@@ -19,6 +20,7 @@ import (
 type IDGenerator interface {
 	// NextID generates a next unique ID.
 	NextID() ID
+	IDTime(id uint64) time.Time
 }
 
 // Row defines an interface for DB row
@@ -87,6 +89,8 @@ type Tx interface {
 // Provider provides complete DB access
 type Provider interface {
 	IDGenerator
+	DB
+	Tx
 
 	// DB returns underlying DB connection
 	DB() DB
@@ -170,21 +174,4 @@ func NewProvider(provider, dataSourceName, dbName string, idGen flake.IDGenerato
 
 func isWindows() bool {
 	return os.PathSeparator == '\\' && os.PathListSeparator == ';'
-}
-
-// TableInfo defines a table info
-type TableInfo struct {
-	Schema     string
-	Name       string
-	PrimaryKey string
-	Columns    []string
-	Indexes    []string
-
-	// SchemaName is FQN in schema.name format
-	SchemaName string `json:"-" yaml:"-"`
-}
-
-// ColumnsList returns list of columns separated by comma
-func (t *TableInfo) ColumnsList() string {
-	return strings.Join(t.Columns, ", ")
 }

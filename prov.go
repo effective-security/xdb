@@ -15,9 +15,9 @@ var logger = xlog.NewPackageLogger("github.com/effective-security/xdb", "xdb")
 // SQLProvider represents SQL client instance
 type SQLProvider struct {
 	conn   *sql.DB
-	sql    DB
+	db     DB
 	idGen  flake.IDGenerator
-	tx     *sql.Tx
+	tx     Tx
 	ticker *time.Ticker
 }
 
@@ -25,7 +25,7 @@ type SQLProvider struct {
 func New(db *sql.DB, idGen flake.IDGenerator) (*SQLProvider, error) {
 	p := &SQLProvider{
 		conn:  db,
-		sql:   db,
+		db:    db,
 		idGen: idGen,
 	}
 
@@ -35,11 +35,6 @@ func New(db *sql.DB, idGen flake.IDGenerator) (*SQLProvider, error) {
 }
 
 func (p *SQLProvider) keepAlive(period time.Duration) {
-	if p.ticker != nil {
-		p.ticker.Stop()
-		p.ticker = nil
-	}
-
 	p.ticker = time.NewTicker(period)
 	ch := p.ticker.C
 
@@ -68,6 +63,9 @@ func (p *SQLProvider) keepAlive(period time.Duration) {
 // If a non-default isolation level is used that the driver doesn't support,
 // an error will be returned.
 func (p *SQLProvider) BeginTx(ctx context.Context, _ *sql.TxOptions) (Provider, error) {
+	if p.tx != nil {
+		return nil, errors.New("transaction already started")
+	}
 	tx, err := p.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -75,7 +73,7 @@ func (p *SQLProvider) BeginTx(ctx context.Context, _ *sql.TxOptions) (Provider, 
 
 	txProv := &SQLProvider{
 		conn:  p.conn,
-		sql:   tx,
+		db:    tx,
 		idGen: p.idGen,
 		tx:    tx,
 	}
@@ -88,9 +86,11 @@ func (p *SQLProvider) Close() (err error) {
 		p.ticker.Stop()
 		p.ticker = nil
 	}
-
-	if p.conn == nil || p.tx != nil {
-		return
+	if p.conn == nil {
+		return nil
+	}
+	if p.tx != nil {
+		return p.Rollback()
 	}
 
 	if err = p.conn.Close(); err != nil {
@@ -104,7 +104,7 @@ func (p *SQLProvider) Close() (err error) {
 
 // DB returns underlying DB connection
 func (p *SQLProvider) DB() DB {
-	return p.conn
+	return p.db
 }
 
 // Tx returns underlying DB transaction
@@ -120,4 +120,44 @@ func (p *SQLProvider) NextID() ID {
 // IDTime returns time when ID was generated
 func (p *SQLProvider) IDTime(id uint64) time.Time {
 	return flake.IDTime(p.idGen, id)
+}
+
+// QueryContext executes a query that returns rows, typically a SELECT.
+// The args are for any placeholder parameters in the query.
+func (p *SQLProvider) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return p.db.QueryContext(ctx, query, args...)
+}
+
+// QueryRowContext executes a query that is expected to return at most one row.
+// QueryRowContext always returns a non-nil value. Errors are deferred until
+// Row's Scan method is called.
+// If the query selects no rows, the *Row's Scan will return ErrNoRows.
+// Otherwise, the *Row's Scan scans the first selected row and discards
+// the rest.
+func (p *SQLProvider) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	return p.db.QueryRowContext(ctx, query, args...)
+}
+
+// ExecContext executes a query without returning any rows.
+// The args are for any placeholder parameters in the query.
+func (p *SQLProvider) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return p.db.ExecContext(ctx, query, args...)
+}
+
+func (p *SQLProvider) Commit() error {
+	if p.tx == nil {
+		return errors.New("no transaction started")
+	}
+	return p.tx.Commit()
+}
+
+func (p *SQLProvider) Rollback() error {
+	if p.tx == nil {
+		return errors.New("no transaction started")
+	}
+	// Rollback returns sql.ErrTxDone if the transaction was already
+	if err := p.tx.Rollback(); err != nil && err != sql.ErrTxDone {
+		return errors.WithStack(err)
+	}
+	return nil
 }

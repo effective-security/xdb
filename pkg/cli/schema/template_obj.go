@@ -24,7 +24,7 @@ var codeRowTemplateText = `// DO NOT EDIT!
 package {{ .Package }}
 
 import (
-	"github.com/effective-security/porto/x/xdb"
+	"github.com/effective-security/xdb"
 	"github.com/pkg/errors"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
@@ -50,7 +50,7 @@ type {{ .StructName }} struct {
 }
 
 // ScanRow scans one row for {{ .TableName }}.
-func(r *{{ .StructName }}) ScanRow(rows xdb.Scanner) error {
+func(r *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 	err := rows.Scan(
 {{- range $i, $e := .Columns }}
 		&r.{{ goName $e.Name }},

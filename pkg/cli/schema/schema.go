@@ -129,8 +129,17 @@ func packageName(folder string) string {
 	return f
 }
 
+func goName(s string) string {
+	if s[0] == '_' {
+		a := []rune(s)
+		a[0] = 'X'
+		s = string(a)
+	}
+	return strcase.ToGoPascal(s)
+}
+
 var templateFuncMap = template.FuncMap{
-	"goName": strcase.ToGoPascal,
+	"goName": goName,
 	"concat": func(args ...string) string {
 		return strings.Join(args, "")
 	},

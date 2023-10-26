@@ -31,9 +31,24 @@ type TableInfo struct {
 	SchemaName string `json:"-" yaml:"-"`
 }
 
-// ColumnsList returns list of columns separated by comma
-func (t *TableInfo) ColumnsList() string {
+// AllColumns returns list of all columns separated by comma
+func (t *TableInfo) AllColumns() string {
 	return strings.Join(t.Columns, ", ")
+}
+
+// AliasedColumns returns list of columns separated by comma,
+// with prefix a.C1, NULL, a.C2 etc.
+// Columns identified in nulls, will be replaced with NULL.
+func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string {
+	prefixed := make([]string, len(t.Columns))
+	for i, c := range t.Columns {
+		if nulls[c] {
+			prefixed[i] = "NULL"
+		} else {
+			prefixed[i] = prefix + "." + c
+		}
+	}
+	return strings.Join(prefixed, ", ")
 }
 
 // Validator provides schema validation interface

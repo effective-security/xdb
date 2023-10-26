@@ -36,6 +36,24 @@ func (m *user) ScanRow(row xdb.Row) error {
 	return nil
 }
 
+func TestProv(t *testing.T) {
+	s, err := xdb.ParseConnectionString("postgres://u1:p2@127.0.0.1:55432?sslmode=disable&dbname=testdb", "")
+	require.NoError(t, err)
+	assert.Equal(t, "postgres", s.Driver)
+	assert.Equal(t, "127.0.0.1:55432", s.Host)
+	assert.Equal(t, "u1", s.User)
+	assert.Equal(t, "p2", s.Password)
+	assert.Equal(t, "testdb", s.Database)
+
+	s, err = xdb.ParseConnectionString("host=localhost port=45432 user=u1 password=p2 sslmode=disable dbname=testdb", "postgres")
+	require.NoError(t, err)
+	assert.Equal(t, "postgres", s.Driver)
+	assert.Equal(t, "localhost:45432", s.Host)
+	assert.Equal(t, "u1", s.User)
+	assert.Equal(t, "p2", s.Password)
+	assert.Equal(t, "testdb", s.Database)
+}
+
 func TestPG(t *testing.T) {
 	ctx := context.Background()
 	provider, err := xdb.NewProvider(

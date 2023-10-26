@@ -8,6 +8,7 @@ import (
 	context "context"
 	sql "database/sql"
 	reflect "reflect"
+	time "time"
 
 	xdb "github.com/effective-security/xdb"
 	gomock "github.com/golang/mock/gomock"
@@ -34,6 +35,20 @@ func NewMockIDGenerator(ctrl *gomock.Controller) *MockIDGenerator {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockIDGenerator) EXPECT() *MockIDGeneratorMockRecorder {
 	return m.recorder
+}
+
+// IDTime mocks base method.
+func (m *MockIDGenerator) IDTime(id uint64) time.Time {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IDTime", id)
+	ret0, _ := ret[0].(time.Time)
+	return ret0
+}
+
+// IDTime indicates an expected call of IDTime.
+func (mr *MockIDGeneratorMockRecorder) IDTime(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTime", reflect.TypeOf((*MockIDGenerator)(nil).IDTime), id)
 }
 
 // NextID mocks base method.
@@ -492,6 +507,20 @@ func (mr *MockProviderMockRecorder) ExecContext(ctx, query any, args ...any) *go
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, query}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecContext", reflect.TypeOf((*MockProvider)(nil).ExecContext), varargs...)
+}
+
+// IDTime mocks base method.
+func (m *MockProvider) IDTime(id uint64) time.Time {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IDTime", id)
+	ret0, _ := ret[0].(time.Time)
+	return ret0
+}
+
+// IDTime indicates an expected call of IDTime.
+func (mr *MockProviderMockRecorder) IDTime(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTime", reflect.TypeOf((*MockProvider)(nil).IDTime), id)
 }
 
 // NextID mocks base method.

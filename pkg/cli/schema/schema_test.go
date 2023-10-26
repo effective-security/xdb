@@ -167,6 +167,7 @@ func (s *testSuite) TestGenerate() {
 	cmd := GenerateCmd{
 		Package: "model",
 		Schema:  "dbo",
+		DB:      "testdb",
 		Table:   []string{"Transaction"},
 	}
 	err = cmd.generate(s.Ctl, "org", res)

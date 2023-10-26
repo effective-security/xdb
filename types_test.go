@@ -14,11 +14,15 @@ import (
 )
 
 func TestTableInfo(t *testing.T) {
+	nulls := map[string]bool{
+		"meta": true,
+	}
 	ti := xdb.TableInfo{
 		Schema:  "public",
-		Columns: []string{"id", "name"},
+		Columns: []string{"id", "meta", "name"},
 	}
-	assert.Equal(t, "id, name", ti.ColumnsList())
+	assert.Equal(t, "id, meta, name", ti.AllColumns())
+	assert.Equal(t, "a.id, NULL, a.name", ti.AliasedColumns("a", nulls))
 }
 
 func TestNullTime(t *testing.T) {

@@ -81,3 +81,16 @@ func TestSqlToGoType(t *testing.T) {
 	assert.Panics(t, func() { sqlserverToGoType(&dbschema.Column{Type: "unknown"}) }, "sqlserverToGoType(unknown) should panic")
 	assert.Panics(t, func() { sqlToGoType("unknown") }, "sqlToGoType(unknown) should panic")
 }
+
+func TestGoName(t *testing.T) {
+
+	tcases := map[string]string{
+		"id":         "ID",
+		"_id":        "Xid",
+		"createdAt":  "CreatedAt",
+		"created_at": "CreatedAt",
+	}
+	for n, exp := range tcases {
+		assert.Equal(t, exp, goName(n))
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/effective-security/porto/pkg/flake"
 	"github.com/effective-security/porto/x/fileutil"
 	"github.com/effective-security/xdb/migrate"
+	"github.com/effective-security/xpki/x/slices"
 	"github.com/pkg/errors"
 )
 
@@ -170,6 +172,78 @@ func NewProvider(provider, dataSourceName, dbName string, idGen flake.IDGenerato
 		}
 	}
 	return New(d, idGen)
+}
+
+// Source describes connection info
+type Source struct {
+	Source   string
+	Driver   string
+	Host     string
+	User     string
+	Password string
+	Database string
+	Params   map[string]string
+}
+
+// ParseConnectionString return parsed Source from
+// sqlserver://username:password@host/instance?param1=value&param2=value
+func ParseConnectionString(dataSourceName, driver string) (*Source, error) {
+	ds, err := fileutil.LoadConfigWithSchema(dataSourceName)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to load config")
+	}
+	ds = strings.Trim(ds, "\"")
+	ds = strings.TrimSpace(ds)
+
+	u, err := url.Parse(ds)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to parse DB connection string")
+	}
+	q := u.Query()
+	s := &Source{
+		Source:   ds,
+		Driver:   u.Scheme,
+		Host:     u.Host,
+		User:     u.User.Username(),
+		Database: slices.StringsCoalesce(q.Get("dbname"), q.Get("database")),
+		Params:   make(map[string]string),
+	}
+	if pwd, ok := u.User.Password(); ok {
+		s.Password = pwd
+	}
+	for k := range q {
+		s.Params[k] = q.Get(k)
+	}
+
+	if s.Driver == "" {
+		s.Driver = driver
+		switch driver {
+		case "postgres":
+			ops := parseOps(dataSourceName)
+			s.Database = ops["dbname"]
+			s.User = ops["user"]
+			s.Password = ops["password"]
+			s.Host = ops["host"]
+			port := ops["port"]
+			if port != "" {
+				s.Host = s.Host + ":" + port
+			}
+			s.Params["sslmode"] = ops["sslmode"]
+		}
+	}
+	return s, nil
+}
+
+func parseOps(s string) map[string]string {
+	vals := map[string]string{}
+	tokens := strings.Split(s, " ")
+	for _, t := range tokens {
+		kv := strings.SplitN(t, "=", 2)
+		if len(kv) == 2 {
+			vals[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		}
+	}
+	return vals
 }
 
 func isWindows() bool {

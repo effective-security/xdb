@@ -8,6 +8,7 @@ import (
 )
 
 func TestMain(t *testing.T) {
+	GitVersion = "0.1.1"
 	out := bytes.NewBuffer([]byte{})
 	errout := bytes.NewBuffer([]byte{})
 	rc := 0

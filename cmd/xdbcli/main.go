@@ -10,8 +10,8 @@ import (
 	"github.com/effective-security/xpki/x/ctl"
 )
 
-// GitVersion is set by the build script
-var GitVersion string
+// version is set by the build script
+const version = "0.2.8"
 
 type app struct {
 	cli.Cli
@@ -26,7 +26,7 @@ func main() {
 func realMain(args []string, out io.Writer, errout io.Writer, exit func(int)) {
 	cl := app{
 		Cli: cli.Cli{
-			Version: ctl.VersionFlag(GitVersion),
+			Version: ctl.VersionFlag(version),
 		},
 	}
 	defer cl.Close()
@@ -45,7 +45,7 @@ func realMain(args []string, out io.Writer, errout io.Writer, exit func(int)) {
 			Compact: true,
 		}),
 		kong.Vars{
-			"version": GitVersion,
+			"version": version,
 		})
 	if err != nil {
 		panic(err)

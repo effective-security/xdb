@@ -15,19 +15,19 @@ func TestSqlToGoType(t *testing.T) {
 	}{
 		{
 			col: dbschema.Column{Type: "int", Nullable: "NO"},
-			exp: "int",
+			exp: "int32",
 		},
 		{
 			col: dbschema.Column{Type: "int", Nullable: "YES"},
-			exp: "*int",
+			exp: "*int32",
 		},
 		{
 			col: dbschema.Column{Type: "bigint", Nullable: "NO"},
-			exp: "int",
+			exp: "int64",
 		},
 		{
 			col: dbschema.Column{Type: "bigint", Nullable: "YES"},
-			exp: "*int",
+			exp: "*int64",
 		},
 		{
 			col: dbschema.Column{Type: "decimal", Nullable: "NO"},

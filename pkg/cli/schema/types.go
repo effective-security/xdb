@@ -108,15 +108,33 @@ func postgresToGoType(c *schema.Column) string {
 func sqlserverToGoType(c *schema.Column) string {
 	switch c.Type {
 
-	case "int", "bigint", "integer":
+	case "bigint":
 		if c.Name == "id" || strings.HasSuffix(c.Name, "_id") {
 			return "xdb.ID"
 		}
 
 		if c.Nullable == yesVal {
-			return "*int"
+			return "*int64"
 		}
-		return "int"
+		return "int64"
+
+	case "int", "integer":
+		if c.Nullable == yesVal {
+			return "*int32"
+		}
+		return "int32"
+
+	case "smallint":
+		if c.Nullable == yesVal {
+			return "*int16"
+		}
+		return "int16"
+
+	case "tinyint":
+		if c.Nullable == yesVal {
+			return "*int8"
+		}
+		return "int8"
 
 	case "decimal", "numeric":
 		if c.Nullable == yesVal {

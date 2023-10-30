@@ -42,7 +42,8 @@ tools:
 	go install github.com/golang/mock/mockgen@latest
 
 build:
-	go build ${BUILD_FLAGS} -ldflags "-X main.GitVersion=$(GIT_VERSION)" -o ./bin/xdbcli ./cmd/xdbcli
+	echo "*** building xdbcli $(GIT_VERSION)"
+	go build ${BUILD_FLAGS} -o ./bin/xdbcli ./cmd/xdbcli
 
 start-localstack:
 	echo "*** starting localstack"

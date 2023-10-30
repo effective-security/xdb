@@ -43,7 +43,7 @@ tools:
 
 build:
 	echo "*** building xdbcli $(GIT_VERSION)"
-	go build ${BUILD_FLAGS} -ldflags "-X main.GitVersion=$(GIT_VERSION)" -o ./bin/xdbcli ./cmd/xdbcli
+	go build ${BUILD_FLAGS} -o ./bin/xdbcli ./cmd/xdbcli
 
 start-localstack:
 	echo "*** starting localstack"

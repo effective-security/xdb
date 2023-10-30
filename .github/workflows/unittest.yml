@@ -31,6 +31,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Fetch History
+        run: git fetch --prune --unshallow
 
       - name: Setup Go
         uses: actions/setup-go@v3

@@ -156,7 +156,7 @@ func TestMetadata(t *testing.T) {
 }
 
 func TestDbTime(t *testing.T) {
-	nb, err := time.Parse(time.RFC3339, "2022-04-01T16:11:15.182Z")
+	nb, err := time.Parse(time.RFC3339, "2022-04-01T16:11:15Z")
 	require.NoError(t, err)
 
 	nbl := nb.Local()
@@ -219,7 +219,7 @@ func TestDbTimeParse(t *testing.T) {
 }
 
 func TestDbTimeEncode(t *testing.T) {
-	nb, err := time.Parse(time.RFC3339, "2022-04-01T16:11:15.182Z")
+	nb, err := time.Parse(time.RFC3339, "2022-04-01T16:11:15Z")
 	require.NoError(t, err)
 	xct := xdb.Time(nb)
 
@@ -244,7 +244,7 @@ func TestDbTimeEncode(t *testing.T) {
 	}
 	b, err = json.Marshal(foo)
 	require.NoError(t, err)
-	assert.Equal(t, `{"created_at":"2022-04-01T16:11:15.182Z","updated_at":""}`, string(b))
+	assert.Equal(t, `{"created_at":"2022-04-01T16:11:15Z","updated_at":""}`, string(b))
 
 	require.NoError(t, json.Unmarshal(b, &foo))
 }

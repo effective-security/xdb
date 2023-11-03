@@ -11,7 +11,7 @@ import (
 )
 
 // version is set by the build script
-const version = "0.2.8"
+const version = "v0.2.9"
 
 type app struct {
 	cli.Cli

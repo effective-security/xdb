@@ -21,18 +21,21 @@ func sqlToGoType(provider string) func(c *schema.Column) string {
 }
 
 func postgresToGoType(c *schema.Column) string {
+	ptr := ""
+	if c.Nullable == yesVal {
+		ptr = "*"
+	}
+
 	switch c.Type {
 
 	case "bigint":
 		if c.Name == "id" || strings.HasSuffix(c.Name, "_id") {
 			return "xdb.ID"
 		}
-		if c.Nullable == yesVal {
-			return "*int64"
-		}
-		return "int64"
 
-	case "integer":
+		return ptr + "int64"
+
+	case "int", "integer":
 		typeName := "int"
 		switch c.UdtType {
 		case "int2":
@@ -42,37 +45,22 @@ func postgresToGoType(c *schema.Column) string {
 		case "int8":
 			typeName = "int64"
 		}
-		if c.Nullable == yesVal {
-			typeName = "*" + typeName
-		}
-		return typeName
+		return ptr + typeName
 	case "smallint":
-		if c.Nullable == yesVal {
-			return "*int16"
-		}
-		return "int16"
+		return ptr + "int16"
 	case "decimal", "numeric":
-		if c.Nullable == yesVal {
-			return "*float64"
-		}
-		return "float64"
+		return ptr + "float64"
 
 	case "real":
-		if c.Nullable == yesVal {
-			return "*float32"
-		}
-		return "float32"
+		return ptr + "float32"
 
 	case "boolean":
-		if c.Nullable == yesVal {
-			return "*bool"
-		}
-		return "bool"
+		return ptr + "bool"
 
 	case "jsonb":
 		return "xdb.NULLString"
 
-	case "char", "character varying", "text":
+	case "char", "varchar", "character", "character varying", "text":
 		if c.Nullable == yesVal {
 			return "xdb.NULLString"
 		}
@@ -106,6 +94,11 @@ func postgresToGoType(c *schema.Column) string {
 }
 
 func sqlserverToGoType(c *schema.Column) string {
+	ptr := ""
+	if c.Nullable == yesVal {
+		ptr = "*"
+	}
+
 	switch c.Type {
 
 	case "bigint":
@@ -113,49 +106,31 @@ func sqlserverToGoType(c *schema.Column) string {
 			return "xdb.ID"
 		}
 
-		if c.Nullable == yesVal {
-			return "*int64"
-		}
-		return "int64"
+		return ptr + "int64"
 
 	case "int", "integer":
-		if c.Nullable == yesVal {
-			return "*int32"
-		}
-		return "int32"
+		return ptr + "int32"
 
 	case "smallint":
-		if c.Nullable == yesVal {
-			return "*int16"
-		}
-		return "int16"
+		return ptr + "int16"
 
 	case "tinyint":
-		if c.Nullable == yesVal {
-			return "*int8"
-		}
-		return "int8"
+		return ptr + "int8"
 
 	case "decimal", "numeric":
-		if c.Nullable == yesVal {
-			return "*float64"
-		}
-		return "float64"
+		return ptr + "float64"
 
 	case "bit", "boolean":
-		if c.Nullable == yesVal {
-			return "*bool"
-		}
-		return "bool"
+		return ptr + "bool"
 
 	case "jsonb":
 		return "xdb.NULLString"
 
-	case "char", "nchar", "varchar", "varchar2", "nvarchar", "character varying", "text":
+	case "char", "nchar", "varchar", "varchar2", "nvarchar", "character", "character varying", "text":
 		if c.Nullable == yesVal {
 			return "xdb.NULLString"
 		}
-		return "string"
+		return ptr + "string"
 
 	case "uniqueidentifier":
 		if c.Nullable == yesVal {

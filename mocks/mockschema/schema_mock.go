@@ -64,3 +64,18 @@ func (mr *MockProviderMockRecorder) ListTables(ctx, schemaName, tableNames, with
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTables", reflect.TypeOf((*MockProvider)(nil).ListTables), ctx, schemaName, tableNames, withDependencies)
 }
+
+// ListViews mocks base method.
+func (m *MockProvider) ListViews(ctx context.Context, schemaName string, tableNames []string) (schema.Tables, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListViews", ctx, schemaName, tableNames)
+	ret0, _ := ret[0].(schema.Tables)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListViews indicates an expected call of ListViews.
+func (mr *MockProviderMockRecorder) ListViews(ctx, schemaName, tableNames any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListViews", reflect.TypeOf((*MockProvider)(nil).ListViews), ctx, schemaName, tableNames)
+}

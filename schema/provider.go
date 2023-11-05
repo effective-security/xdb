@@ -15,6 +15,7 @@ import (
 // Dialect interface
 type Dialect interface {
 	QueryTables(ctx context.Context) (*sql.Rows, error)
+	QueryViews(ctx context.Context) (*sql.Rows, error)
 	QueryColumns(ctx context.Context, schema, table string) (*sql.Rows, error)
 	QueryIndexes(ctx context.Context, schema, table string) (*sql.Rows, error)
 	QueryForeignKeys(ctx context.Context) (*sql.Rows, error)
@@ -122,6 +123,65 @@ func (r *SQLServerProvider) ListTables(ctx context.Context, schema string, table
 		return tt[i].SchemaName < tt[j].SchemaName
 	})
 
+	return tt, nil
+}
+
+// ListViews returns a list of views in database.
+// schemaName and tableNames are optional parameters to filter,
+// if not provided, then all items are returned
+func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables []string) (Tables, error) {
+	rows, err := r.dialect.QueryViews(ctx)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to query tables")
+	}
+
+	tablesMap := map[string]*Table{} // map of Table FQN => table
+
+	for rows.Next() {
+		var schemaName string
+		var tableName string
+		c := &Column{}
+		if err := rows.Scan(&schemaName, &tableName, &c.Name, &c.Type, &c.UdtType, &c.Nullable, &c.MaxLength); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if schema != "" && !strings.EqualFold(schema, schemaName) {
+			continue
+		}
+
+		if len(tables) > 0 && !slices.ContainsStringEqualFold(tables, tableName) {
+			continue
+		}
+
+		c.Name = columnName(c.Name)
+		c.SchemaName = fmt.Sprintf("%s.%s.%s", schemaName, tableName, c.Name)
+		r.columns[c.SchemaName] = c
+
+		tSchemaName := fmt.Sprintf("%s.%s", schemaName, tableName)
+		t := tablesMap[tSchemaName]
+		if t == nil {
+			t = &Table{
+				Name:       tableName,
+				Schema:     schemaName,
+				SchemaName: tSchemaName,
+				IsView:     true,
+			}
+			tablesMap[tSchemaName] = t
+		}
+		t.Columns = append(t.Columns, c)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	tt := Tables{}
+	for _, c := range tablesMap {
+		tt = append(tt, c)
+	}
+
+	sort.Slice(tt, func(i int, j int) bool {
+		return tt[i].SchemaName < tt[j].SchemaName
+	})
 	return tt, nil
 }
 

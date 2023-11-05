@@ -82,4 +82,23 @@ BEGIN
     ON [dbo].[orgmember] (user_id);
 END;
 
+IF OBJECT_ID('dbo.vwMembership', 'V') IS NOT NULL
+BEGIN
+    DROP VIEW dbo.vwMembership
+END;
+
+EXECUTE('
+CREATE VIEW [dbo].[vwMembership] AS
+    SELECT 
+        dbo.org.id AS org_id, 
+        dbo.org.name AS org_name, 
+        dbo.orgmember.role, 
+        dbo.[user].email AS user_email, 
+        dbo.[user].name AS user_name, 
+        dbo.[user].id AS user_id
+    FROM dbo.org 
+    INNER JOIN dbo.orgmember ON dbo.org.id = dbo.orgmember.org_id AND dbo.org.id = dbo.orgmember.org_id 
+    INNER JOIN dbo.[user] ON dbo.orgmember.user_id = dbo.[user].id AND dbo.orgmember.user_id = dbo.[user].id;
+');
+
 COMMIT;

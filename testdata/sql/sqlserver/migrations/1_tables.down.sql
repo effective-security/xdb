@@ -50,4 +50,9 @@ BEGIN
     DROP INDEX [public].[org].[idx_org_updated_at];
 END
 
+IF OBJECT_ID('dbo.vwMembership', 'V') IS NOT NULL
+BEGIN
+    DROP VIEW dbo.vwMembership
+END
+
 COMMIT;

@@ -112,6 +112,10 @@ func TestListSQLServer(t *testing.T) {
 	assert.Equal(t, 5, len(tr.Indexes))
 	require.NotNil(t, tr.PrimaryKey)
 	assert.Equal(t, "id", tr.PrimaryKeyName())
+
+	tt, err = p.ListViews(context.Background(), "dbo", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(tt))
 }
 
 func TestListPostgres(t *testing.T) {
@@ -161,4 +165,8 @@ func TestListPostgres(t *testing.T) {
 	assert.Equal(t, 5, len(tr.Indexes))
 	require.NotNil(t, tr.PrimaryKey)
 	assert.Equal(t, "id", tr.PrimaryKeyName())
+
+	tt, err = p.ListViews(context.Background(), "public", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(tt))
 }

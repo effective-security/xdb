@@ -41,6 +41,27 @@ func (p postgres) QueryColumns(ctx context.Context, schema, table string) (*sql.
 	return p.db.QueryContext(ctx, qry)
 }
 
+const postgresQueryViews = `
+SELECT
+	t.table_schema as table_schema,
+	t.table_name as table_name,
+	c.column_name,
+	c.data_type,
+	c.udt_name,
+	c.is_nullable,
+	c.character_maximum_length
+FROM information_schema.tables t
+LEFT JOIN information_schema.columns c 
+	   ON t.table_schema = c.table_schema 
+	   AND t.table_name = c.table_name
+WHERE table_type = 'VIEW' 
+	AND t.table_schema not in ('information_schema', 'pg_catalog')
+ORDER BY table_schema, table_name;`
+
+func (p postgres) QueryViews(ctx context.Context) (*sql.Rows, error) {
+	return p.db.QueryContext(ctx, postgresQueryViews)
+}
+
 const postgresQueryIndexes = `
 SELECT
 	i.relname as index_name,

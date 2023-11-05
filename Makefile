@@ -6,17 +6,17 @@ export COVERAGE_EXCLUSIONS="testing|main.go|clisuite.go|mocks.go|.gen.go"
 
 # not used in UnitTests
 export XDB_SQL_SERVER=168.137.11.102
+export XDB_SQL_PORT=1433
 export XDB_SQL_USER=sa
 export XDB_SQL_PASSWORD=notUsed123_P
-export XDB_SQL_DATASOURCE="sqlserver://localhost?user id=sa&password=notUsed123_P"
 
 export XDB_PG_HOST=168.137.11.101
 export XDB_PG_PORT=5432
 export XDB_PG_USER=postgres
 export XDB_PG_PASSWORD=postgres
 
-export XDB_SQL_DATASOURCE="sqlserver://localhost?user id=sa&password=notUsed123_P"
-export XDB_PG_DATASOURCE="postgres://postgres:postgres@localhost:5432?sslmode=disable"
+export XDB_SQL_DATASOURCE="sqlserver://${XDB_SQL_SERVER}:${XDB_SQL_PORT}?user id=${XDB_SQL_USER}&password=${XDB_SQL_PASSWORD}"
+export XDB_PG_DATASOURCE="postgres://${XDB_PG_USER}:${XDB_PG_PASSWORD}@${XDB_PG_HOST}:${XDB_PG_PORT}?sslmode=disable"
 
 .PHONY: *
 
@@ -64,6 +64,6 @@ drop-sql:
 	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/drop_local_db.sql
 
 gen-sql-schema:
-	xdbcli --provider postgres --sql-source=$(XDB_PG_DATASOURCE) schema generate --db testdb --package modelgen --dependencies
-	xdbcli --provider sqlserver --sql-source=$(XDB_SQL_DATASOURCE) schema generate --db testdb --package modelgen --dependencies
+	xdbcli --provider postgres --sql-source=$(XDB_PG_DATASOURCE) schema generate --db testdb --view vwMembership --package modelgen --dependencies
+	xdbcli --provider sqlserver --sql-source=$(XDB_SQL_DATASOURCE) schema generate --db testdb --view vwMembership --package modelgen --dependencies
 

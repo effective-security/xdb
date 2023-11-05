@@ -13,4 +13,6 @@ DROP INDEX IF EXISTS idx_org_email;
 DROP INDEX IF EXISTS idx_org_phone;
 DROP INDEX IF EXISTS idx_org_updated_at;
 
+DROP VIEW IF EXISTS public.vwMembership;
+
 COMMIT;

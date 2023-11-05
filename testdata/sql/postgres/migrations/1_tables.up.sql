@@ -118,6 +118,18 @@ CREATE INDEX IF NOT EXISTS idx_orgmember_user_id
     (user_id ASC NULLS LAST);
 
 
+CREATE OR REPLACE VIEW public.vwMembership AS
+    SELECT 
+        org.id AS org_id,
+        org.name AS org_name,
+        orgmember.role,
+        public.user.email AS user_email,
+        public.user.name AS user_name, 
+        public.user.id AS user_id
+    FROM org 
+    INNER JOIN orgmember ON org.id = orgmember.org_id AND org.id = orgmember.org_id 
+    INNER JOIN public.user ON orgmember.user_id = public.user.id AND orgmember.user_id = public.user.id;
+
 --
 --
 --

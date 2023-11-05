@@ -46,7 +46,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	mock.EXPECT().ListTables(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.Errorf("query failed")).Times(1)
 
 	cmd := PrintColumnsCmd{
-		DB:     "Datahub",
+		DB:     "TestDb2",
 		Schema: "dbo",
 		Table:  []string{"Transaction"},
 	}
@@ -65,7 +65,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	err = cmd.Run(s.Ctl)
 	require.NoError(err)
 	s.Equal(
-		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": \"NO\",\n        \"MaxLength\": null\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
+		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": \"NO\",\n        \"MaxLength\": null\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
 		s.Out.String())
 
 	err = cmd.Run(s.Ctl)
@@ -97,9 +97,47 @@ func (s *testSuite) TestPrintTablesCmd() {
 	mock.EXPECT().ListTables(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.Errorf("query failed")).Times(1)
 
 	cmd := PrintTablesCmd{
-		DB:     "Datahub",
+		DB:     "TestDb2",
 		Schema: "dbo",
 		Table:  []string{"Transaction"},
+	}
+
+	err := cmd.Run(s.Ctl)
+	require.NoError(err)
+	s.Equal("dbo.test\n", s.Out.String())
+
+	err = cmd.Run(s.Ctl)
+	s.EqualError(err, "query failed")
+}
+
+func (s *testSuite) TestPrintViewsCmd() {
+	require := s.Require()
+
+	ctrl := gomock.NewController(s.T())
+	mock := mockschema.NewMockProvider(ctrl)
+	s.Ctl.WithSchemaProvider(mock)
+
+	res := dbschema.Tables{
+		{
+			Name:   "test",
+			Schema: "dbo",
+			Columns: dbschema.Columns{
+				{
+					Name:     "ID",
+					Type:     "numeric",
+					Nullable: "NO",
+				},
+			},
+		},
+	}
+
+	mock.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return(res, nil).Times(1)
+	mock.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.Errorf("query failed")).Times(1)
+
+	cmd := PrintViewsCmd{
+		DB:     "TestDb2",
+		Schema: "dbo",
+		View:   []string{"Transaction"},
 	}
 
 	err := cmd.Run(s.Ctl)
@@ -133,7 +171,7 @@ func (s *testSuite) TestPrintFKCmd() {
 	mock.EXPECT().ListForeignKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.Errorf("query failed")).Times(1)
 
 	cmd := PrintFKCmd{
-		DB:     "Datahub",
+		DB:     "TestDb2",
 		Schema: "dbo",
 		Table:  []string{"Transaction"},
 	}

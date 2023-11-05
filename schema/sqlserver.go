@@ -45,6 +45,15 @@ func (p sqlserver) QueryColumns(ctx context.Context, schema, table string) (*sql
 	return p.db.QueryContext(ctx, qry)
 }
 
+const mssqlQueryViews = `
+SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS s
+JOIN sys.views v ON v.name = s.TABLE_NAME;
+`
+
+func (p sqlserver) QueryViews(ctx context.Context) (*sql.Rows, error) {
+	return p.db.QueryContext(ctx, mssqlQueryViews)
+}
+
 const mssqlQueryIndexKeys = `
 SELECT 
     i.[name] as index_name, 

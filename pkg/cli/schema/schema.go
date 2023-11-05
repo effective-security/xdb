@@ -22,6 +22,7 @@ type Cmd struct {
 	Generate    GenerateCmd     `cmd:"" help:"generate Go model for database schema"`
 	Columns     PrintColumnsCmd `cmd:"" help:"prints database schema"`
 	Tables      PrintTablesCmd  `cmd:"" help:"prints database tables and dependencies"`
+	Views       PrintViewsCmd   `cmd:"" help:"prints database views and dependencies"`
 	ForeignKeys PrintFKCmd      `cmd:"" help:"prints Foreign Keys"`
 }
 
@@ -76,6 +77,35 @@ func (a *PrintTablesCmd) Run(ctx *cli.Cli) error {
 	return nil
 }
 
+// PrintViewsCmd prints database tables with dependencies
+type PrintViewsCmd struct {
+	DB     string   `help:"database name" required:""`
+	Schema string   `help:"optional schema name to filter"`
+	View   []string `help:"optional, list of views, default: all views"`
+}
+
+// Run the command
+func (a *PrintViewsCmd) Run(ctx *cli.Cli) error {
+	r, err := ctx.SchemaProvider(a.DB)
+	if err != nil {
+		return err
+	}
+	res, err := r.ListViews(ctx.Context(), a.Schema, a.View)
+	if err != nil {
+		return err
+	}
+	w := ctx.Writer()
+
+	if ctx.O == "json" || ctx.O == "yaml" {
+		return ctx.Print(res)
+	}
+	for _, t := range res {
+		fmt.Fprintf(w, "%s.%s\n", t.Schema, t.Name)
+	}
+
+	return nil
+}
+
 // PrintFKCmd prints database FK
 type PrintFKCmd struct {
 	DB     string   `help:"database name" required:""`
@@ -101,9 +131,11 @@ type GenerateCmd struct {
 	DB           string   `help:"database name" required:""`
 	Schema       string   `help:"optional schema name to filter"`
 	Table        []string `help:"optional, list of tables, default: all tables"`
+	View         []string `help:"optional, list of views"`
 	Dependencies bool     `help:"optional, to discover all dependencies"`
 	Out          string   `help:"schema folder name to store files"`
 	Package      string   `help:"package name to override from --out path"`
+	StructSuffix string   `help:"optional, suffix for struct names"`
 	Imports      []string `help:"optional go imports"`
 	UseSchema    bool     `help:"optional, use schema name in table name"`
 }
@@ -114,10 +146,20 @@ func (a *GenerateCmd) Run(ctx *cli.Cli) error {
 	if err != nil {
 		return err
 	}
+
 	res, err := r.ListTables(ctx.Context(), a.Schema, a.Table, a.Dependencies)
 	if err != nil {
 		return err
 	}
+
+	if len(a.View) > 0 {
+		res2, err := r.ListViews(ctx.Context(), a.Schema, a.View)
+		if err != nil {
+			return err
+		}
+		res = append(res, res2...)
+	}
+
 	return a.generate(ctx, a.DB, res)
 }
 
@@ -172,6 +214,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 		sName := strcase.ToGoPascal(schema)
 		for _, t := range tables {
 			tName := strcase.ToGoPascal(t.Name)
+			if a.StructSuffix != "" {
+				tName += t.Name + strcase.ToGoPascal(a.StructSuffix)
+			}
 
 			tableInfo = append(tableInfo, xdb.TableInfo{
 				Schema:     t.Schema,
@@ -204,7 +249,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 				Package:    packageName,
 				Imports:    imports,
 				Name:       prefix + tName,
-				StructName: prefix + tName + "Row",
+				StructName: prefix + tName,
 				SchemaName: t.Schema,
 				TableName:  t.Name,
 				Columns:    t.Columns,

@@ -8,6 +8,7 @@ require (
 	github.com/effective-security/xlog v0.5.1
 	github.com/effective-security/xpki v0.10.0
 	github.com/ettle/strcase v0.1.1
+	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/golang/mock v1.6.0
 	github.com/lib/pq v1.10.9
@@ -36,7 +37,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
-	github.com/xo/dburl v0.16.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/net v0.14.0 // indirect

@@ -27,7 +27,7 @@ import (
 )
 
 {{ range .Tables }}
-{{- $tableName := concat .Name "Table" | goName }}
+{{- $tableName := tableStructName .Name }}
 // {{ $tableName }} provides table info for '{{ .Name }}'
 var {{ $tableName }} = xdb.TableInfo{
 	SchemaName : "{{ .SchemaName }}",
@@ -42,7 +42,7 @@ var {{ $tableName }} = xdb.TableInfo{
 // {{ goName .DB }}Tables provides tables map for {{ .DB }}
 var {{ goName .DB }}Tables = map[string]*xdb.TableInfo{
 {{ range .Tables }}
- 	"{{ .Name }}": &{{ goName .Name }}Table,
+ 	"{{ .Name }}": &{{ tableStructName .Name }},
 {{- end }}
 }
 `

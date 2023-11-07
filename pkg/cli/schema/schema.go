@@ -14,8 +14,11 @@ import (
 	"github.com/effective-security/xdb/pkg/cli"
 	"github.com/effective-security/xdb/schema"
 	"github.com/ettle/strcase"
+	"github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
 )
+
+var pluralizeClient = pluralize.NewClient()
 
 // Cmd base command for schema
 type Cmd struct {
@@ -180,8 +183,13 @@ func goName(s string) string {
 	return strcase.ToGoPascal(s)
 }
 
+func tableStructName(s string) string {
+	return goName(pluralizeClient.Singular(s)) + "Table"
+}
+
 var templateFuncMap = template.FuncMap{
-	"goName": goName,
+	"goName":          goName,
+	"tableStructName": tableStructName,
 	"concat": func(args ...string) string {
 		return strings.Join(args, "")
 	},
@@ -213,7 +221,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 	for schema, tables := range schemas {
 		sName := strcase.ToGoPascal(schema)
 		for _, t := range tables {
-			tName := strcase.ToGoPascal(t.Name)
+			tName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
 			if a.StructSuffix != "" {
 				tName += t.Name + strcase.ToGoPascal(a.StructSuffix)
 			}

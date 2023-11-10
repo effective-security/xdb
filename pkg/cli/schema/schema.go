@@ -201,7 +201,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 
 	templateFuncMap["sqlToGoType"] = sqlToGoType(ctx.Provider)
 
-	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeRowTemplateText))
+	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
+	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
 	packageName := slices.StringsCoalesce(a.Package, packageName(a.Out))
 
@@ -217,6 +218,27 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 	}
 
 	var tableInfo []xdb.TableInfo
+
+	w := ctx.Writer()
+	if a.Out != "" {
+		fn := filepath.Join(a.Out, "model.gen.go")
+		f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_ = f.Close()
+		}()
+		w = f
+	}
+	err = headerTemplate.Execute(w, &tableDefinition{
+		DB:      dbName,
+		Package: packageName,
+		Imports: imports,
+	})
+	if err != nil {
+		return errors.WithMessagef(err, "failed to generate header")
+	}
 
 	for schema, tables := range schemas {
 		sName := strcase.ToGoPascal(schema)
@@ -239,19 +261,6 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 				prefix = sName
 			}
 
-			w := ctx.Writer()
-			if a.Out != "" {
-				fn := filepath.Join(a.Out, prefix+tName+".gen.go")
-				f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-				if err != nil {
-					return err
-				}
-				defer func() {
-					_ = f.Close()
-				}()
-				w = f
-			}
-
 			td := tableDefinition{
 				DB:         dbName,
 				Package:    packageName,
@@ -272,7 +281,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 	}
 
 	var schemaCodeTemplate = template.Must(template.New("schemaCode").Funcs(templateFuncMap).Parse(codeSchemaTemplateText))
-	w := ctx.Writer()
+	w = ctx.Writer()
 	if a.Out != "" {
 		fn := filepath.Join(a.Out, "tables.gen.go")
 		f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)

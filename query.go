@@ -6,6 +6,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// DefaultPageSize is the default page size
+const DefaultPageSize = 500
+
 // RowScanner defines an interface to scan a single row
 type RowScanner interface {
 	ScanRow(rows Row) error

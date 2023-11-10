@@ -29,11 +29,16 @@ type TableInfo struct {
 
 	// SchemaName is FQN in schema.name format
 	SchemaName string `json:"-" yaml:"-"`
+
+	allColumns string `json:"-" yaml:"-"`
 }
 
 // AllColumns returns list of all columns separated by comma
 func (t *TableInfo) AllColumns() string {
-	return strings.Join(t.Columns, ", ")
+	if t.allColumns == "" {
+		t.allColumns = strings.Join(t.Columns, ",")
+	}
+	return t.allColumns
 }
 
 // AliasedColumns returns list of columns separated by comma,
@@ -48,7 +53,7 @@ func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string 
 			prefixed[i] = prefix + "." + c
 		}
 	}
-	return strings.Join(prefixed, ", ")
+	return strings.Join(prefixed, ",")
 }
 
 // Validator provides schema validation interface

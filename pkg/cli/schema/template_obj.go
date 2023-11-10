@@ -17,9 +17,9 @@ type tableDefinition struct {
 	PrimaryKey *schema.Column
 }
 
-var codeRowTemplateText = `// DO NOT EDIT!
+var codeHeaderTemplateText = `// DO NOT EDIT!
 // This file is MACHINE GENERATED
-// Table: {{ .SchemaName }}.{{ .TableName }}
+// DB: {{ .DB }}
 
 package {{ .Package }}
 
@@ -31,6 +31,9 @@ import (
 	{{ end }}
 )
 
+`
+
+var codeModelTemplateText = `
 // {{ .StructName }} represents one row from table '{{ .SchemaName }}.{{ .TableName }}'.
 {{- if .PrimaryKey }}
 // Primary key: {{ .PrimaryKey.Name }}
@@ -50,10 +53,10 @@ type {{ .StructName }} struct {
 }
 
 // ScanRow scans one row for {{ .TableName }}.
-func(r *{{ .StructName }}) ScanRow(rows xdb.Row) error {
+func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 	err := rows.Scan(
 {{- range $i, $e := .Columns }}
-		&r.{{ goName $e.Name }},
+		&m.{{ goName $e.Name }},
 {{- end }}
 	)
 	if err != nil {
@@ -61,4 +64,5 @@ func(r *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 	}
 	return nil
 }
+
 `

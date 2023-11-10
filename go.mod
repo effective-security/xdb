@@ -3,6 +3,7 @@ module github.com/effective-security/xdb
 go 1.21
 
 require (
+	dario.cat/mergo v1.0.0
 	github.com/alecthomas/kong v0.8.1
 	github.com/effective-security/porto v0.10.0
 	github.com/effective-security/xlog v0.5.1

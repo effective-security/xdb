@@ -201,6 +201,10 @@ vet:
 	echo "Running vet"
 	go vet ${BUILD_FLAGS} ${PROJ_PACKAGE}/...
 
+vulns:
+	echo "Running vulns"
+	govulncheck ${PROJ_PACKAGE}/...
+
 lint: fmt vet
 	echo "Running lint"
 	golangci-lint run --timeout 20m0s ./...

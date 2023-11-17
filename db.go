@@ -64,6 +64,8 @@ type Rows interface {
 }
 
 // DB provides interface for Db operations
+// It's an interface accepted by Query, QueryRow and Exec methods.
+// Both sql.DB, sql.Conn and sql.Tx can be passed as DB interface.
 type DB interface {
 	// QueryContext executes a query that returns rows, typically a SELECT.
 	// The args are for any placeholder parameters in the query.

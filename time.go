@@ -16,6 +16,12 @@ type Time time.Time
 // Scan implements the Scanner interface.
 func (ns *Time) Scan(value any) error {
 	var v sql.NullTime
+
+	if str, ok := value.(string); ok {
+		*ns = ParseTime(str)
+		return nil
+	}
+
 	if err := (&v).Scan(value); err != nil {
 		return errors.WithStack(err)
 	}
@@ -62,7 +68,13 @@ func FromUnixMilli(tm int64) Time {
 
 // ParseTime returns Time from RFC3339 format
 func ParseTime(val string) Time {
-	t, _ := time.Parse(time.RFC3339, val)
+	if val == "" {
+		return Time{}
+	}
+	t, err := time.Parse(time.RFC3339, val)
+	if err != nil {
+		t, _ = time.Parse(time.DateTime, val)
+	}
 	return Time(t.UTC())
 }
 

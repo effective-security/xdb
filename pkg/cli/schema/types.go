@@ -7,8 +7,6 @@ import (
 	"github.com/effective-security/xdb/schema"
 )
 
-const yesVal = "YES"
-
 func sqlToGoType(provider string) func(c *schema.Column) string {
 	switch provider {
 	case "postgres":

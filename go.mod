@@ -8,7 +8,7 @@ require (
 	github.com/effective-security/porto v0.16.0
 	github.com/effective-security/xlog v0.6.1-0.20231117065932-e993e47f2aa3
 	github.com/effective-security/xpki v0.12.0
-	github.com/ettle/strcase v0.1.1
+	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/golang/mock v1.6.0

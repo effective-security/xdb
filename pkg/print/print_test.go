@@ -55,7 +55,6 @@ func checkFormat(t *testing.T, val any, has ...string) {
 
 func TestPrintSchema(t *testing.T) {
 	t.Run("Table", func(t *testing.T) {
-		maxL := 255
 		o := schema.Table{
 			Name:   "test",
 			Schema: "dbo",
@@ -64,14 +63,14 @@ func TestPrintSchema(t *testing.T) {
 					Name:     "ID",
 					Type:     "uint64",
 					UdtType:  "int8",
-					Nullable: "NO",
+					Nullable: false,
 				},
 				{
 					Name:      "Name",
 					Type:      "string",
 					UdtType:   "varchar",
-					Nullable:  "YES",
-					MaxLength: &maxL,
+					Nullable:  true,
+					MaxLength: 255,
 				},
 			},
 		}
@@ -80,7 +79,7 @@ func TestPrintSchema(t *testing.T) {
 				"Table: test\n\n"+
 				"  NAME |  TYPE  |   UDT   | NULL | MAX | REF  \n"+
 				"-------+--------+---------+------+-----+------\n"+
-				"  ID   | uint64 | int8    | NO   |     |      \n"+
+				"  ID   | uint64 | int8    |      |     |      \n"+
 				"  Name | string | varchar | YES  | 255 |      \n\n",
 		)
 	})

@@ -64,6 +64,18 @@ drop-sql:
 	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/drop_local_db.sql
 
 gen-sql-schema:
-	xdbcli --provider postgres --sql-source=$(XDB_PG_DATASOURCE) schema generate --db testdb --view vwMembership --package modelgen --dependencies
-	xdbcli --provider sqlserver --sql-source=$(XDB_SQL_DATASOURCE) schema generate --db testdb --view vwMembership --package modelgen --dependencies
-
+	rm -rf testdata/e2e
+	mkdir -p testdata/e2e/postgres/model
+	mkdir -p testdata/e2e/sqlserver/model
+	xdbcli --provider postgres --sql-source=$(XDB_PG_DATASOURCE) \
+		schema generate \
+		--db testdb --view vwMembership --package modelgen --dependencies \
+		--out ./testdata/e2e/postgres/model
+	goimports -w ./testdata/e2e/postgres/model/*.gen.go
+	gofmt -s -l -w -r 'interface{} -> any' ./testdata/e2e/postgres/model/*.gen.go
+	xdbcli --provider sqlserver --sql-source=$(XDB_SQL_DATASOURCE) \
+		schema generate \
+		--db testdb --view vwMembership --package modelgen --dependencies \
+		--out ./testdata/e2e/sqlserver/model
+	goimports -w ./testdata/e2e/postgres/model/*.gen.go
+	gofmt -s -l -w -r 'interface{} -> any' ./testdata/e2e/postgres/model/*.gen.go

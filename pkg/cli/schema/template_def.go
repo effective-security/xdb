@@ -1,15 +1,14 @@
 package schema
 
-import (
-	"github.com/effective-security/xdb"
-)
+import "github.com/effective-security/xdb/schema"
 
 type schemaDefinition struct {
 	DB      string
 	Package string
 	Imports []string
 
-	Tables []xdb.TableInfo
+	Tables []schema.TableInfo
+	Defs   []tableDefinition
 }
 
 var codeSchemaTemplateText = `// DO NOT EDIT!
@@ -19,8 +18,7 @@ var codeSchemaTemplateText = `// DO NOT EDIT!
 package {{ .Package }}
 
 import (
-
-	"github.com/effective-security/xdb"
+	"github.com/effective-security/xdb/schema"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
 	{{ end }}
@@ -29,7 +27,7 @@ import (
 {{ range .Tables }}
 {{- $tableName := tableStructName .Name }}
 // {{ $tableName }} provides table info for '{{ .Name }}'
-var {{ $tableName }} = xdb.TableInfo{
+var {{ $tableName }} = schema.TableInfo{
 	SchemaName : "{{ .SchemaName }}",
 	Schema     : "{{ .Schema }}",
 	Name       : "{{ .Name }}",
@@ -40,8 +38,8 @@ var {{ $tableName }} = xdb.TableInfo{
 {{ end }}
 
 // {{ goName .DB }}Tables provides tables map for {{ .DB }}
-var {{ goName .DB }}Tables = map[string]*xdb.TableInfo{
-{{ range .Tables }}
+var {{ goName .DB }}Tables = map[string]*schema.TableInfo{
+{{- range .Tables }}
  	"{{ .Name }}": &{{ tableStructName .Name }},
 {{- end }}
 }

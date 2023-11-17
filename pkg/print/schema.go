@@ -26,19 +26,24 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 	table.SetHeaderLine(true)
 
 	for _, c := range r.Columns {
+		// TODO: select
 		maxL := ""
-		if c.MaxLength != nil {
-			maxL = fmt.Sprintf("%d", *c.MaxLength)
+		if c.MaxLength > 0 {
+			maxL = fmt.Sprintf("%d", c.MaxLength)
 		}
 		ref := ""
 		if c.Ref != nil {
 			ref = c.Ref.RefColumnSchemaName()
 		}
+		nullable := ""
+		if c.Nullable {
+			nullable = "YES"
+		}
 		table.Append([]string{
 			c.Name,
 			c.Type,
 			c.UdtType,
-			c.Nullable,
+			nullable,
 			maxL,
 			ref,
 		})

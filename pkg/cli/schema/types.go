@@ -20,16 +20,23 @@ func sqlToGoType(provider string) func(c *schema.Column) string {
 	}
 }
 
+func isID(c *schema.Column) bool {
+	return strings.EqualFold(c.Name, "id") ||
+		strings.HasSuffix(c.Name, "_id") ||
+		strings.HasSuffix(c.Name, "Id") ||
+		strings.HasSuffix(c.Name, "ID")
+}
+
 func postgresToGoType(c *schema.Column) string {
 	ptr := ""
-	if c.Nullable == yesVal {
+	if c.Nullable {
 		ptr = "*"
 	}
 
 	switch c.Type {
 
 	case "bigint":
-		if c.Name == "id" || strings.HasSuffix(c.Name, "_id") {
+		if isID(c) {
 			return "xdb.ID"
 		}
 
@@ -44,6 +51,9 @@ func postgresToGoType(c *schema.Column) string {
 			typeName = "int32"
 		case "int8":
 			typeName = "int64"
+		}
+		if isID(c) {
+			typeName = "u" + typeName
 		}
 		return ptr + typeName
 	case "smallint":
@@ -61,7 +71,7 @@ func postgresToGoType(c *schema.Column) string {
 		return "xdb.NULLString"
 
 	case "char", "varchar", "character", "character varying", "text":
-		if c.Nullable == yesVal {
+		if c.Nullable {
 			return "xdb.NULLString"
 		}
 		return "string"
@@ -95,20 +105,23 @@ func postgresToGoType(c *schema.Column) string {
 
 func sqlserverToGoType(c *schema.Column) string {
 	ptr := ""
-	if c.Nullable == yesVal {
+	if c.Nullable {
 		ptr = "*"
 	}
 
 	switch c.Type {
 
 	case "bigint":
-		if c.Name == "id" || strings.HasSuffix(c.Name, "_id") {
+		if isID(c) {
 			return "xdb.ID"
 		}
 
 		return ptr + "int64"
 
 	case "int", "integer":
+		if isID(c) {
+			return ptr + "uint32"
+		}
 		return ptr + "int32"
 
 	case "smallint":
@@ -127,13 +140,13 @@ func sqlserverToGoType(c *schema.Column) string {
 		return "xdb.NULLString"
 
 	case "char", "nchar", "varchar", "varchar2", "nvarchar", "character", "character varying", "text":
-		if c.Nullable == yesVal {
+		if c.Nullable {
 			return "xdb.NULLString"
 		}
 		return ptr + "string"
 
 	case "uniqueidentifier":
-		if c.Nullable == yesVal {
+		if c.Nullable {
 			return "xdb.NULLString"
 		}
 		return "string"

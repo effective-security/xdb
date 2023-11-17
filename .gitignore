@@ -10,3 +10,4 @@ bin/
 debug
 debug.test
 .vscode/launch.json
+testdata/e2e/

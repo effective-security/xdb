@@ -4,9 +4,47 @@ package schema
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 //go:generate mockgen -source=schema.go -destination=../mocks/mockschema/schema_mock.go -package mockschema
+
+// TableInfo defines a table info
+type TableInfo struct {
+	Schema     string
+	Name       string
+	PrimaryKey string
+	Columns    []string
+	Indexes    []string
+
+	// SchemaName is FQN in schema.name format
+	SchemaName string `json:"-" yaml:"-"`
+
+	allColumns string `json:"-" yaml:"-"`
+}
+
+// AllColumns returns list of all columns separated by comma
+func (t *TableInfo) AllColumns() string {
+	if t.allColumns == "" {
+		t.allColumns = strings.Join(t.Columns, ",")
+	}
+	return t.allColumns
+}
+
+// AliasedColumns returns list of columns separated by comma,
+// with prefix a.C1, NULL, a.C2 etc.
+// Columns identified in nulls, will be replaced with NULL.
+func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string {
+	prefixed := make([]string, len(t.Columns))
+	for i, c := range t.Columns {
+		if nulls[c] {
+			prefixed[i] = "NULL"
+		} else {
+			prefixed[i] = prefix + "." + c
+		}
+	}
+	return strings.Join(prefixed, ",")
+}
 
 // Table definition
 type Table struct {
@@ -38,13 +76,14 @@ type Tables []*Table
 
 // Column definition
 type Column struct {
-	Name    string
-	Type    string
-	UdtType string
-	// GoName      string
-	// GoType    string
-	Nullable  string
-	MaxLength *int
+	Name      string
+	Type      string
+	UdtType   string
+	Nullable  bool
+	MaxLength uint32
+
+	// GoName string
+	// GoType string
 
 	// SchemaName is FQN in schema.table.name format
 	SchemaName string `json:"-" yaml:"-"`
@@ -52,6 +91,16 @@ type Column struct {
 	Ref *ForeignKey `json:"-" yaml:"-"`
 	// Indexes provides the index references, where the column is part of index
 	Indexes Indexes `json:"-" yaml:"-"`
+}
+
+func (c *Column) StructString() string {
+	ml := ""
+	if c.MaxLength > 0 {
+		ml = fmt.Sprintf(", MaxLength: %d ", c.MaxLength)
+	}
+	return fmt.Sprintf(`{ Name: "%s", Type: "%s", UdtType: "%s", Nullable: %t %s}`,
+		c.Name, c.Type, c.UdtType, c.Nullable, ml,
+	)
 }
 
 // IsIndex returns true if column is part of index
@@ -77,10 +126,10 @@ func (c *Column) Tag() string {
 	} else {
 		ops += fmt.Sprintf(",%s", c.Type)
 	}
-	if c.MaxLength != nil {
-		ops += fmt.Sprintf(",max:%d", *c.MaxLength)
+	if c.MaxLength > 0 {
+		ops += fmt.Sprintf(",max:%d", c.MaxLength)
 	}
-	if c.Nullable == "YES" {
+	if c.Nullable {
 		ops += ",null"
 	}
 

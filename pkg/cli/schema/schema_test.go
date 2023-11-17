@@ -36,7 +36,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 					Name:     "ID",
 					Type:     "uint64",
 					UdtType:  "int8",
-					Nullable: "NO",
+					Nullable: false,
 				},
 			},
 		},
@@ -57,7 +57,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 		"Table: test\n\n"+
 		"  NAME |  TYPE  | UDT  | NULL | MAX | REF  \n"+
 		"-------+--------+------+------+-----+------\n"+
-		"  ID   | uint64 | int8 | NO   |     |      \n\n", s.Out.String())
+		"  ID   | uint64 | int8 |      |     |      \n\n", s.Out.String())
 
 	s.Ctl.O = "json"
 	s.Out.Reset()
@@ -65,7 +65,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	err = cmd.Run(s.Ctl)
 	require.NoError(err)
 	s.Equal(
-		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": \"NO\",\n        \"MaxLength\": null\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
+		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": false,\n        \"MaxLength\": 0\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
 		s.Out.String())
 
 	err = cmd.Run(s.Ctl)
@@ -87,7 +87,7 @@ func (s *testSuite) TestPrintTablesCmd() {
 				{
 					Name:     "ID",
 					Type:     "numeric",
-					Nullable: "NO",
+					Nullable: false,
 				},
 			},
 		},
@@ -125,7 +125,7 @@ func (s *testSuite) TestPrintViewsCmd() {
 				{
 					Name:     "ID",
 					Type:     "numeric",
-					Nullable: "NO",
+					Nullable: false,
 				},
 			},
 		},
@@ -223,7 +223,7 @@ func (s *testSuite) TestGenerate() {
 				{
 					Name:     "ID",
 					Type:     "numeric",
-					Nullable: "NO",
+					Nullable: false,
 				},
 			},
 		},

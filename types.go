@@ -19,43 +19,6 @@ const (
 	MaxLenForShortURL = 256
 )
 
-// TableInfo defines a table info
-type TableInfo struct {
-	Schema     string
-	Name       string
-	PrimaryKey string
-	Columns    []string
-	Indexes    []string
-
-	// SchemaName is FQN in schema.name format
-	SchemaName string `json:"-" yaml:"-"`
-
-	allColumns string `json:"-" yaml:"-"`
-}
-
-// AllColumns returns list of all columns separated by comma
-func (t *TableInfo) AllColumns() string {
-	if t.allColumns == "" {
-		t.allColumns = strings.Join(t.Columns, ",")
-	}
-	return t.allColumns
-}
-
-// AliasedColumns returns list of columns separated by comma,
-// with prefix a.C1, NULL, a.C2 etc.
-// Columns identified in nulls, will be replaced with NULL.
-func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string {
-	prefixed := make([]string, len(t.Columns))
-	for i, c := range t.Columns {
-		if nulls[c] {
-			prefixed[i] = "NULL"
-		} else {
-			prefixed[i] = prefix + "." + c
-		}
-	}
-	return strings.Join(prefixed, ",")
-}
-
 // Validator provides schema validation interface
 type Validator interface {
 	// Validate returns error if the model is not valid

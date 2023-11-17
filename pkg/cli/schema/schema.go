@@ -10,7 +10,6 @@ import (
 	"text/template"
 
 	"github.com/effective-security/porto/x/slices"
-	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/cli"
 	"github.com/effective-security/xdb/schema"
 	"github.com/ettle/strcase"
@@ -217,7 +216,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 		schemas[t.Schema] = append(schemas[t.Schema], t)
 	}
 
-	var tableInfo []xdb.TableInfo
+	var tableInfos []schema.TableInfo
+	var tableDefs []tableDefinition
 
 	w := ctx.Writer()
 	if a.Out != "" {
@@ -240,15 +240,15 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 		return errors.WithMessagef(err, "failed to generate header")
 	}
 
-	for schema, tables := range schemas {
-		sName := strcase.ToGoPascal(schema)
+	for schemaName, tables := range schemas {
+		sName := strcase.ToGoPascal(schemaName)
 		for _, t := range tables {
 			tName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
 			if a.StructSuffix != "" {
 				tName += t.Name + strcase.ToGoPascal(a.StructSuffix)
 			}
 
-			tableInfo = append(tableInfo, xdb.TableInfo{
+			tableInfos = append(tableInfos, schema.TableInfo{
 				Schema:     t.Schema,
 				Name:       t.Name,
 				SchemaName: t.SchemaName,
@@ -257,7 +257,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 				PrimaryKey: t.PrimaryKeyName(),
 			})
 			prefix := ""
-			if a.UseSchema && !slices.ContainsStringEqualFold([]string{"dbo", "public"}, schema) {
+			if a.UseSchema && !slices.ContainsStringEqualFold([]string{"dbo", "public"}, schemaName) {
 				prefix = sName
 			}
 
@@ -277,10 +277,12 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 			if err != nil {
 				return errors.WithMessagef(err, "failed to generate model for %s.%s", t.Schema, t.Name)
 			}
+			tableDefs = append(tableDefs, td)
 		}
 	}
 
 	var schemaCodeTemplate = template.Must(template.New("schemaCode").Funcs(templateFuncMap).Parse(codeSchemaTemplateText))
+	var collsCodeTemplate = template.Must(template.New("collsCode").Funcs(templateFuncMap).Parse(codeTableColTemplateText))
 	w = ctx.Writer()
 	if a.Out != "" {
 		fn := filepath.Join(a.Out, "tables.gen.go")
@@ -297,12 +299,19 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 		DB:      dbName,
 		Package: packageName,
 		Imports: a.Imports,
-		Tables:  tableInfo,
+		Tables:  tableInfos,
+		Defs:    tableDefs,
 	}
 	err = schemaCodeTemplate.Execute(w, td)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to generate schema")
 	}
 
+	for _, ctd := range tableDefs {
+		err = collsCodeTemplate.Execute(w, ctd)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to generate schema")
+		}
+	}
 	return nil
 }

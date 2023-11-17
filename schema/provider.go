@@ -141,10 +141,11 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 		var schemaName string
 		var tableName string
 		c := &Column{}
-		if err := rows.Scan(&schemaName, &tableName, &c.Name, &c.Type, &c.UdtType, &c.Nullable, &c.MaxLength); err != nil {
+		var nullable string
+		var max *int
+		if err := rows.Scan(&schemaName, &tableName, &c.Name, &c.Type, &c.UdtType, &nullable, &max); err != nil {
 			return nil, errors.WithStack(err)
 		}
-
 		if schema != "" && !strings.EqualFold(schema, schemaName) {
 			continue
 		}
@@ -152,7 +153,8 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 		if len(tables) > 0 && !slices.ContainsStringEqualFold(tables, tableName) {
 			continue
 		}
-
+		c.Nullable = slices.ContainsStringEqualFold(nullableVals, nullable)
+		c.MaxLength = maxLength(max)
 		c.Name = columnName(c.Name)
 		c.SchemaName = fmt.Sprintf("%s.%s.%s", schemaName, tableName, c.Name)
 		r.columns[c.SchemaName] = c
@@ -185,6 +187,8 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 	return tt, nil
 }
 
+var nullableVals = []string{"YES", "TRUE", "NULL"}
+
 func (r *SQLServerProvider) readColumnsSchema(ctx context.Context, schema, table string) (Columns, error) {
 	rows, err := r.dialect.QueryColumns(ctx, schema, table)
 	if err != nil {
@@ -194,10 +198,13 @@ func (r *SQLServerProvider) readColumnsSchema(ctx context.Context, schema, table
 	cc := Columns{}
 	for rows.Next() {
 		c := &Column{}
-		if err := rows.Scan(&c.Name, &c.Type, &c.UdtType, &c.Nullable, &c.MaxLength); err != nil {
+		var nullable string
+		var max *int
+		if err := rows.Scan(&c.Name, &c.Type, &c.UdtType, &nullable, &max); err != nil {
 			return nil, errors.WithStack(err)
 		}
-
+		c.Nullable = slices.ContainsStringEqualFold(nullableVals, nullable)
+		c.MaxLength = maxLength(max)
 		c.Name = columnName(c.Name)
 		c.SchemaName = fmt.Sprintf("%s.%s.%s", schema, table, c.Name)
 		r.columns[c.SchemaName] = c
@@ -369,4 +376,11 @@ func columnName(s string) string {
 	// 	s = string(a)
 	// }
 	// return strcase.ToGoPascal(s)
+}
+
+func maxLength(v *int) uint32 {
+	if v == nil {
+		return 0
+	}
+	return uint32(*v)
 }

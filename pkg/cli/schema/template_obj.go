@@ -25,6 +25,7 @@ package {{ .Package }}
 
 import (
 	"github.com/effective-security/xdb"
+	"github.com/effective-security/xdb/schema"
 	"github.com/pkg/errors"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
@@ -33,7 +34,32 @@ import (
 
 `
 
+var codeTableColTemplateText = `
+
+// {{ .StructName }}Col provides column definitions for table '{{ .SchemaName }}.{{ .TableName }}'.
+{{- if .PrimaryKey }}
+// Primary key: {{ .PrimaryKey.Name }}
+{{- end}}
+{{- if .Indexes }}
+// Indexes:
+{{- range .Indexes }}
+//   {{ .Name }}:{{if .IsPrimary }} PRIMARY{{end}}{{if .IsUnique }} UNIQUE{{end}} [{{ join .ColumnNames "," }}]
+{{- end }}
+{{- end }}
+var {{ .StructName }}Col = struct {
+{{- range .Columns }}
+{{- $fieldName := goName .Name }}
+	{{$fieldName}} schema.Column // {{.Name}} {{.Type}}
+{{- end }}
+}{
+	{{- range .Columns }}
+	{{ goName .Name}}: schema.Column{{.StructString}},
+	{{- end }}
+}
+`
+
 var codeModelTemplateText = `
+
 // {{ .StructName }} represents one row from table '{{ .SchemaName }}.{{ .TableName }}'.
 {{- if .PrimaryKey }}
 // Primary key: {{ .PrimaryKey.Name }}
@@ -47,7 +73,7 @@ var codeModelTemplateText = `
 type {{ .StructName }} struct {
 {{- range .Columns }}
 {{- $fieldName := goName .Name }}
-	// {{$fieldName}} representation of DB field {{.Name}} {{.Type}}
+	// {{$fieldName}} represents '{{.Name}}' column of '{{.Type}}'
 	{{$fieldName}} {{ sqlToGoType . }} ` + "`" + `{{ .Tag }}` + "`" + `
 {{- end }}
 }

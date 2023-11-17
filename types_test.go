@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/effective-security/xdb"
+	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/xlog"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ func TestTableInfo(t *testing.T) {
 	nulls := map[string]bool{
 		"meta": true,
 	}
-	ti := xdb.TableInfo{
+	ti := schema.TableInfo{
 		Schema:  "public",
 		Columns: []string{"id", "meta", "name"},
 	}

@@ -208,7 +208,7 @@ func (s *testSuite) TestGenerate() {
 		DB:      "testdb",
 		Table:   []string{"Transaction"},
 	}
-	err = cmd.generate(s.Ctl, "org", res)
+	err = cmd.generate(s.Ctl, "postgres", "org", res)
 	require.NoError(err)
 
 	ctrl := gomock.NewController(s.T())
@@ -229,6 +229,7 @@ func (s *testSuite) TestGenerate() {
 		},
 	}
 
+	mock.EXPECT().Name().Return("postgres").Times(1)
 	mock.EXPECT().ListTables(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(ret, nil).Times(1)
 	err = cmd.Run(s.Ctl)
 	require.NoError(err)

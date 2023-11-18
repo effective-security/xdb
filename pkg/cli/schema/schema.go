@@ -162,7 +162,7 @@ func (a *GenerateCmd) Run(ctx *cli.Cli) error {
 		res = append(res, res2...)
 	}
 
-	return a.generate(ctx, a.DB, res)
+	return a.generate(ctx, r.Name(), a.DB, res)
 }
 
 func packageName(folder string) string {
@@ -196,9 +196,8 @@ var templateFuncMap = template.FuncMap{
 	"lower": strings.ToLower,
 }
 
-func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) error {
-
-	templateFuncMap["sqlToGoType"] = sqlToGoType(ctx.Provider)
+func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
+	templateFuncMap["sqlToGoType"] = sqlToGoType(provider)
 
 	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
@@ -206,16 +205,16 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, dbName string, res schema.Tables) e
 	packageName := slices.StringsCoalesce(a.Package, packageName(a.Out))
 
 	imports := a.Imports
-	if ctx.Provider == "postgres" {
+	if provider == "postgres" {
 		imports = append(imports, "github.com/lib/pq")
 	}
 
-	var err error
 	schemas := map[string]schema.Tables{}
 	for _, t := range res {
 		schemas[t.Schema] = append(schemas[t.Schema], t)
 	}
 
+	var err error
 	var tableInfos []schema.TableInfo
 	var tableDefs []tableDefinition
 

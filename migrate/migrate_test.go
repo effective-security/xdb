@@ -2,7 +2,6 @@ package migrate_test
 
 import (
 	"database/sql"
-	"os"
 	"testing"
 
 	"github.com/effective-security/porto/pkg/flake"
@@ -11,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:5432?sslmode=disable"
 
 func TestPostgres(t *testing.T) {
 	err := migrate.Migrate("postgres", "test", "", 1, 1, nil)
@@ -24,8 +25,7 @@ func TestPostgres(t *testing.T) {
 	})
 
 	provider, err := xdb.NewProvider(
-		"postgres",
-		os.Getenv("XDB_PG_DATASOURCE"),
+		XDB_PG_DATASOURCE,
 		"",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{
@@ -34,4 +34,5 @@ func TestPostgres(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.NotNil(t, provider)
+	assert.Equal(t, "postgres", provider.Name())
 }

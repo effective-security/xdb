@@ -217,6 +217,43 @@ func (mr *MockRowsMockRecorder) Scan(dest ...any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scan", reflect.TypeOf((*MockRows)(nil).Scan), dest...)
 }
 
+// MockRowScanner is a mock of RowScanner interface.
+type MockRowScanner struct {
+	ctrl     *gomock.Controller
+	recorder *MockRowScannerMockRecorder
+}
+
+// MockRowScannerMockRecorder is the mock recorder for MockRowScanner.
+type MockRowScannerMockRecorder struct {
+	mock *MockRowScanner
+}
+
+// NewMockRowScanner creates a new mock instance.
+func NewMockRowScanner(ctrl *gomock.Controller) *MockRowScanner {
+	mock := &MockRowScanner{ctrl: ctrl}
+	mock.recorder = &MockRowScannerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRowScanner) EXPECT() *MockRowScannerMockRecorder {
+	return m.recorder
+}
+
+// ScanRow mocks base method.
+func (m *MockRowScanner) ScanRow(rows xdb.Row) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanRow", rows)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ScanRow indicates an expected call of ScanRow.
+func (mr *MockRowScannerMockRecorder) ScanRow(rows any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanRow", reflect.TypeOf((*MockRowScanner)(nil).ScanRow), rows)
+}
+
 // MockDB is a mock of DB interface.
 type MockDB struct {
 	ctrl     *gomock.Controller
@@ -521,6 +558,20 @@ func (m *MockProvider) IDTime(id uint64) time.Time {
 func (mr *MockProviderMockRecorder) IDTime(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTime", reflect.TypeOf((*MockProvider)(nil).IDTime), id)
+}
+
+// Name mocks base method.
+func (m *MockProvider) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockProviderMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockProvider)(nil).Name))
 }
 
 // NextID mocks base method.

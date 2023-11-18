@@ -41,10 +41,10 @@ func (d *Dialect) GetCachedQuery(name string) (string, bool) {
 
 func (d *Dialect) putCachedSQL(buf *bytebufferpool.ByteBuffer, sql string) {
 	key := string(buf.B)
-	d.putCachedSQLByName(key, sql)
+	d.PutCachedQuery(key, sql)
 }
 
-func (d *Dialect) putCachedSQLByName(name, sql string) {
+func (d *Dialect) PutCachedQuery(name, sql string) {
 	c := d.getCache()
 	d.cacheLock.Lock()
 	c[name] = sql

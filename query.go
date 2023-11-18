@@ -3,16 +3,12 @@ package xdb
 import (
 	"context"
 
+	"github.com/effective-security/porto/x/slices"
 	"github.com/pkg/errors"
 )
 
 // DefaultPageSize is the default page size
 const DefaultPageSize = 500
-
-// RowScanner defines an interface to scan a single row
-type RowScanner interface {
-	ScanRow(rows Row) error
-}
 
 // RowPointer defines a generic interface to scan a single row
 type RowPointer[T any] interface {
@@ -24,10 +20,22 @@ type RowPointer[T any] interface {
 type Result[T any, TPointer RowPointer[T]] struct {
 	Rows       []TPointer
 	NextOffset uint32
+	Limit      uint32
+}
+
+// QueryRow runs a query and returns a single model
+func QueryRow[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) (TPointer, error) {
+	row := sql.QueryRowContext(ctx, query, args...)
+	var m TPointer = new(T)
+	err := m.ScanRow(row)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return m, nil
 }
 
 // RunListQuery runs a query and returns a list of models
-func RunListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, take uint32, query string, args ...any) ([]TPointer, error) {
+func RunListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) ([]TPointer, error) {
 	rows, err := sql.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -36,7 +44,7 @@ func RunListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, ta
 		_ = rows.Close()
 	}()
 
-	list := make([]TPointer, 0, take)
+	list := make([]TPointer, 0, DefaultPageSize)
 
 	for rows.Next() {
 		var m TPointer = new(T)
@@ -49,28 +57,22 @@ func RunListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, ta
 	return list, nil
 }
 
-// RunListQueryWithOffset runs a query and returns a list of models, with the next offset,
-// if there are more rows to fetch
-func RunListQueryWithOffset[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, offset, take uint32, query string, args ...any) ([]TPointer, uint32, error) {
-	list, err := RunListQuery[T, TPointer](ctx, sql, take, query, args...)
-	if err != nil {
-		return nil, 0, err
-	}
-	nextOffset := uint32(0)
-	count := uint32(len(list))
-	if count == take {
-		nextOffset = offset + count
-	}
-	return list, nextOffset, nil
-}
-
 // RunQueryResult runs a query and populates the result with a list of models and the next offset,
 // if there are more rows to fetch
-func (p *Result[T, RowPointer]) RunQueryResult(ctx context.Context, sql DB, offset, take uint32, query string, args ...any) error {
+func (p *Result[T, RowPointer]) RunQueryResult(ctx context.Context, sql DB, query string, args ...any) error {
 	var err error
-	p.Rows, p.NextOffset, err = RunListQueryWithOffset[T, RowPointer](ctx, sql, offset, take, query, args...)
+	limit := slices.NvlNumber(p.Limit, DefaultPageSize)
+
+	list, err := RunListQuery[T, RowPointer](ctx, sql, query, args...)
 	if err != nil {
 		return err
 	}
+	p.Rows = list
+	if len(list) >= int(limit) {
+		p.NextOffset = p.NextOffset + uint32(len(list))
+	} else {
+		p.NextOffset = 0
+	}
+
 	return nil
 }

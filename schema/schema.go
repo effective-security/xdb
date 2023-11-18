@@ -217,6 +217,8 @@ type ForeignKeys []*ForeignKey
 
 // Provider defines schema provider interface
 type Provider interface {
+	Name() string
+
 	// ListTables returns a list of tables in database.
 	// schemaName and tableNames are optional parameters to filter,
 	// if not provided, then all items are returned

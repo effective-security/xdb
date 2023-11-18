@@ -139,7 +139,7 @@ func BenchmarkDest(b *testing.B) {
 	}
 }
 
-func selectComplex(b *testing.B, dialect *xsql.Dialect) {
+func selectComplex(b *testing.B, dialect xsql.SQLDialect) {
 	dialect.ClearCache()
 	for n := 0; n < b.N; n++ {
 		q := dialect.Select("DISTINCT a, b, z, y, x").
@@ -164,7 +164,7 @@ func selectComplex(b *testing.B, dialect *xsql.Dialect) {
 	}
 }
 
-func selectSubqueryFmt(b *testing.B, dialect *xsql.Dialect) {
+func selectSubqueryFmt(b *testing.B, dialect xsql.SQLDialect) {
 	dialect.ClearCache()
 	for n := 0; n < b.N; n++ {
 		sq := dialect.Select("id").
@@ -187,7 +187,7 @@ func selectSubqueryFmt(b *testing.B, dialect *xsql.Dialect) {
 	}
 }
 
-func selectSubquery(b *testing.B, dialect *xsql.Dialect) {
+func selectSubquery(b *testing.B, dialect xsql.SQLDialect) {
 	dialect.ClearCache()
 	for n := 0; n < b.N; n++ {
 		q := dialect.Select("DISTINCT a, b").

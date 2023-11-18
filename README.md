@@ -9,8 +9,7 @@ Extensions around standard sql package
 ## Schema generator
 
 ```sh
- bin/xdbcli --help
-Usage: xdbcli --provider=STRING <command>
+Usage: xdbcli <command>
 
 SQL schema tool
 
@@ -18,13 +17,13 @@ Flags:
   -h, --help                 Show context-sensitive help.
   -D, --debug                Enable debug mode
       --o="table"            Print output format: json|yaml|table
-      --provider=STRING
       --sql-source=STRING    SQL sources, if not provided, will be used from XDB_DATASOURCE env var
 
 Commands:
   schema generate        generate Go model for database schema
   schema columns         prints database schema
   schema tables          prints database tables and dependencies
+  schema views           prints database views and dependencies
   schema foreign-keys    prints Foreign Keys
 
 Run "xdbcli <command> --help" for more information on a command.
@@ -39,7 +38,7 @@ export XDB_DATASOURCE="host=localhost port=5432 user=postgres password=XXX sslmo
 Print tables:
 
 ```sh
- bin/xdbcli --provider=postgres schema tables --db testdb
+ bin/xdbcli schema tables --db testdb
 public.org
 public.orgmember
 public.schema_migrations
@@ -49,7 +48,7 @@ public.user
 Print columns
 
 ```sh
-bin/xdbcli --provider=postgres schema columns --db testdb --table orgmember --dependencies
+bin/xdbcli schema columns --db testdb --table orgmember --dependencies
 Schema: public
 Table: org
 
@@ -75,7 +74,7 @@ Table: org
 Print FK
 
 ```sh
-bin/xdbcli --provider=postgres schema foreign-keys --db testdb                      
+bin/xdbcli schema foreign-keys --db testdb                      
            NAME          | SCHEMA |   TABLE   | COLUMN  | FK SCHEMA | FK TABLE | FK COLUMN  
 -------------------------+--------+-----------+---------+-----------+----------+------------
   orgmember_org_id_fkey  | public | orgmember | org_id  | public    | org      | id         
@@ -85,5 +84,5 @@ bin/xdbcli --provider=postgres schema foreign-keys --db testdb
 Generate model
 
 ```sh
-bin/xdbcli --provider=postgres schema generate --db testdb
+bin/xdbcli schema generate --db testdb
 ```

@@ -68,13 +68,13 @@ gen-sql-schema:
 	rm -rf testdata/e2e
 	mkdir -p testdata/e2e/postgres/model
 	mkdir -p testdata/e2e/sqlserver/model
-	xdbcli --provider postgres --sql-source=$(XDB_PG_DATASOURCE) \
+	xdbcli --sql-source=$(XDB_PG_DATASOURCE) \
 		schema generate \
 		--db testdb --view vwMembership --package modelgen --dependencies \
 		--out ./testdata/e2e/postgres/model
 	goimports -w ./testdata/e2e/postgres/model/*.gen.go
 	gofmt -s -l -w -r 'interface{} -> any' ./testdata/e2e/postgres/model/*.gen.go
-	xdbcli --provider sqlserver --sql-source=$(XDB_SQL_DATASOURCE) \
+	xdbcli --sql-source=$(XDB_SQL_DATASOURCE) \
 		schema generate \
 		--db testdb --view vwMembership --package modelgen --dependencies \
 		--out ./testdata/e2e/sqlserver/model

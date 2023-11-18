@@ -79,3 +79,17 @@ func (mr *MockProviderMockRecorder) ListViews(ctx, schemaName, tableNames any) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListViews", reflect.TypeOf((*MockProvider)(nil).ListViews), ctx, schemaName, tableNames)
 }
+
+// Name mocks base method.
+func (m *MockProvider) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockProviderMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockProvider)(nil).Name))
+}

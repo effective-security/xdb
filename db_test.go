@@ -3,7 +3,6 @@ package xdb_test
 import (
 	"context"
 	"database/sql"
-	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -14,6 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const XDB_SQL_DATASOURCE = "sqlserver://127.0.0.1:1433?user id=sa&password=notUsed123_P"
+const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:5432?sslmode=disable"
 
 // User provides basic user information
 type user struct {
@@ -37,18 +39,10 @@ func (m *user) ScanRow(row xdb.Row) error {
 }
 
 func TestProv(t *testing.T) {
-	s, err := xdb.ParseConnectionString("postgres://u1:p2@127.0.0.1:55432?sslmode=disable&dbname=testdb", "")
+	s, err := xdb.ParseConnectionString("postgres://u1:p2@127.0.0.1:55432?sslmode=disable&dbname=testdb")
 	require.NoError(t, err)
 	assert.Equal(t, "postgres", s.Driver)
 	assert.Equal(t, "127.0.0.1:55432", s.Host)
-	assert.Equal(t, "u1", s.User)
-	assert.Equal(t, "p2", s.Password)
-	assert.Equal(t, "testdb", s.Database)
-
-	s, err = xdb.ParseConnectionString("host=localhost port=45432 user=u1 password=p2 sslmode=disable dbname=testdb", "postgres")
-	require.NoError(t, err)
-	assert.Equal(t, "postgres", s.Driver)
-	assert.Equal(t, "localhost:45432", s.Host)
 	assert.Equal(t, "u1", s.User)
 	assert.Equal(t, "p2", s.Password)
 	assert.Equal(t, "testdb", s.Database)
@@ -57,8 +51,7 @@ func TestProv(t *testing.T) {
 func TestPG(t *testing.T) {
 	ctx := context.Background()
 	provider, err := xdb.NewProvider(
-		"postgres",
-		os.Getenv("XDB_PG_DATASOURCE"),
+		XDB_PG_DATASOURCE,
 		"testdb",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{
@@ -111,20 +104,19 @@ func TestPG(t *testing.T) {
 	})
 
 	t.Run("RunQueryResult", func(t *testing.T) {
-		var rs xdb.Result[user, *user]
+		rs := xdb.Result[user, *user]{
+			Limit:      2,
+			NextOffset: 0,
+		}
 		err = rs.RunQueryResult(ctx,
 			provider.DB(),
-			0,
-			2,
-			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, 2, 0)
+			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
 		err = rs.RunQueryResult(ctx,
 			provider.DB(),
-			2,
-			2,
-			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, 2, 2)
+			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(rs.Rows))
 		assert.Equal(t, uint32(0), rs.NextOffset)
@@ -137,12 +129,13 @@ func TestPG(t *testing.T) {
 		_, err = ptx.BeginTx(ctx, nil)
 		assert.EqualError(t, err, "transaction already started")
 
-		var rs xdb.Result[user, *user]
+		rs := xdb.Result[user, *user]{
+			Limit:      2,
+			NextOffset: 0,
+		}
 		err = rs.RunQueryResult(ctx,
 			ptx.DB(),
-			0,
-			2,
-			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, 2, 0)
+			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
@@ -201,8 +194,7 @@ const mssqlTableNamesWithSchema = `
 func TestMS(t *testing.T) {
 	ctx := context.Background()
 	provider, err := xdb.NewProvider(
-		"sqlserver",
-		os.Getenv("XDB_SQL_DATASOURCE"),
+		XDB_SQL_DATASOURCE,
 		"testdb",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{
@@ -245,30 +237,29 @@ func TestMS(t *testing.T) {
 	})
 
 	t.Run("RunQueryResult", func(t *testing.T) {
-		var rs xdb.Result[user, *user]
+		rs := xdb.Result[user, *user]{
+			Limit:      2,
+			NextOffset: 0,
+		}
 		err = rs.RunQueryResult(ctx,
 			provider.DB(),
-			0,
-			2,
 			`SELECT id, email,email_verified, name FROM [dbo].[user] 
 			ORDER BY id 
 			OFFSET @offset ROWS 
 			FETCH NEXT @take ROWS ONLY`,
-			sql.Named("offset", 0),
-			sql.Named("take", 2))
+			sql.Named("offset", rs.NextOffset),
+			sql.Named("take", rs.Limit))
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
 		err = rs.RunQueryResult(ctx,
 			provider.DB(),
-			2,
-			2,
 			`SELECT id, email,email_verified, name FROM [dbo].[user] 
 			ORDER BY id 
 			OFFSET @offset ROWS 
 			FETCH NEXT @take ROWS ONLY`,
-			sql.Named("offset", 2),
-			sql.Named("take", 2))
+			sql.Named("offset", rs.NextOffset),
+			sql.Named("take", rs.Limit))
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(rs.Rows))
 		assert.Equal(t, uint32(0), rs.NextOffset)
@@ -280,17 +271,18 @@ func TestMS(t *testing.T) {
 		assert.NotNil(t, ptx.Tx())
 		assert.NotNil(t, ptx.DB())
 
-		var rs xdb.Result[user, *user]
+		rs := xdb.Result[user, *user]{
+			Limit:      2,
+			NextOffset: 0,
+		}
 		err = rs.RunQueryResult(ctx,
 			provider.DB(),
-			0,
-			2,
 			`SELECT id, email,email_verified, name FROM [dbo].[user] 
 			ORDER BY id 
 			OFFSET @offset ROWS 
 			FETCH NEXT @take ROWS ONLY`,
-			sql.Named("offset", 0),
-			sql.Named("take", 2))
+			sql.Named("offset", rs.NextOffset),
+			sql.Named("take", rs.Limit))
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 

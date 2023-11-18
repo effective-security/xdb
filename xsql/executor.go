@@ -34,7 +34,9 @@ func (q *Stmt) Query(ctx context.Context, db Executor, handler func(rows *sql.Ro
 			}
 		}
 		// Call a callback function
-		handler(rows)
+		if handler != nil {
+			handler(rows)
+		}
 	}
 	// Check for errors during rows "Close".
 	// This may be more important if multiple statements are executed

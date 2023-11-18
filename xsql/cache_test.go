@@ -11,13 +11,15 @@ func TestSQLCache(t *testing.T) {
 	defer putBuffer(buf)
 
 	buf.WriteString("test")
-	_, ok := defaultDialect.getCachedSQL(buf)
+	dialect := defaultDialect.Load().(*Dialect)
+
+	_, ok := dialect.getCachedSQL(buf)
 	require.False(t, ok)
 
-	defaultDialect.putCachedSQL(buf, "test SQL")
-	sql, ok := defaultDialect.getCachedSQL(buf)
+	dialect.putCachedSQL(buf, "test SQL")
+	sql, ok := dialect.getCachedSQL(buf)
 	require.True(t, ok)
 	require.Equal(t, "test SQL", sql)
 
-	defaultDialect.ClearCache()
+	dialect.ClearCache()
 }

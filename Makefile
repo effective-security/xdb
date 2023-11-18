@@ -82,4 +82,3 @@ gen-sql-schema:
 		--out-schema ./testdata/e2e/sqlserver/schema
 	# fix generated code
 	goimports -w ./testdata/e2e
-	gofmt -s -l -w -r 'interface{} -> any' ./testdata/e2e

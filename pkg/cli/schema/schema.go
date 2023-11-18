@@ -2,7 +2,9 @@
 package schema
 
 import (
+	"bytes"
 	"fmt"
+	"go/format"
 	"os"
 	"path"
 	"path/filepath"
@@ -222,6 +224,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	var tableDefs []tableDefinition
 
 	w := ctx.Writer()
+	buf := &bytes.Buffer{}
+
 	if a.OutModel != "" {
 		_ = os.MkdirAll(a.OutModel, 0777)
 		fn := filepath.Join(a.OutModel, "model.gen.go")
@@ -234,7 +238,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		}()
 		w = f
 	}
-	err = headerTemplate.Execute(w, &tableDefinition{
+	err = headerTemplate.Execute(buf, &tableDefinition{
 		DB:      dbName,
 		Package: modelPkg,
 		Imports: imports,
@@ -276,7 +280,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				Indexes:    t.Indexes,
 				PrimaryKey: t.PrimaryKey,
 			}
-			err = rowCodeTemplate.Execute(w, td)
+			err = rowCodeTemplate.Execute(buf, td)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to generate model for %s.%s", t.Schema, t.Name)
 			}
@@ -284,8 +288,16 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		}
 	}
 
+	code, err := format.Source(buf.Bytes())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to format")
+	}
+	w.Write(code)
+
 	var schemaCodeTemplate = template.Must(template.New("schemaCode").Funcs(templateFuncMap).Parse(codeSchemaTemplateText))
 	var collsCodeTemplate = template.Must(template.New("collsCode").Funcs(templateFuncMap).Parse(codeTableColTemplateText))
+
+	buf.Reset()
 	w = ctx.Writer()
 	if a.OutSchema != "" {
 		_ = os.MkdirAll(a.OutSchema, 0777)
@@ -306,16 +318,22 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		Tables:  tableInfos,
 		Defs:    tableDefs,
 	}
-	err = schemaCodeTemplate.Execute(w, td)
+	err = schemaCodeTemplate.Execute(buf, td)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to generate schema")
 	}
 
 	for _, ctd := range tableDefs {
-		err = collsCodeTemplate.Execute(w, ctd)
+		err = collsCodeTemplate.Execute(buf, ctd)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to generate schema")
 		}
 	}
+	code, err = format.Source(buf.Bytes())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to format")
+	}
+	w.Write(code)
+
 	return nil
 }

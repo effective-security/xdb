@@ -2,7 +2,6 @@ package schema
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/effective-security/porto/pkg/flake"
@@ -10,6 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const XDB_SQL_DATASOURCE = "sqlserver://127.0.0.1:1433?user id=sa&password=notUsed123_P"
+const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:5432?sslmode=disable"
 
 func TestModel(t *testing.T) {
 	var fk *ForeignKey
@@ -68,8 +70,7 @@ func TestModel(t *testing.T) {
 
 func TestListSQLServer(t *testing.T) {
 	provider, err := xdb.NewProvider(
-		"sqlserver",
-		os.Getenv("XDB_SQL_DATASOURCE"),
+		XDB_SQL_DATASOURCE,
 		"testdb",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{
@@ -83,7 +84,8 @@ func TestListSQLServer(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	p := NewProvider(provider.DB(), "sqlserver")
+	require.Equal(t, "sqlserver", provider.Name())
+	p := NewProvider(provider.DB(), provider.Name())
 
 	tt, err := p.ListTables(context.Background(), "dbo", []string{"Fake"}, true)
 	require.NoError(t, err)
@@ -121,8 +123,7 @@ func TestListSQLServer(t *testing.T) {
 
 func TestListPostgres(t *testing.T) {
 	provider, err := xdb.NewProvider(
-		"postgres",
-		os.Getenv("XDB_PG_DATASOURCE"),
+		XDB_PG_DATASOURCE,
 		"testdb",
 		flake.DefaultIDGenerator,
 		&xdb.MigrationConfig{
@@ -136,7 +137,8 @@ func TestListPostgres(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	p := NewProvider(provider.DB(), "postgres")
+	require.Equal(t, "postgres", provider.Name())
+	p := NewProvider(provider.DB(), provider.Name())
 
 	tt, err := p.ListTables(context.Background(), "public", []string{"Fake"}, true)
 	require.NoError(t, err)

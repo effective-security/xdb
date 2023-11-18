@@ -63,6 +63,11 @@ type Rows interface {
 	NextResultSet() bool
 }
 
+// RowScanner defines an interface to scan a single row
+type RowScanner interface {
+	ScanRow(rows Row) error
+}
+
 // DB provides interface for Db operations
 // It's an interface accepted by Query, QueryRow and Exec methods.
 // Both sql.DB, sql.Conn and sql.Tx can be passed as DB interface.
@@ -96,6 +101,9 @@ type Provider interface {
 	DB
 	Tx
 
+	// Name returns provider name: postgres, sqlserver, etc
+	Name() string
+
 	// DB returns underlying DB connection
 	DB() DB
 	// Tx returns underlying DB transaction
@@ -107,18 +115,23 @@ type Provider interface {
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (Provider, error)
 }
 
-// Open returns an SQL connection instance
-func Open(driverName string, dataSourceName, database string) (*sql.DB, string, error) {
-	ds, err := fileutil.LoadConfigWithSchema(dataSourceName)
+// Open returns an SQL connection instance, provider name or error
+func Open(dataSource, database string) (*sql.DB, string, string, error) {
+	ds, err := fileutil.LoadConfigWithSchema(dataSource)
 	if err != nil {
-		return nil, "", errors.WithMessagef(err, "failed to load config")
+		return nil, "", "", errors.WithMessagef(err, "failed to load config")
 	}
 
 	ds = strings.Trim(ds, "\"")
 	ds = strings.TrimSpace(ds)
 
+	source, err := ParseConnectionString(ds)
+	if err != nil {
+		return nil, "", "", err
+	}
+
 	if database != "" {
-		switch driverName {
+		switch source.Driver {
 		case "sqlserver":
 			ds = ds + "&database=" + database
 		case "postgres":
@@ -128,13 +141,13 @@ func Open(driverName string, dataSourceName, database string) (*sql.DB, string, 
 				ds = ds + "&dbname=" + database
 			}
 		default:
-			return nil, ds, errors.Errorf("unsuppoprted driver %q", driverName)
+			return nil, source.Driver, ds, errors.Errorf("unsuppoprted driver %q", source.Driver)
 		}
 	}
 
-	d, err := sql.Open(driverName, ds)
+	d, err := sql.Open(source.Driver, ds)
 	if err != nil {
-		return nil, ds, errors.WithMessagef(err, "unable to open DB")
+		return nil, source.Driver, ds, errors.WithMessagef(err, "unable to open DB")
 	}
 
 	d.SetConnMaxIdleTime(0)
@@ -142,10 +155,10 @@ func Open(driverName string, dataSourceName, database string) (*sql.DB, string, 
 
 	err = d.Ping()
 	if err != nil {
-		return nil, ds, errors.WithMessagef(err, "unable to ping DB")
+		return nil, source.Driver, ds, errors.WithMessagef(err, "unable to ping DB")
 	}
 
-	return d, ds, nil
+	return d, source.Driver, ds, nil
 }
 
 // MigrationConfig defines migration configuration
@@ -156,8 +169,8 @@ type MigrationConfig struct {
 }
 
 // NewProvider creates a Provider instance
-func NewProvider(provider, dataSourceName, dbName string, idGen flake.IDGenerator, migrateCfg *MigrationConfig) (Provider, error) {
-	d, _, err := Open(provider, dataSourceName, dbName)
+func NewProvider(dataSource, dbName string, idGen flake.IDGenerator, migrateCfg *MigrationConfig) (Provider, error) {
+	d, provider, _, err := Open(dataSource, dbName)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to open DB")
 	}
@@ -173,7 +186,7 @@ func NewProvider(provider, dataSourceName, dbName string, idGen flake.IDGenerato
 			return nil, errors.WithMessagef(err, "unable to migrate Orgs DB")
 		}
 	}
-	return New(d, idGen)
+	return New(provider, d, idGen)
 }
 
 // Source describes connection info
@@ -189,8 +202,8 @@ type Source struct {
 
 // ParseConnectionString return parsed Source from
 // sqlserver://username:password@host/instance?param1=value&param2=value
-func ParseConnectionString(dataSourceName, driver string) (*Source, error) {
-	ds, err := fileutil.LoadConfigWithSchema(dataSourceName)
+func ParseConnectionString(dataSource string) (*Source, error) {
+	ds, err := fileutil.LoadConfigWithSchema(dataSource)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load config")
 	}
@@ -217,35 +230,7 @@ func ParseConnectionString(dataSourceName, driver string) (*Source, error) {
 		s.Params[k] = q.Get(k)
 	}
 
-	if s.Driver == "" {
-		s.Driver = driver
-		switch driver {
-		case "postgres":
-			ops := parseOps(dataSourceName)
-			s.Database = ops["dbname"]
-			s.User = ops["user"]
-			s.Password = ops["password"]
-			s.Host = ops["host"]
-			port := ops["port"]
-			if port != "" {
-				s.Host = s.Host + ":" + port
-			}
-			s.Params["sslmode"] = ops["sslmode"]
-		}
-	}
 	return s, nil
-}
-
-func parseOps(s string) map[string]string {
-	vals := map[string]string{}
-	tokens := strings.Split(s, " ")
-	for _, t := range tokens {
-		kv := strings.SplitN(t, "=", 2)
-		if len(kv) == 2 {
-			vals[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
-		}
-	}
-	return vals
 }
 
 func isWindows() bool {

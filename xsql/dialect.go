@@ -5,15 +5,16 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 )
 
 // SQLDialect is an interface for SQL statement builders.
 type SQLDialect interface {
 	// Provider returns the name of the SQL dialect.
 	Provider() string
+
 	ClearCache()
 	GetCachedQuery(name string) (string, bool)
+	PutCachedQuery(name, query string)
 
 	DeleteFrom(tableName string) Builder
 	From(expr string, args ...any) Builder
@@ -52,14 +53,19 @@ type Dialect struct {
 
 var (
 	// NoDialect is a default statement builder mode.
-	NoDialect = &Dialect{provider: "default"}
+	NoDialect = SQLDialect(&Dialect{provider: "default"})
 	// Postgres mode is to be used to automatically replace ? placeholders with $1, $2...
-	Postgres = &Dialect{provider: "postgres"}
+	Postgres = SQLDialect(&Dialect{provider: "postgres"})
 
-	SQLServer = &Dialect{provider: "sqlserver"}
+	SQLServer = SQLDialect(&Dialect{provider: "sqlserver"})
 )
 
-var defaultDialect = NoDialect
+var defaultDialect atomic.Value // *SQLDialect
+
+func init() {
+	// Initialize to a blackhole sink to avoid errors
+	defaultDialect.Store(NoDialect)
+}
 
 /*
 SetDialect selects a Dialect to be used by default.
@@ -68,8 +74,8 @@ Dialect can be one of xsql.NoDialect or xsql.PostgreSQL
 
 	xsql.SetDialect(xsql.PostgreSQL)
 */
-func SetDialect(newDefaultDialect *Dialect) {
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&defaultDialect)), unsafe.Pointer(newDefaultDialect))
+func SetDialect(newDefaultDialect SQLDialect) {
+	defaultDialect.Store(newDefaultDialect)
 }
 
 // Provider returns the name of the SQL dialect.

@@ -110,7 +110,7 @@ Use New for special cases like this:
 	}
 */
 func New(verb string, args ...any) Builder {
-	return defaultDialect.New(verb, args...)
+	return defaultDialect.Load().(SQLDialect).New(verb, args...)
 }
 
 /*
@@ -127,7 +127,7 @@ From starts a SELECT statement.
 	}
 */
 func From(expr string, args ...any) Builder {
-	return defaultDialect.From(expr, args...)
+	return defaultDialect.Load().(SQLDialect).From(expr, args...)
 }
 
 /*
@@ -135,7 +135,7 @@ With starts a statement prepended by WITH clause
 and closes a subquery passed as an argument.
 */
 func With(queryName string, query Builder) Builder {
-	return defaultDialect.With(queryName, query)
+	return defaultDialect.Load().(SQLDialect).With(queryName, query)
 }
 
 /*
@@ -154,7 +154,7 @@ Select starts a SELECT statement.
 Note that From method can also be used to start a SELECT statement.
 */
 func Select(expr string, args ...any) Builder {
-	return defaultDialect.Select(expr, args...)
+	return defaultDialect.Load().(SQLDialect).Select(expr, args...)
 }
 
 /*
@@ -169,7 +169,7 @@ Update starts an UPDATE statement.
 	}
 */
 func Update(tableName string) Builder {
-	return defaultDialect.Update(tableName)
+	return defaultDialect.Load().(SQLDialect).Update(tableName)
 }
 
 /*
@@ -185,7 +185,7 @@ InsertInto starts an INSERT statement.
 	}
 */
 func InsertInto(tableName string) Builder {
-	return defaultDialect.InsertInto(tableName)
+	return defaultDialect.Load().(SQLDialect).InsertInto(tableName)
 }
 
 /*
@@ -194,7 +194,7 @@ DeleteFrom starts a DELETE statement.
 	err := xsql.DeleteFrom("table").Where("id = ?", id).ExecAndClose(ctx, db)
 */
 func DeleteFrom(tableName string) Builder {
-	return defaultDialect.DeleteFrom(tableName)
+	return defaultDialect.Load().(SQLDialect).DeleteFrom(tableName)
 }
 
 type stmtChunk struct {
@@ -230,7 +230,7 @@ For other SQL statements use New:
 */
 type Stmt struct {
 	name    string
-	dialect *Dialect
+	dialect SQLDialect
 	pos     chunkPos
 	chunks  stmtChunks
 	buf     *bytebufferpool.ByteBuffer
@@ -256,6 +256,7 @@ type newRow struct {
 	notEmpty bool
 }
 
+// WriteString appends a string to the statement
 func (q *Stmt) WriteString(s string) {
 	_, err := q.buf.WriteString(s)
 	if err != nil {
@@ -655,7 +656,8 @@ func (q *Stmt) Clause(expr string, args ...any) Builder {
 func (q *Stmt) String() string {
 	if q.sql == "" {
 		// Calculate the buffer hash and check for available queries
-		sql, ok := q.dialect.getCachedSQL(q.buf)
+		bufStrKey := bufToString(&q.buf.B)
+		sql, ok := q.dialect.GetCachedQuery(bufStrKey)
 		if ok {
 			q.sql = sql
 		} else {
@@ -670,7 +672,7 @@ func (q *Stmt) String() string {
 					buf.Write(space)
 				}
 				s := q.buf.B[chunk.bufLow:chunk.bufHigh]
-				if chunk.argLen > 0 && q.dialect.provider == "postgres" {
+				if chunk.argLen > 0 && q.dialect.Provider() == "postgres" {
 					argNo, _ = writePg(argNo, s, &buf)
 				} else {
 					buf.Write(s)
@@ -679,9 +681,9 @@ func (q *Stmt) String() string {
 			}
 			q.sql = buf.String()
 			// Save it for reuse
-			q.dialect.putCachedSQL(q.buf, q.sql)
+			q.dialect.PutCachedQuery(bufStrKey, q.sql)
 			if q.name != "" {
-				q.dialect.putCachedSQLByName(q.name, q.sql)
+				q.dialect.PutCachedQuery(q.name, q.sql)
 			}
 		}
 	}
@@ -774,7 +776,8 @@ func (q *Stmt) Bind(data any) Builder {
 		} else {
 			dbFieldName := t.Tag.Get("db")
 			if dbFieldName != "" {
-				q.Select(dbFieldName).To(field.Addr().Interface())
+				tokens := strings.Split(dbFieldName, ",")
+				q.Select(tokens[0]).To(field.Addr().Interface())
 			}
 		}
 	}

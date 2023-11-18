@@ -20,15 +20,15 @@ import (
 
 type dbEnv struct {
 	driver string
-	db     *sql.DB
-	xsql   *xsql.Dialect
+	db     xdb.DB
+	xsql   xsql.SQLDialect
 }
 
 type dbConfig struct {
 	driver  string
 	envVar  string
 	defDSN  string
-	dialect *xsql.Dialect
+	dialect xsql.SQLDialect
 }
 
 var dbList = []dbConfig{
@@ -75,9 +75,9 @@ func connect() {
 	}
 }
 
-func execScript(db *sql.DB, script []string) (err error) {
+func execScript(ctx context.Context, db xdb.DB, script []string) (err error) {
 	for _, stmt := range script {
-		_, err = db.Exec(stmt)
+		_, err = db.ExecContext(ctx, stmt)
 		if err != nil {
 			break
 		}
@@ -90,11 +90,11 @@ func forEveryDB(t *testing.T, test func(ctx context.Context, env *dbEnv)) {
 	for n := range envs {
 		env := &envs[n]
 		// Create schema
-		err := execScript(env.db, sqlSchemaCreate)
+		err := execScript(ctx, env.db, sqlSchemaCreate)
 		if err != nil {
 			t.Errorf("Failed to create a %s schema: %v", env.driver, err)
 		} else {
-			err = execScript(env.db, sqlFillDb)
+			err = execScript(ctx, env.db, sqlFillDb)
 			if err != nil {
 				t.Errorf("Failed to populate a %s database: %v", env.driver, err)
 			} else {
@@ -102,7 +102,7 @@ func forEveryDB(t *testing.T, test func(ctx context.Context, env *dbEnv)) {
 				test(ctx, env)
 			}
 		}
-		err = execScript(env.db, sqlSchemaDrop)
+		err = execScript(ctx, env.db, sqlSchemaDrop)
 		if err != nil {
 			t.Errorf("Failed to drop a %s schema: %v", env.driver, err)
 		}

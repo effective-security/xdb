@@ -16,7 +16,7 @@ func newStmt() any {
 	}
 }
 
-func getStmt(d *Dialect) *Stmt {
+func getStmt(d SQLDialect) *Stmt {
 	stmt := stmtPool.Get().(*Stmt)
 	stmt.dialect = d
 	stmt.buf = getBuffer()

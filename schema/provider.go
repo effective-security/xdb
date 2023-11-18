@@ -23,8 +23,9 @@ type Dialect interface {
 
 // SQLServerProvider implementation
 type SQLServerProvider struct {
-	//db xdb.DB
+	db      xdb.DB
 	dialect Dialect
+	name    string
 
 	tables  map[string]*Table      // map of Table FQN => table
 	columns map[string]*Column     // map of Column FQN => column
@@ -43,15 +44,21 @@ func NewProvider(db xdb.DB, provider string) Provider {
 	}
 
 	p := &SQLServerProvider{
+		db:      db,
+		name:    provider,
 		columns: make(map[string]*Column),
 		tables:  make(map[string]*Table),
 		fkeys:   make(map[string]*ForeignKey),
 		indexes: make(map[string]*Index),
-		//db:      db,
 		dialect: dialect,
 	}
 
 	return p
+}
+
+// Name returns provider name
+func (r *SQLServerProvider) Name() string {
+	return r.name
 }
 
 // ListTables returns a list of tables in database.

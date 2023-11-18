@@ -39,7 +39,7 @@ func TestParse(t *testing.T) {
 			"cmd",
 			"-D",
 		})
-		assert.EqualError(t, err, `missing flags: --provider=STRING`)
+		assert.EqualError(t, err, `use --sql-source or set XDB_DATASOURCE`)
 	})
 
 	t.Run("default", func(t *testing.T) {
@@ -51,7 +51,6 @@ func TestParse(t *testing.T) {
 		p := mustNew(t, &cl)
 		ctx, err := p.Parse([]string{
 			"cmd",
-			"--provider", "postgres",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "test", cl.SQLSource)
@@ -68,7 +67,6 @@ func TestParse(t *testing.T) {
 		_, err := p.Parse([]string{
 			"cmd",
 			"--sql-source", "sqlserver://127.0.0.1?user id=sa&password=notused",
-			"--provider", "postgres",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "sqlserver://127.0.0.1?user id=sa&password=notused", cl.SQLSource)

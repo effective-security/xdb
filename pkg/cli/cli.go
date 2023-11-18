@@ -3,7 +3,6 @@ package cli
 
 import (
 	"context"
-	"database/sql"
 	"io"
 	"os"
 
@@ -23,7 +22,6 @@ type Cli struct {
 	Debug   bool            `short:"D" help:"Enable debug mode"`
 	O       string          `help:"Print output format: json|yaml|table" default:"table"`
 
-	Provider  string `kong:"required" help:"SQL provider name: sqlserver|postgres"`
 	SQLSource string `help:"SQL sources, if not provided, will be used from XDB_DATASOURCE env var"`
 
 	// Stdin is the source to read from, typically set to os.Stdin
@@ -36,7 +34,7 @@ type Cli struct {
 
 	ctx    context.Context
 	schema schema.Provider
-	db     *sql.DB
+	db     xdb.Provider
 }
 
 // Close used resources
@@ -114,9 +112,9 @@ func (c *Cli) AfterApply(_ *kong.Kong, _ kong.Vars) error {
 }
 
 // DB returns DB connection
-func (c *Cli) DB(dbname string) (*sql.DB, error) {
+func (c *Cli) DB(dbname string) (xdb.Provider, error) {
 	if c.db == nil {
-		d, _, err := xdb.Open(c.Provider, c.SQLSource, dbname)
+		d, err := xdb.NewProvider(c.SQLSource, dbname, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -128,12 +126,12 @@ func (c *Cli) DB(dbname string) (*sql.DB, error) {
 // SchemaProvider returns schema.Provider
 func (c *Cli) SchemaProvider(dbname string) (schema.Provider, error) {
 	if c.schema == nil {
-		db, err := c.DB(dbname)
+		prov, err := c.DB(dbname)
 		if err != nil {
 			return nil, err
 		}
 
-		c.schema = schema.NewProvider(db, c.Provider)
+		c.schema = schema.NewProvider(prov, prov.Name())
 	}
 
 	return c.schema, nil

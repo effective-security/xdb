@@ -38,7 +38,7 @@ export XDB_DATASOURCE="host=localhost port=5432 user=postgres password=XXX sslmo
 Print tables:
 
 ```sh
- bin/xdbcli schema tables --db testdb
+bin/xdbcli schema tables --db testdb
 public.org
 public.orgmember
 public.schema_migrations
@@ -84,5 +84,11 @@ bin/xdbcli schema foreign-keys --db testdb
 Generate model
 
 ```sh
-bin/xdbcli schema generate --db testdb
+xdbcli --sql-source=$(DATASOURCE) \
+  schema generate \
+  --dependencies \
+  --db=testdb \
+  --view=vwMembership \
+  --out-model=./testdata/e2e/postgres/model \
+  --out-schema=./testdata/e2e/postgres/schema
 ```

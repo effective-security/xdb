@@ -203,10 +203,11 @@ func (s *testSuite) TestGenerate() {
 	require.NoError(err)
 
 	cmd := GenerateCmd{
-		Package: "model",
-		Schema:  "dbo",
-		DB:      "testdb",
-		Table:   []string{"Transaction"},
+		PkgModel:  "model",
+		PkgSchema: "schema",
+		Schema:    "dbo",
+		DB:        "testdb",
+		Table:     []string{"Transaction"},
 	}
 	err = cmd.generate(s.Ctl, "postgres", "org", res)
 	require.NoError(err)

@@ -45,7 +45,7 @@ import (
 
 var codeTableColTemplateText = `
 
-// {{ .StructName }}Col provides column definitions for table '{{ .SchemaName }}.{{ .TableName }}'.
+// {{ .StructName }} provides column definitions for table '{{ .SchemaName }}.{{ .TableName }}'.
 {{- if .PrimaryKey }}
 // Primary key: {{ .PrimaryKey.Name }}
 {{- end}}
@@ -55,7 +55,7 @@ var codeTableColTemplateText = `
 //   {{ .Name }}:{{if .IsPrimary }} PRIMARY{{end}}{{if .IsUnique }} UNIQUE{{end}} [{{ join .ColumnNames "," }}]
 {{- end }}
 {{- end }}
-var {{ .StructName }}Col = struct {
+var {{ .StructName }} = struct {
 	Table *schema.TableInfo
 
 {{- range .Columns }}

@@ -135,8 +135,10 @@ type GenerateCmd struct {
 	Table        []string `help:"optional, list of tables, default: all tables"`
 	View         []string `help:"optional, list of views"`
 	Dependencies bool     `help:"optional, to discover all dependencies"`
-	Out          string   `help:"schema folder name to store files"`
-	Package      string   `help:"package name to override from --out path"`
+	OutModel     string   `help:"folder name to store model files"`
+	OutSchema    string   `help:"folder name to store schema files"`
+	PkgModel     string   `help:"package name to override from --out-model path"`
+	PkgSchema    string   `help:"package name to override from --out-schema path"`
 	StructSuffix string   `help:"optional, suffix for struct names"`
 	Imports      []string `help:"optional go imports"`
 	UseSchema    bool     `help:"optional, use schema name in table name"`
@@ -202,7 +204,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
-	packageName := slices.StringsCoalesce(a.Package, packageName(a.Out))
+	modelPkg := slices.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
+	schemaPkg := slices.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
 
 	imports := a.Imports
 	if provider == "postgres" {
@@ -219,8 +222,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	var tableDefs []tableDefinition
 
 	w := ctx.Writer()
-	if a.Out != "" {
-		fn := filepath.Join(a.Out, "model.gen.go")
+	if a.OutModel != "" {
+		_ = os.MkdirAll(a.OutModel, 0777)
+		fn := filepath.Join(a.OutModel, "model.gen.go")
 		f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 		if err != nil {
 			return err
@@ -232,7 +236,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	}
 	err = headerTemplate.Execute(w, &tableDefinition{
 		DB:      dbName,
-		Package: packageName,
+		Package: modelPkg,
 		Imports: imports,
 	})
 	if err != nil {
@@ -262,7 +266,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 
 			td := tableDefinition{
 				DB:         dbName,
-				Package:    packageName,
+				Package:    modelPkg,
 				Imports:    imports,
 				Name:       prefix + tName,
 				StructName: prefix + tName,
@@ -283,8 +287,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	var schemaCodeTemplate = template.Must(template.New("schemaCode").Funcs(templateFuncMap).Parse(codeSchemaTemplateText))
 	var collsCodeTemplate = template.Must(template.New("collsCode").Funcs(templateFuncMap).Parse(codeTableColTemplateText))
 	w = ctx.Writer()
-	if a.Out != "" {
-		fn := filepath.Join(a.Out, "tables.gen.go")
+	if a.OutSchema != "" {
+		_ = os.MkdirAll(a.OutSchema, 0777)
+		fn := filepath.Join(a.OutSchema, "schema.gen.go")
 		f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 		if err != nil {
 			return err
@@ -296,7 +301,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	}
 	td := schemaDefinition{
 		DB:      dbName,
-		Package: packageName,
+		Package: schemaPkg,
 		Imports: a.Imports,
 		Tables:  tableInfos,
 		Defs:    tableDefs,

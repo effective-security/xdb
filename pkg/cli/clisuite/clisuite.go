@@ -72,7 +72,7 @@ func (s *TestSuite) SetupSuite() {
 
 	_, err = parser.Parse([]string{
 		"-D",
-		"--sql-source", "postgres://postgres:postgres@localhost:5432?sslmode=disable",
+		"--sql-source", "postgres://postgres:postgres@127.0.0.1:15433?sslmode=disable",
 	})
 	if err != nil {
 		s.FailNow("unexpected error parsing: %+v", err)

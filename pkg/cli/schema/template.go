@@ -9,6 +9,7 @@ type tableDefinition struct {
 	Package    string
 	Imports    []string
 	Name       string
+	Dialect    string
 	StructName string
 	SchemaName string
 	TableName  string
@@ -21,9 +22,9 @@ type schemaDefinition struct {
 	DB      string
 	Package string
 	Imports []string
-
-	Tables []schema.TableInfo
-	Defs   []tableDefinition
+	Dialect string
+	Tables  []schema.TableInfo
+	Defs    []tableDefinition
 }
 
 var codeHeaderTemplateText = `// DO NOT EDIT!
@@ -41,6 +42,8 @@ import (
 	{{ end }}
 )
 
+// Dialect provides Dialect for {{ .DB }}
+var Dialect = {{ .Dialect }}
 `
 
 var codeTableColTemplateText = `
@@ -104,6 +107,8 @@ func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 	return nil
 }
 
+type {{ .StructName }}Slice []*{{ .StructName }}
+type {{ .StructName }}Result = xdb.Result[{{ .StructName }}, *{{ .StructName }}]
 `
 
 var codeSchemaTemplateText = `// DO NOT EDIT!
@@ -119,6 +124,10 @@ import (
 	{{ end }}
 )
 
+// Dialect provides Dialect for {{ .DB }}
+var Dialect = {{ .Dialect }}
+{{- $dialect := .Dialect }}
+
 {{ range .Tables }}
 {{- $tableName := tableStructName .Name }}
 // {{ $tableName }} provides table info for '{{ .Name }}'
@@ -129,6 +138,7 @@ var {{ $tableName }} = schema.TableInfo{
 	PrimaryKey : "{{ .PrimaryKey }}", 
 	Columns    : []string{ {{- range .Columns }}"{{ . }}", {{ end -}} },
 	Indexes    : []string{ {{- range .Indexes }}"{{ . }}", {{ end -}} },
+	Dialect    : {{ $dialect }},
 }
 {{ end }}
 

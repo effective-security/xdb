@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const XDB_SQL_DATASOURCE = "sqlserver://127.0.0.1:1433?user id=sa&password=notUsed123_P"
-const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:5432?sslmode=disable"
+const XDB_SQL_DATASOURCE = "sqlserver://127.0.0.1:11434?user id=sa&password=notUsed123_P"
+const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:15433?sslmode=disable"
 
 func TestModel(t *testing.T) {
 	var fk *ForeignKey

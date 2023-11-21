@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const XDB_SQL_DATASOURCE = "sqlserver://127.0.0.1:1433?user id=sa&password=notUsed123_P"
-const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:5432?sslmode=disable"
+const XDB_SQL_DATASOURCE = "sqlserver://127.0.0.1:11434?user id=sa&password=notUsed123_P"
+const XDB_PG_DATASOURCE = "postgres://postgres:postgres@127.0.0.1:15433?sslmode=disable"
 
 // User provides basic user information
 type user struct {
@@ -108,13 +108,13 @@ func TestPG(t *testing.T) {
 			Limit:      2,
 			NextOffset: 0,
 		}
-		err = rs.RunQueryResult(ctx,
+		err = rs.Execute(ctx,
 			provider.DB(),
 			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
-		err = rs.RunQueryResult(ctx,
+		err = rs.Execute(ctx,
 			provider.DB(),
 			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
 		require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestPG(t *testing.T) {
 			Limit:      2,
 			NextOffset: 0,
 		}
-		err = rs.RunQueryResult(ctx,
+		err = rs.Execute(ctx,
 			ptx.DB(),
 			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
 		require.NoError(t, err)
@@ -236,12 +236,12 @@ func TestMS(t *testing.T) {
 		assert.Equal(t, expectedTables, tables)
 	})
 
-	t.Run("RunQueryResult", func(t *testing.T) {
+	t.Run("Execute", func(t *testing.T) {
 		rs := xdb.Result[user, *user]{
 			Limit:      2,
 			NextOffset: 0,
 		}
-		err = rs.RunQueryResult(ctx,
+		err = rs.Execute(ctx,
 			provider.DB(),
 			`SELECT id, email,email_verified, name FROM [dbo].[user] 
 			ORDER BY id 
@@ -252,7 +252,7 @@ func TestMS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
-		err = rs.RunQueryResult(ctx,
+		err = rs.Execute(ctx,
 			provider.DB(),
 			`SELECT id, email,email_verified, name FROM [dbo].[user] 
 			ORDER BY id 
@@ -275,7 +275,7 @@ func TestMS(t *testing.T) {
 			Limit:      2,
 			NextOffset: 0,
 		}
-		err = rs.RunQueryResult(ctx,
+		err = rs.Execute(ctx,
 			provider.DB(),
 			`SELECT id, email,email_verified, name FROM [dbo].[user] 
 			ORDER BY id 

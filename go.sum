@@ -96,6 +96,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/effective-security/porto v0.16.0 h1:DtZ1oJHqhIUZFlB7C07VY8Q6tkGFPNDi5unzW0QYRCs=
 github.com/effective-security/porto v0.16.0/go.mod h1:b9i/z95JDOoK/YlQjEAONHWjA5BCwN+k9VeSmjcYFxI=
+github.com/effective-security/porto v0.17.0 h1:xl8sPK4WwQwr3wMjPiwy0xbbJJjSwr3gfJ28ThEkF2A=
+github.com/effective-security/porto v0.17.0/go.mod h1:M6pUZETLINyRzMao1++JOMMojIADCacx0nsU2f0tHiM=
 github.com/effective-security/xlog v0.6.1-0.20231117065932-e993e47f2aa3 h1:e7pbMvKz/LyYGCsPpZP9OaWUzcYU42qxH3iKN5Xv8Qg=
 github.com/effective-security/xlog v0.6.1-0.20231117065932-e993e47f2aa3/go.mod h1:8ymyxSvtDtqzwE6VUhgsPRMT6/hBDymgyeoNtHmRz9Y=
 github.com/effective-security/xpki v0.12.0 h1:4Txyg4Sb3c1YZ9YiYOyUq6Y+0GVw9SrGVzCdcyzX0pg=

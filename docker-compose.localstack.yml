@@ -21,7 +21,7 @@ services:
       # the source path in the volume definitions are relative to ./sql
       - ./testdata/sql/postgres:/postgres
     ports:
-      - "127.0.0.1:5432:5432" # SQL
+      - "127.0.0.1:15433:5432" # SQL
     environment:
       - POSTGRES_PORT=5432
       - POSTGRES_USER=postgres
@@ -44,7 +44,7 @@ services:
       - ./testdata/sql/sqlserver:/sqlserver
     ports:
       # TODO: port override if collision with another local SQL
-      - "127.0.0.1:1433:1433"
+      - "127.0.0.1:11434:1433"
     environment:
       MSSQL_SA_PASSWORD: "notUsed123_P"
       ACCEPT_EULA: "Y"

@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/effective-security/xdb/xsql"
 )
 
 //go:generate mockgen -source=schema.go -destination=../mocks/mockschema/schema_mock.go -package mockschema
@@ -17,10 +19,43 @@ type TableInfo struct {
 	Columns    []string
 	Indexes    []string
 
+	Dialect xsql.SQLDialect `json:"-" yaml:"-"`
+
 	// SchemaName is FQN in schema.name format
 	SchemaName string `json:"-" yaml:"-"`
 
 	allColumns string `json:"-" yaml:"-"`
+}
+
+// From starts FROM expression
+func (t *TableInfo) From() xsql.Builder {
+	return t.Dialect.From(t.SchemaName)
+}
+
+// DeleteFrom starts DELETE FROM expression
+func (t *TableInfo) DeleteFrom() xsql.Builder {
+	return t.Dialect.DeleteFrom(t.SchemaName)
+}
+
+// InsertInto starts INSERT expression
+func (t *TableInfo) InsertInto() xsql.Builder {
+	return t.Dialect.InsertInto(t.SchemaName)
+}
+
+// Update starts UPDATE expression
+func (t *TableInfo) Update() xsql.Builder {
+	return t.Dialect.Update(t.SchemaName)
+}
+
+// Select starts SELECT FROM  expression
+func (t *TableInfo) Select(cols ...string) xsql.Builder {
+	var expr string
+	if len(cols) > 0 {
+		expr = strings.Join(cols, ",")
+	} else {
+		expr = t.AllColumns()
+	}
+	return t.Dialect.From(t.SchemaName).Select(expr)
 }
 
 // AllColumns returns list of all columns separated by comma

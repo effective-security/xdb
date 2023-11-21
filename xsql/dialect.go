@@ -16,12 +16,39 @@ type SQLDialect interface {
 	GetCachedQuery(name string) (string, bool)
 	PutCachedQuery(name, query string)
 
+	// DeleteFrom starts a DELETE statement.
 	DeleteFrom(tableName string) Builder
+
+	/*
+		From starts a SELECT statement.
+	*/
 	From(expr string, args ...any) Builder
+
+	// InsertInto starts an INSERT statement.
 	InsertInto(tableName string) Builder
+	/*
+		New starts an SQL statement with an arbitrary verb.
+
+		Use From, Select, InsertInto or DeleteFrom methods to create
+		an instance of an SQL statement builder for common statements.
+	*/
 	New(verb string, args ...any) Builder
+
+	/*
+		Select starts a SELECT statement.
+
+		Consider using From method to start a SELECT statement - you may find
+		it easier to read and maintain.
+	*/
 	Select(expr string, args ...any) Builder
+
+	// Update starts an UPDATE statement.
 	Update(tableName string) Builder
+
+	/*
+		With starts a statement prepended by WITH clause
+		and closes a subquery passed as an argument.
+	*/
 	With(queryName string, query Builder) Builder
 }
 

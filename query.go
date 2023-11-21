@@ -34,8 +34,8 @@ func QueryRow[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query 
 	return m, nil
 }
 
-// RunListQuery runs a query and returns a list of models
-func RunListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) ([]TPointer, error) {
+// ExecuteListQuery runs a query and returns a list of models
+func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) ([]TPointer, error) {
 	rows, err := sql.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -57,19 +57,20 @@ func RunListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, qu
 	return list, nil
 }
 
-// RunQueryResult runs a query and populates the result with a list of models and the next offset,
+// Execute runs a query and populates the result with a list of models and the next offset,
 // if there are more rows to fetch
-func (p *Result[T, RowPointer]) RunQueryResult(ctx context.Context, sql DB, query string, args ...any) error {
+func (p *Result[T, RowPointer]) Execute(ctx context.Context, sql DB, query string, args ...any) error {
 	var err error
 	limit := slices.NvlNumber(p.Limit, DefaultPageSize)
 
-	list, err := RunListQuery[T, RowPointer](ctx, sql, query, args...)
+	list, err := ExecuteListQuery[T, RowPointer](ctx, sql, query, args...)
 	if err != nil {
 		return err
 	}
 	p.Rows = list
-	if len(list) >= int(limit) {
-		p.NextOffset = p.NextOffset + uint32(len(list))
+	count := uint32(len(list))
+	if count >= limit {
+		p.NextOffset = p.NextOffset + count
 	} else {
 		p.NextOffset = 0
 	}

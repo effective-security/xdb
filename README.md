@@ -31,8 +31,8 @@ Run "xdbcli <command> --help" for more information on a command.
 
 Examples:
 
-```
-export XDB_DATASOURCE="host=localhost port=5432 user=postgres password=XXX sslmode=disable" 
+```sh
+export XDB_DATASOURCE="postgres://${XDB_PG_USER}:${XDB_PG_PASSWORD}@${XDB_PG_HOST}:${XDB_PG_PORT}?sslmode=disable" 
 ```
 
 Print tables:

@@ -209,9 +209,15 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	modelPkg := slices.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
 	schemaPkg := slices.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
 
+	var dialect string
 	imports := a.Imports
 	if provider == "postgres" {
 		imports = append(imports, "github.com/lib/pq")
+		dialect = "xsql.Postgres"
+	} else if provider == "sqlserver" {
+		dialect = "xsql.SQLServer"
+	} else {
+		dialect = "xsql.NoDialect"
 	}
 
 	schemas := map[string]schema.Tables{}
@@ -242,6 +248,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		DB:      dbName,
 		Package: modelPkg,
 		Imports: imports,
+		Dialect: dialect,
 	})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to generate header")
@@ -272,6 +279,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				DB:         dbName,
 				Package:    modelPkg,
 				Imports:    imports,
+				Dialect:    dialect,
 				Name:       prefix + tName,
 				StructName: prefix + tName,
 				SchemaName: t.Schema,
@@ -315,6 +323,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		DB:      dbName,
 		Package: schemaPkg,
 		Imports: a.Imports,
+		Dialect: dialect,
 		Tables:  tableInfos,
 		Defs:    tableDefs,
 	}

@@ -5,13 +5,13 @@ TEST_FLAGS=
 export COVERAGE_EXCLUSIONS="testing|main.go|clisuite.go|mocks.go|.gen.go"
 
 # not used in UnitTests
-export XDB_SQL_SERVER=168.137.11.102
-export XDB_SQL_PORT=1433
+export XDB_SQL_SERVER=127.0.0.1
+export XDB_SQL_PORT=11434
 export XDB_SQL_USER=sa
 export XDB_SQL_PASSWORD=notUsed123_P
 
-export XDB_PG_HOST=168.137.11.101
-export XDB_PG_PORT=5432
+export XDB_PG_HOST=127.0.0.1
+export XDB_PG_PORT=15433
 export XDB_PG_USER=postgres
 export XDB_PG_PASSWORD=postgres
 
@@ -54,14 +54,14 @@ start-localstack:
 
 start-sql:
 	echo "*** creating postgres tables "
-	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h $(XDB_PG_HOST) -p $(XDB_PG_PORT) -U $(XDB_PG_USER) -a -f /postgres/create_local_db.sql
+	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h 168.137.11.101 -p 5432 -U $(XDB_PG_USER) -a -f /postgres/create_local_db.sql
 	echo "*** creating ms server tables "
 	sleep 5
 	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/create_local_db.sql
 
 drop-sql:
 	echo "*** dropping SQL tables "
-	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h $(XDB_PG_HOST) -p $(XDB_PG_PORT) -U $(XDB_PG_USER) -a -f /postgres/drop_local_db.sql
+	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h 168.137.11.101 -p 5432 -U $(XDB_PG_USER) -a -f /postgres/drop_local_db.sql
 	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/drop_local_db.sql
 
 gen-sql-schema:

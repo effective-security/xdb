@@ -20,6 +20,8 @@ func getStmt(d SQLDialect) *Stmt {
 	stmt := stmtPool.Get().(*Stmt)
 	stmt.dialect = d
 	stmt.buf = getBuffer()
+	stmt.name = ""
+	stmt.sql = ""
 	return stmt
 }
 
@@ -40,6 +42,7 @@ func reuseStmt(q *Stmt) {
 	putBuffer(q.buf)
 	q.buf = nil
 	q.sql = ""
+	q.name = ""
 
 	stmtPool.Put(q)
 }

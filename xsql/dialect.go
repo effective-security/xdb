@@ -12,6 +12,9 @@ type SQLDialect interface {
 	// Provider returns the name of the SQL dialect.
 	Provider() string
 
+	// UseNewLines specifies an option to add new lines for each clause
+	UseNewLines(op bool)
+
 	ClearCache()
 	GetCachedQuery(name string) (string, bool)
 	PutCachedQuery(name, query string)
@@ -72,19 +75,20 @@ type SQLDialect interface {
 // When PostgreSQL mode is activated, ? placeholders are
 // replaced with numbered positional arguments like $1, $2...
 type Dialect struct {
-	provider  string
-	cacheOnce sync.Once
-	cacheLock sync.RWMutex
-	cache     sqlCache
+	provider    string
+	cacheOnce   sync.Once
+	cacheLock   sync.RWMutex
+	cache       sqlCache
+	useNewLines bool
 }
 
 var (
 	// NoDialect is a default statement builder mode.
-	NoDialect = SQLDialect(&Dialect{provider: "default"})
+	NoDialect = SQLDialect(&Dialect{provider: "default", useNewLines: true})
 	// Postgres mode is to be used to automatically replace ? placeholders with $1, $2...
-	Postgres = SQLDialect(&Dialect{provider: "postgres"})
+	Postgres = SQLDialect(&Dialect{provider: "postgres", useNewLines: true})
 
-	SQLServer = SQLDialect(&Dialect{provider: "sqlserver"})
+	SQLServer = SQLDialect(&Dialect{provider: "sqlserver", useNewLines: true})
 )
 
 var defaultDialect atomic.Value // *SQLDialect
@@ -105,6 +109,11 @@ func SetDialect(newDefaultDialect SQLDialect) {
 	defaultDialect.Store(newDefaultDialect)
 }
 
+// UseNewLines specifies an option to add new lines for each clause
+func (b *Dialect) UseNewLines(op bool) {
+	b.useNewLines = op
+}
+
 // Provider returns the name of the SQL dialect.
 func (b *Dialect) Provider() string {
 	return b.provider
@@ -117,7 +126,7 @@ Use From, Select, InsertInto or DeleteFrom methods to create
 an instance of an SQL statement builder for common statements.
 */
 func (b *Dialect) New(verb string, args ...any) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	q.addChunk(posSelect, verb, "", args, ", ")
 	return q
 }
@@ -127,7 +136,7 @@ With starts a statement prepended by WITH clause
 and closes a subquery passed as an argument.
 */
 func (b *Dialect) With(queryName string, query Builder) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	return q.With(queryName, query)
 }
 
@@ -135,7 +144,7 @@ func (b *Dialect) With(queryName string, query Builder) Builder {
 From starts a SELECT statement.
 */
 func (b *Dialect) From(expr string, args ...any) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	return q.From(expr, args...)
 }
 
@@ -146,25 +155,25 @@ Consider using From method to start a SELECT statement - you may find
 it easier to read and maintain.
 */
 func (b *Dialect) Select(expr string, args ...any) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	return q.Select(expr, args...)
 }
 
 // Update starts an UPDATE statement.
 func (b *Dialect) Update(tableName string) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	return q.Update(tableName)
 }
 
 // InsertInto starts an INSERT statement.
 func (b *Dialect) InsertInto(tableName string) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	return q.InsertInto(tableName)
 }
 
 // DeleteFrom starts a DELETE statement.
 func (b *Dialect) DeleteFrom(tableName string) Builder {
-	q := getStmt(b)
+	q := b.getStmt()
 	return q.DeleteFrom(tableName)
 }
 

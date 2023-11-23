@@ -16,12 +16,13 @@ func newStmt() any {
 	}
 }
 
-func getStmt(d SQLDialect) *Stmt {
+func (b *Dialect) getStmt() *Stmt {
 	stmt := stmtPool.Get().(*Stmt)
-	stmt.dialect = d
+	stmt.dialect = b
 	stmt.buf = getBuffer()
 	stmt.name = ""
 	stmt.sql = ""
+	stmt.useNewLines = b.useNewLines
 	return stmt
 }
 
@@ -40,11 +41,12 @@ func reuseStmt(q *Stmt) {
 		q.dest = q.dest[:0]
 	}
 	putBuffer(q.buf)
+
 	q.buf = nil
 	q.sql = ""
 	q.name = ""
 
-	stmtPool.Put(q)
+	//stmtPool.Put(q)
 }
 
 func getBuffer() *bytebufferpool.ByteBuffer {
@@ -52,5 +54,5 @@ func getBuffer() *bytebufferpool.ByteBuffer {
 }
 
 func putBuffer(buf *bytebufferpool.ByteBuffer) {
-	bytebufferpool.Put(buf)
+	//bytebufferpool.Put(buf)
 }

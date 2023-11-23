@@ -16,7 +16,7 @@ func TestNewBuilder(t *testing.T) {
 	defer q.Close()
 	sql := q.String()
 	args := q.Args()
-	require.Equal(t, "SELECT * FROM table", sql)
+	require.Equal(t, "SELECT * \nFROM table", sql)
 	require.Empty(t, args)
 }
 
@@ -24,7 +24,7 @@ func TestBasicSelect(t *testing.T) {
 	q := xsql.From("table").Select("id").Where("id > ?", 42).Where("id < ?", 1000)
 	defer q.Close()
 	sql, args := q.String(), q.Args()
-	require.Equal(t, "SELECT id FROM table WHERE id > ? AND id < ?", sql)
+	require.Equal(t, "SELECT id \nFROM table \nWHERE id > ? AND id < ?", sql)
 	require.Equal(t, []any{42, 1000}, args)
 }
 
@@ -32,7 +32,7 @@ func TestSelectWith(t *testing.T) {
 	q := xsql.Postgres.From("table").Select("id, ?", "NULL").Where("id > ?", 42).Where("id < ?", 1000)
 	defer q.Close()
 	sql, args := q.String(), q.Args()
-	require.Equal(t, "SELECT id, $1 FROM table WHERE id > $2 AND id < $3", sql)
+	require.Equal(t, "SELECT id, $1 \nFROM table \nWHERE id > $2 AND id < $3", sql)
 	require.Equal(t, []any{"NULL", 42, 1000}, args)
 }
 
@@ -40,7 +40,7 @@ func TestMixedOrder(t *testing.T) {
 	q := xsql.Select("id").Where("id > ?", 42).From("table").Where("id < ?", 1000)
 	defer q.Close()
 	sql, args := q.String(), q.Args()
-	require.Equal(t, "SELECT id FROM table WHERE id > ? AND id < ?", sql)
+	require.Equal(t, "SELECT id \nFROM table \nWHERE id > ? AND id < ?", sql)
 	require.Equal(t, []any{42, 1000}, args)
 }
 
@@ -48,7 +48,7 @@ func TestClause(t *testing.T) {
 	q := xsql.Select("id").From("table").Where("id > ?", 42).Clause("FETCH NEXT").Clause("FOR UPDATE")
 	defer q.Close()
 	sql, args := q.String(), q.Args()
-	require.Equal(t, "SELECT id FROM table WHERE id > ? FETCH NEXT FOR UPDATE", sql)
+	require.Equal(t, "SELECT id \nFROM table \nWHERE id > ? \nFETCH NEXT \nFOR UPDATE", sql)
 	require.Equal(t, []any{42}, args)
 }
 
@@ -57,7 +57,17 @@ func TestExpr(t *testing.T) {
 		Select("id").
 		Expr("(select 1 from related where table_id = table.id limit 1) AS has_related").
 		Where("id > ?", 42)
-	require.Equal(t, "SELECT id, (select 1 from related where table_id = table.id limit 1) AS has_related FROM table WHERE id > ?", q.String())
+	require.Equal(t, "SELECT id, (select 1 from related where table_id = table.id limit 1) AS has_related \nFROM table \nWHERE id > ?", q.String())
+	require.Equal(t, []any{42}, q.Args())
+	q.Close()
+
+	xsql.Postgres.UseNewLines(true)
+	q = xsql.Postgres.From("table").UseNewLines(true).
+		Select("id").
+		Expr("(select 1 from related where table_id = table.id limit 1) AS has_related").
+		Where("id > ?", 42)
+
+	require.Equal(t, "SELECT id, (select 1 from related where table_id = table.id limit 1) AS has_related \nFROM table \nWHERE id > $1", q.String())
 	require.Equal(t, []any{42}, q.Args())
 	q.Close()
 }
@@ -72,7 +82,7 @@ func TestManyFields(t *testing.T) {
 		q.Select(field)
 	}
 	sql, args := q.String(), q.Args()
-	require.Equal(t, "SELECT id, (id + ?) as id_1, (id + ?) as id_2, (id + ?) as id_3, uno, dos, tres FROM table WHERE id = ?", sql)
+	require.Equal(t, "SELECT id, (id + ?) as id_1, (id + ?) as id_2, (id + ?) as id_3, uno, dos, tres \nFROM table \nWHERE id = ?", sql)
 	require.Equal(t, []any{10, 20, 30, 42}, args)
 }
 
@@ -97,7 +107,7 @@ func TestPgPlaceholders(t *testing.T) {
 		Where("(time < ?)", time.Now().Add(time.Hour*-24*7))
 	defer q.Close()
 	sql, _ := q.String(), q.Args()
-	require.Equal(t, "SELECT id FROM series WHERE time > $1 AND (time < $2)", sql)
+	require.Equal(t, "SELECT id \nFROM series \nWHERE time > $1 AND (time < $2)", sql)
 }
 
 func TestPgPlaceholderEscape(t *testing.T) {
@@ -107,7 +117,7 @@ func TestPgPlaceholderEscape(t *testing.T) {
 		Where("time < ?", time.Now().Add(time.Hour*-24*7))
 	defer q.Close()
 	sql, _ := q.String(), q.Args()
-	require.Equal(t, "SELECT id FROM series WHERE time ?> $1 + 1 AND time < $2", sql)
+	require.Equal(t, "SELECT id \nFROM series \nWHERE time ?> $1 + 1 AND time < $2", sql)
 }
 
 func TestTo(t *testing.T) {
@@ -138,7 +148,7 @@ func TestManyClauses(t *testing.T) {
 	defer q.Close()
 	sql, args := q.String(), q.Args()
 
-	require.Equal(t, "SELECT field FROM table WHERE id > ? UNO DOS TRES QUATRO LIMIT ? OFFSET ? NO LOCK", sql)
+	require.Equal(t, "SELECT field \nFROM table \nWHERE id > ? \nUNO \nDOS \nTRES \nQUATRO \nLIMIT ? \nOFFSET ? \nNO LOCK", sql)
 	require.Equal(t, []any{2, 5, 10}, args)
 }
 
@@ -155,7 +165,7 @@ func TestWith(t *testing.T) {
 		Bind(&row)
 	defer q.Close()
 
-	require.Equal(t, "WITH t AS (SELECT id, quantity FROM orders WHERE ts < ?) SELECT id, quantity FROM t", q.String())
+	require.Equal(t, "WITH t AS (SELECT id, quantity \nFROM orders \nWHERE ts < ?) \nSELECT id, quantity \nFROM t", q.String())
 }
 
 func TestWithRecursive(t *testing.T) {
@@ -170,7 +180,7 @@ func TestWithRecursive(t *testing.T) {
 		GroupBy("region, product")
 	defer q.Close()
 
-	require.Equal(t, "WITH RECURSIVE regional_sales AS (SELECT region, SUM(amount) AS total_sales FROM orders GROUP BY region), top_regions AS (SELECT region FROM regional_sales ORDER BY total_sales DESC LIMIT ?) SELECT region, product, SUM(quantity) AS product_units, SUM(amount) AS product_sales FROM orders WHERE region IN (SELECT region FROM top_regions) GROUP BY region, product", q.String())
+	require.Equal(t, "WITH RECURSIVE regional_sales AS (SELECT region, SUM(amount) AS total_sales \nFROM orders \nGROUP BY region), top_regions AS (SELECT region \nFROM regional_sales \nORDER BY total_sales DESC \nLIMIT ?) \nSELECT region, product, SUM(quantity) AS product_units, SUM(amount) AS product_sales \nFROM orders \nWHERE region IN (SELECT region FROM top_regions) \nGROUP BY region, product", q.String())
 }
 
 func TestSubQueryDialect(t *testing.T) {
@@ -185,7 +195,7 @@ func TestSubQueryDialect(t *testing.T) {
 	defer q.Close()
 
 	// Parameter placeholder numbering should match the arguments
-	require.Equal(t, "SELECT email FROM users u WHERE registered > $1 AND EXISTS (SELECT id FROM orders WHERE user_id = u.id AND amount > $2)", q.String())
+	require.Equal(t, "SELECT email \nFROM users u \nWHERE registered > $1 AND EXISTS (SELECT id \nFROM orders \nWHERE user_id = u.id AND amount > $2)", q.String())
 	require.Equal(t, []any{"2019-01-01", 100}, q.Args())
 }
 
@@ -197,7 +207,7 @@ func TestClone(t *testing.T) {
 	q := xsql.From("table").Select("field").To(&value).Where("id = ?", 42)
 	defer q.Close()
 
-	require.Equal(t, "SELECT field FROM table WHERE id = ?", q.String())
+	require.Equal(t, "SELECT field \nFROM table \nWHERE id = ?", q.String())
 
 	q2 := q.Clone()
 	defer q2.Close()
@@ -238,25 +248,25 @@ func TestClone(t *testing.T) {
 func TestJoin(t *testing.T) {
 	q := xsql.From("orders o").Select("id").Join("users u", "u.id = o.user_id")
 	defer q.Close()
-	require.Equal(t, "SELECT id FROM orders o JOIN users u ON (u.id = o.user_id)", q.String())
+	require.Equal(t, "SELECT id \nFROM orders o JOIN users u ON (u.id = o.user_id)", q.String())
 }
 
 func TestLeftJoin(t *testing.T) {
 	q := xsql.From("orders o").Select("id").LeftJoin("users u", "u.id = o.user_id")
 	defer q.Close()
-	require.Equal(t, "SELECT id FROM orders o LEFT JOIN users u ON (u.id = o.user_id)", q.String())
+	require.Equal(t, "SELECT id \nFROM orders o LEFT JOIN users u ON (u.id = o.user_id)", q.String())
 }
 
 func TestRightJoin(t *testing.T) {
 	q := xsql.From("orders o").Select("id").RightJoin("users u", "u.id = o.user_id")
 	defer q.Close()
-	require.Equal(t, "SELECT id FROM orders o RIGHT JOIN users u ON (u.id = o.user_id)", q.String())
+	require.Equal(t, "SELECT id \nFROM orders o RIGHT JOIN users u ON (u.id = o.user_id)", q.String())
 }
 
 func TestFullJoin(t *testing.T) {
 	q := xsql.From("orders o").Select("id").FullJoin("users u", "u.id = o.user_id")
 	defer q.Close()
-	require.Equal(t, "SELECT id FROM orders o FULL JOIN users u ON (u.id = o.user_id)", q.String())
+	require.Equal(t, "SELECT id \nFROM orders o FULL JOIN users u ON (u.id = o.user_id)", q.String())
 }
 
 func TestUnion(t *testing.T) {
@@ -267,7 +277,7 @@ func TestUnion(t *testing.T) {
 			Select("id, status").
 			Where("status = ?", "wip"))
 	defer q.Close()
-	require.Equal(t, "SELECT id, status FROM tasks WHERE status = ? UNION SELECT id, status FROM tasks WHERE status = ?", q.String())
+	require.Equal(t, "SELECT id, status \nFROM tasks \nWHERE status = ? \nUNION SELECT id, status \nFROM tasks \nWHERE status = ?", q.String())
 }
 
 func TestLimit(t *testing.T) {
@@ -278,7 +288,7 @@ func TestLimit(t *testing.T) {
 		Limit(11).
 		Limit(20)
 	defer q.Close()
-	require.Equal(t, "SELECT id FROM items WHERE id > ? LIMIT ?", q.String())
+	require.Equal(t, "SELECT id \nFROM items \nWHERE id > ? \nLIMIT ?", q.String())
 	require.Equal(t, []any{42, 20}, q.Args())
 }
 
@@ -298,7 +308,7 @@ func TestBindStruct(t *testing.T) {
 		Bind(&u).
 		Where("id = ?", 2)
 	defer q.Close()
-	require.Equal(t, "SELECT id, date, child_time, name FROM users WHERE id = ?", q.String())
+	require.Equal(t, "SELECT id, date, child_time, name \nFROM users \nWHERE id = ?", q.String())
 	require.Equal(t, []any{2}, q.Args())
 	require.EqualValues(t, []any{&u.ID, &u.Date, &u.ChildTime, &u.Name}, q.Dest())
 }
@@ -317,7 +327,11 @@ func TestInsert(t *testing.T) {
 		SetExpr("updated_at", "Now()")
 	q.Returning("id, name, age, count, updated_at")
 
-	exp := `INSERT INTO vars ( id, name, age, count, updated_at ) VALUES ( $1, $2, $3, 1, Now() ) RETURNING id, name, age, count, updated_at, id, name, age, count, updated_at`
+	exp := `INSERT INTO vars 
+( id, name, age, count, updated_at 
+) VALUES ( $1, $2, $3, 1, Now() 
+) 
+RETURNING id, name, age, count, updated_at, id, name, age, count, updated_at`
 	require.Equal(t, exp, q.String())
 	require.Len(t, q.Args(), 3)
 
@@ -333,6 +347,6 @@ func TestBulkInsert(t *testing.T) {
 			Set("no", i).
 			Set("val", i)
 	}
-	require.Equal(t, "INSERT INTO vars ( no, val ) VALUES ( ?, ? ), ( ?, ? ), ( ?, ? ), ( ?, ? ), ( ?, ? )", q.String())
+	require.Equal(t, "INSERT INTO vars \n( no, val \n) VALUES ( ?, ? ), ( ?, ? ), ( ?, ? ), ( ?, ? ), ( ?, ? \n)", q.String())
 	require.Len(t, q.Args(), 10)
 }

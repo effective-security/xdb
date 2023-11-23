@@ -54,6 +54,8 @@ type Builder interface {
 
 	Name() string
 	SetName(name string) Builder
+	// UseNewLines specifies an option to add new lines for each clause
+	UseNewLines(op bool) Builder
 }
 
 // Row is an interface for a single row of data.
@@ -111,6 +113,13 @@ Use New for special cases like this:
 */
 func New(verb string, args ...any) Builder {
 	return defaultDialect.Load().(SQLDialect).New(verb, args...)
+}
+
+// UseNewLines specifies an option to add new lines for each clause
+func UseNewLines(op bool) SQLDialect {
+	d := defaultDialect.Load().(SQLDialect)
+	d.UseNewLines(op)
+	return d
 }
 
 /*
@@ -229,14 +238,21 @@ For other SQL statements use New:
 	}
 */
 type Stmt struct {
-	name    string
-	dialect SQLDialect
-	pos     chunkPos
-	chunks  stmtChunks
-	buf     *bytebufferpool.ByteBuffer
-	sql     string
-	args    []any
-	dest    []any
+	name        string
+	dialect     SQLDialect
+	pos         chunkPos
+	chunks      stmtChunks
+	buf         *bytebufferpool.ByteBuffer
+	sql         string
+	args        []any
+	dest        []any
+	useNewLines bool
+}
+
+// UseNewLines specifies an option to add new lines for each clause
+func (q *Stmt) UseNewLines(op bool) Builder {
+	q.useNewLines = op
+	return q
 }
 
 // Name returns the name of the statement
@@ -472,7 +488,7 @@ func (q *Stmt) In(args ...any) Builder {
 	_, _ = buf.WriteString(")")
 	q.addChunk(posWhere, "", bufToString(&buf.B), args, " ")
 
-	bytebufferpool.Put(buf)
+	//bytebufferpool.Put(buf)
 	return q
 }
 
@@ -679,7 +695,8 @@ func (q *Stmt) String() string {
 				}
 				pos = chunk.pos
 			}
-			q.sql = buf.String()
+			bstr := buf.String()
+			q.sql = strings.TrimLeft(bstr, "\n\r\t ")
 			// Save it for reuse
 			q.dialect.PutCachedQuery(bufStrKey, q.sql)
 			if q.name != "" {
@@ -743,7 +760,7 @@ func (q *Stmt) Close() {
 
 // Clone creates a copy of the statement.
 func (q *Stmt) Clone() Builder {
-	stmt := getStmt(q.dialect)
+	stmt := q.dialect.(*Dialect).getStmt()
 	if cap(stmt.chunks) < len(q.chunks) {
 		stmt.chunks = make(stmtChunks, len(q.chunks), len(q.chunks)+2)
 		copy(stmt.chunks, q.chunks)
@@ -795,7 +812,7 @@ func (q *Stmt) join(joinType, table, on string) (index int) {
 
 	index = q.addChunk(posFrom, "", bufToString(&buf.B), nil, " ")
 
-	bytebufferpool.Put(buf)
+	//bytebufferpool.Put(buf)
 
 	return index
 }
@@ -861,6 +878,9 @@ loop:
 	if addNew {
 		// Insert a new chunk
 		if addClause {
+			if q.useNewLines {
+				q.WriteString("\n")
+			}
 			q.WriteString(clause)
 			if expr != "" {
 				q.WriteString(" ")

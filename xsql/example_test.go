@@ -33,6 +33,8 @@ func Example() {
 		productSales float64
 	)
 
+	xsql.NoDialect.UseNewLines(false)
+	xsql.Postgres.UseNewLines(false)
 	xsql.SetDialect(xsql.Postgres)
 
 	err := xsql.From("orders").
@@ -65,34 +67,34 @@ func Example() {
 }
 
 func ExampleStmt_OrderBy() {
-	q := xsql.Select("id").From("table").OrderBy("id", "name DESC")
+	q := xsql.UseNewLines(false).Select("id").From("table").OrderBy("id", "name DESC")
 	fmt.Println(q.String())
 	// Output: SELECT id FROM table ORDER BY id, name DESC
 }
 
 func ExampleStmt_Limit() {
-	q := xsql.Select("id").From("table").Limit(10)
+	q := xsql.UseNewLines(false).Select("id").From("table").Limit(10)
 	fmt.Println(q.String())
 	// Output: SELECT id FROM table LIMIT ?
 }
 
 func ExampleStmt_Offset() {
-	q := xsql.Select("id").From("table").Limit(10).Offset(10)
+	q := xsql.UseNewLines(false).Select("id").From("table").Limit(10).Offset(10)
 	fmt.Println(q.String())
 	// Output: SELECT id FROM table LIMIT ? OFFSET ?
 }
 
 func ExampleStmt_Paginate() {
-	q := xsql.Select("id").From("table").Paginate(5, 10)
+	q := xsql.UseNewLines(false).Select("id").From("table").Paginate(5, 10)
 	fmt.Println(q.String(), q.Args())
 	q.Close()
 
-	q = xsql.Select("id").From("table").Paginate(1, 10)
+	q = xsql.UseNewLines(false).Select("id").From("table").Paginate(1, 10)
 	fmt.Println(q.String(), q.Args())
 	q.Close()
 
 	// Zero and negative values are replaced with 1
-	q = xsql.Select("id").From("table").Paginate(-1, -1)
+	q = xsql.UseNewLines(false).Select("id").From("table").Paginate(-1, -1)
 	fmt.Println(q.String(), q.Args())
 	q.Close()
 
@@ -103,7 +105,7 @@ func ExampleStmt_Paginate() {
 }
 
 func ExampleStmt_Update() {
-	q := xsql.Update("table").Set("field1", "newvalue").Where("id = ?", 42)
+	q := xsql.UseNewLines(false).Update("table").Set("field1", "newvalue").Where("id = ?", 42)
 	fmt.Println(q.String(), q.Args())
 	q.Close()
 	// Output:
@@ -111,7 +113,7 @@ func ExampleStmt_Update() {
 }
 
 func ExampleStmt_SetExpr() {
-	q := xsql.Update("table").SetExpr("field1", "field2 + 1").Where("id = ?", 42)
+	q := xsql.UseNewLines(false).Update("table").SetExpr("field1", "field2 + 1").Where("id = ?", 42)
 	fmt.Println(q.String())
 	fmt.Println(q.Args())
 	q.Close()
@@ -121,7 +123,7 @@ func ExampleStmt_SetExpr() {
 }
 
 func ExampleStmt_InsertInto() {
-	q := xsql.InsertInto("table").
+	q := xsql.UseNewLines(false).InsertInto("table").
 		Set("field1", "newvalue").
 		SetExpr("field2", "field2 + 1")
 	fmt.Println(q.String())
@@ -133,7 +135,7 @@ func ExampleStmt_InsertInto() {
 }
 
 func ExampleStmt_DeleteFrom() {
-	q := xsql.DeleteFrom("table").Where("id = ?", 42)
+	q := xsql.UseNewLines(false).DeleteFrom("table").Where("id = ?", 42)
 	fmt.Println(q.String())
 	fmt.Println(q.Args())
 	q.Close()
@@ -143,7 +145,7 @@ func ExampleStmt_DeleteFrom() {
 }
 
 func ExampleStmt_GroupBy() {
-	q := xsql.From("incomes").
+	q := xsql.UseNewLines(false).From("incomes").
 		Select("source, sum(amount) as s").
 		Where("amount > ?", 42).
 		GroupBy("source")
@@ -156,7 +158,7 @@ func ExampleStmt_GroupBy() {
 }
 
 func ExampleStmt_Having() {
-	q := xsql.From("incomes").
+	q := xsql.UseNewLines(false).From("incomes").
 		Select("source, sum(amount) as s").
 		Where("amount > ?", 42).
 		GroupBy("source").
@@ -171,7 +173,7 @@ func ExampleStmt_Having() {
 
 func ExampleStmt_Returning() {
 	var newId int
-	q := xsql.InsertInto("table").
+	q := xsql.UseNewLines(false).InsertInto("table").
 		Set("field1", "newvalue").
 		Returning("id").To(&newId)
 	fmt.Println(q.String(), q.Args())
@@ -181,7 +183,9 @@ func ExampleStmt_Returning() {
 }
 
 func ExamplePostgres() {
-	q := xsql.Postgres.From("table").Select("field").Where("id = ?", 42)
+	d := xsql.Postgres
+	d.UseNewLines(false)
+	q := d.From("table").Select("field").Where("id = ?", 42)
 	fmt.Println(q.String())
 	q.Close()
 	// Output:
@@ -189,7 +193,7 @@ func ExamplePostgres() {
 }
 
 func ExampleStmt_With() {
-	q := xsql.From("orders").
+	q := xsql.UseNewLines(false).From("orders").
 		With("regional_sales",
 			xsql.From("orders").
 				Select("region, SUM(amount) AS total_sales").
@@ -211,7 +215,7 @@ func ExampleStmt_With() {
 }
 
 func ExampleStmt_From() {
-	q := xsql.Select("*").
+	q := xsql.UseNewLines(false).Select("*").
 		From("").
 		SubQuery(
 			"(", ") counted_news",
@@ -227,7 +231,7 @@ func ExampleStmt_From() {
 }
 
 func ExampleStmt_SubQuery() {
-	q := xsql.From("orders o").
+	q := xsql.UseNewLines(false).From("orders o").
 		Select("date, region").
 		SubQuery("(", ") AS prev_order_date",
 			xsql.From("orders po").
@@ -246,7 +250,7 @@ func ExampleStmt_SubQuery() {
 }
 
 func ExampleStmt_Clause() {
-	q := xsql.From("empsalary").
+	q := xsql.UseNewLines(false).From("empsalary").
 		Select("sum(salary) OVER w").
 		Clause("WINDOW w AS (PARTITION BY depname ORDER BY salary DESC)")
 	fmt.Println(q.String())
@@ -298,7 +302,7 @@ func ExampleStmt_Bind() {
 }
 
 func ExampleStmt_In() {
-	q := xsql.From("tasks").
+	q := xsql.UseNewLines(false).From("tasks").
 		Select("id, status").
 		Where("status").In("new", "pending", "wip")
 	fmt.Println(q.String())
@@ -311,7 +315,7 @@ func ExampleStmt_In() {
 }
 
 func ExampleStmt_Union() {
-	q := xsql.From("tasks").
+	q := xsql.UseNewLines(false).From("tasks").
 		Select("id, status").
 		Where("status = ?", "new").
 		Union(true, xsql.From("tasks").

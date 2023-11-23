@@ -90,6 +90,9 @@ func forEveryDB(t *testing.T, test func(ctx context.Context, env *dbEnv)) {
 	for n := range envs {
 		env := &envs[n]
 		// Create schema
+		// TODO: investigate
+		env.xsql.ClearCache()
+		//execScript(ctx, env.db, sqlSchemaDrop)
 		err := execScript(ctx, env.db, sqlSchemaCreate)
 		if err != nil {
 			t.Errorf("Failed to create a %s schema: %v", env.driver, err)
@@ -178,11 +181,10 @@ func TestExec(t *testing.T) {
 		q := env.xsql.From("users").
 			Select("count(*)").To(&count).
 			Select("min(id)").To(&userId)
-		defer q.Close()
 
 		q.QueryRow(ctx, env.db)
 
-		require.Equal(t, 3, count)
+		require.Equal(t, 3, count, q.String())
 
 		_, err := env.xsql.DeleteFrom("users").
 			Where("id = ?", userId).
@@ -194,6 +196,7 @@ func TestExec(t *testing.T) {
 		q.QueryRow(ctx, env.db)
 
 		require.Equal(t, 2, count)
+		q.Close()
 	})
 }
 
@@ -330,10 +333,9 @@ func TestQueryReuse(t *testing.T) {
 			refresh_token=EXCLUDED.refresh_token,
 			token_expires_at=EXCLUDED.token_expires_at,
 			login_count = ` + LoginTable.Name + `.login_count + 1,
-			last_login_at=CURRENT_TIMESTAMP
-`).
+			last_login_at=CURRENT_TIMESTAMP`).
 			Returning(LoginTable.AllColumns())
-		//
+		defer q.Close()
 
 		q.NewRow().
 			Set(LoginCol.ID.Name, nil).
@@ -348,15 +350,19 @@ func TestQueryReuse(t *testing.T) {
 			SetExpr(LoginCol.LoginCount.Name, "1").
 			SetExpr(LoginCol.LastLoginAt.Name, "CURRENT_TIMESTAMP")
 
-		exp := `INSERT INTO logins ( id, extern_id, provider, email, email_verified, name, access_token, refresh_token, token_expires_at, login_count, last_login_at ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP ) ON CONFLICT (email) DO UPDATE SET 
+		exp := `INSERT INTO logins 
+( id, extern_id, provider, email, email_verified, name, access_token, refresh_token, token_expires_at, login_count, last_login_at 
+) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP 
+) 
+ON CONFLICT (email) DO UPDATE SET 
 			email_verified=EXCLUDED.email_verified,
 			name=EXCLUDED.name,
 			access_token=EXCLUDED.access_token,
 			refresh_token=EXCLUDED.refresh_token,
 			token_expires_at=EXCLUDED.token_expires_at,
 			login_count = logins.login_count + 1,
-			last_login_at=CURRENT_TIMESTAMP
- RETURNING id,extern_id,provider,email,email_verified,name,access_token,refresh_token,token_expires_at,login_count,last_login_at`
+			last_login_at=CURRENT_TIMESTAMP 
+RETURNING id,extern_id,provider,email,email_verified,name,access_token,refresh_token,token_expires_at,login_count,last_login_at`
 		assert.Equal(t, exp, q.String())
 
 		row := env.db.QueryRowContext(ctx, q.String(), login.ID, login.ExternID, login.Provider, login.Email, login.EmailVerified, login.Name, login.AccessToken, login.RefreshToken, login.TokenExpiresAt)

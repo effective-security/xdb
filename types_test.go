@@ -157,7 +157,7 @@ func TestMetadata(t *testing.T) {
 }
 
 func TestDbTime(t *testing.T) {
-	nb, err := time.Parse(time.RFC3339, "2022-04-01T16:11:15Z")
+	nb, err := time.Parse(time.RFC3339, "2022-04-01T16:11:15.123Z")
 	require.NoError(t, err)
 
 	nbl := nb.Local()
@@ -169,8 +169,8 @@ func TestDbTime(t *testing.T) {
 		str    string
 	}{
 		{val: xdb.Time{}, exp: time.Time{}, isZero: true, str: ""},
-		{val: xdb.Time(nb), exp: nb, isZero: false, str: "2022-04-01T16:11:15Z"},
-		{val: xdb.Time(nbl), exp: nb, isZero: false, str: "2022-04-01T16:11:15Z"},
+		{val: xdb.Time(nb), exp: nb, isZero: false, str: "2022-04-01T16:11:15.123Z"},
+		{val: xdb.Time(nbl), exp: nb, isZero: false, str: "2022-04-01T16:11:15.123Z"},
 	}
 
 	for _, tc := range tcases {
@@ -210,13 +210,13 @@ func TestDbTime(t *testing.T) {
 	assert.Equal(t, xafter.UTC().Unix(), now2.UTC().Unix())
 
 	ms := xnow.UnixMilli()
-	assert.Equal(t, xnow, xdb.FromUnixMilli(ms))
+	assert.Equal(t, xnow.UTC().Truncate(time.Millisecond), xdb.FromUnixMilli(ms).UTC())
 }
 
 func TestDbTimeParse(t *testing.T) {
 	withNano := xdb.ParseTime("2022-11-21T08:39:23.439786Z")
 	assert.False(t, withNano.IsZero())
-	assert.Equal(t, "2022-11-21T08:39:23Z", withNano.String())
+	assert.Equal(t, "2022-11-21T08:39:23.439Z", withNano.String())
 }
 
 func TestDbTimeEncode(t *testing.T) {

@@ -10,6 +10,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// DefaultTimeFormat is the default format for Time.String()
+var DefaultTimeFormat = "2006-01-02T15:04:05.999Z07:00"
+
 // Time implements sql.Time functionality and always returns UTC
 type Time time.Time
 
@@ -45,18 +48,18 @@ func (ns Time) Value() (driver.Value, error) {
 
 // Now returns Time in UTC
 func Now() Time {
-	return Time(time.Now().UTC().Truncate(time.Second))
+	return Time(time.Now().UTC())
 }
 
 // UTC returns Time in UTC,
 func UTC(t time.Time) Time {
-	return Time(t.UTC().Truncate(time.Second))
+	return Time(t.UTC())
 }
 
 // FromNow returns Time in UTC after now,
 // with Second presicions
 func FromNow(after time.Duration) Time {
-	return Time(time.Now().Add(after).UTC().Truncate(time.Second))
+	return Time(time.Now().Add(after).UTC())
 }
 
 // FromUnixMilli returns Time from Unix milliseconds elapsed since January 1, 1970 UTC.
@@ -71,9 +74,19 @@ func ParseTime(val string) Time {
 	if val == "" {
 		return Time{}
 	}
-	t, err := time.Parse(time.RFC3339, val)
-	if err != nil {
+
+	var t time.Time
+	switch len(val) {
+	case len(DefaultTimeFormat):
+		t, _ = time.Parse(DefaultTimeFormat, val)
+	case len(time.RFC3339):
+		t, _ = time.Parse(time.RFC3339, val)
+	case len(time.DateTime):
 		t, _ = time.Parse(time.DateTime, val)
+	case len(time.DateOnly):
+		t, _ = time.Parse(time.DateOnly, val)
+	default:
+		t, _ = time.Parse(time.RFC3339Nano, val)
 	}
 	return Time(t.UTC())
 }
@@ -86,12 +99,12 @@ func (ns Time) UnixMilli() int64 {
 // Add returns Time in UTC after this thime,
 // with Second presicions
 func (ns Time) Add(after time.Duration) Time {
-	return Time(time.Time(ns).Add(after).UTC().Truncate(time.Second))
+	return Time(time.Time(ns).Add(after).UTC())
 }
 
 // UTC returns t with the location set to UTC.
 func (ns Time) UTC() time.Time {
-	return time.Time(ns).UTC().Truncate(time.Second)
+	return time.Time(ns).UTC()
 }
 
 // IsZero reports whether t represents the zero time instant, January 1, year 1, 00:00:00 UTC.
@@ -120,7 +133,7 @@ func (ns Time) String() string {
 	if t.IsZero() {
 		return ""
 	}
-	return t.Format(time.RFC3339)
+	return t.Format(DefaultTimeFormat)
 }
 
 // MarshalJSON implements the json.Marshaler interface.

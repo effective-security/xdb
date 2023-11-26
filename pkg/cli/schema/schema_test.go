@@ -223,7 +223,7 @@ func (s *testSuite) TestGenerate() {
 			Columns: dbschema.Columns{
 				{
 					Name:     "ID",
-					Type:     "numeric",
+					Type:     "int8",
 					Nullable: false,
 				},
 			},

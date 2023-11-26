@@ -158,6 +158,70 @@ func (ns NULLString) Value() (driver.Value, error) {
 	return string(ns), nil
 }
 
+// Int64 represents SQL int64 NULL
+type Int64 int64
+
+// MarshalJSON implements json.Marshaler interface
+func (v Int64) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%d", v)), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (v *Int64) UnmarshalJSON(data []byte) error {
+	s := strings.Trim(string(data), "\"")
+	if s == "" || s == "0" || s == "NULL" {
+		*v = 0
+		return nil
+	}
+
+	f, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return errors.Errorf("expected number value to unmarshal ID: %s", s)
+	}
+	*v = Int64(f)
+	return nil
+}
+
+func (v Int64) String() string {
+	return strconv.FormatInt(int64(v), 10)
+}
+
+// Scan implements the Scanner interface.
+func (v *Int64) Scan(value any) error {
+	if value == nil {
+		return nil
+	}
+
+	var id int64
+	switch vid := value.(type) {
+	case uint64:
+		id = int64(vid)
+	case int64:
+		id = int64(vid)
+	case int:
+		id = int64(vid)
+	case uint:
+		id = int64(vid)
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	*v = Int64(id)
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (v Int64) Value() (driver.Value, error) {
+	// this makes sure ID can be used as NULL in SQL
+	// however this also means that ID(0) will be treated as NULL
+	if v == 0 {
+		return nil, nil
+	}
+
+	// driver.Value support only int64
+	return int64(v), nil
+}
+
 // Int32 represents SQL int NULL
 type Int32 int32
 

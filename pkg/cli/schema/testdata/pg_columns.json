@@ -2,127 +2,195 @@
   {
     "Schema": "public",
     "Name": "org",
+    "IsView": false,
     "Columns": [
       {
         "Name": "id",
         "Type": "bigint",
-        "Nullable":  false,
+        "UdtType": "int8",
+        "Nullable": false,
         "MaxLength": 0
       },
       {
         "Name": "name",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 64
       },
       {
         "Name": "email",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 160
       },
       {
         "Name": "billing_email",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 160
       },
       {
         "Name": "company",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 64
       },
       {
         "Name": "street_address",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 256
       },
       {
         "Name": "city",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 32
       },
       {
         "Name": "postal_code",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 16
       },
       {
         "Name": "region",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 16
       },
       {
         "Name": "country",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 16
       },
       {
         "Name": "phone",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 32
       },
       {
         "Name": "created_at",
         "Type": "timestamp with time zone",
+        "UdtType": "timestamptz",
         "Nullable": true,
         "MaxLength": 0
       },
       {
         "Name": "updated_at",
         "Type": "timestamp with time zone",
+        "UdtType": "timestamptz",
         "Nullable": true,
         "MaxLength": 0
       },
       {
         "Name": "quota",
         "Type": "jsonb",
+        "UdtType": "jsonb",
         "Nullable": true,
         "MaxLength": 0
       },
       {
         "Name": "settings",
         "Type": "jsonb",
+        "UdtType": "jsonb",
         "Nullable": true,
         "MaxLength": 0
       }
     ],
-    "Indexes": null,
-    "PrimaryKey": null
+    "Indexes": [
+      {
+        "Name": "idx_org_email",
+        "IsPrimary": false,
+        "IsUnique": false,
+        "ColumnNames": [
+          "email"
+        ]
+      },
+      {
+        "Name": "idx_org_phone",
+        "IsPrimary": false,
+        "IsUnique": false,
+        "ColumnNames": [
+          "phone"
+        ]
+      },
+      {
+        "Name": "idx_org_updated_at",
+        "IsPrimary": false,
+        "IsUnique": false,
+        "ColumnNames": [
+          "updated_at"
+        ]
+      },
+      {
+        "Name": "orgs_pkey",
+        "IsPrimary": true,
+        "IsUnique": true,
+        "ColumnNames": [
+          "id"
+        ]
+      },
+      {
+        "Name": "unique_orgs_name",
+        "IsPrimary": false,
+        "IsUnique": true,
+        "ColumnNames": [
+          "name"
+        ]
+      }
+    ],
+    "PrimaryKey": {
+      "Name": "id",
+      "Type": "bigint",
+      "UdtType": "int8",
+      "Nullable": false,
+      "MaxLength": 0
+    }
   },
   {
     "Schema": "public",
     "Name": "orgmember",
+    "IsView": false,
     "Columns": [
       {
         "Name": "id",
         "Type": "bigint",
-        "Nullable":  false,
+        "UdtType": "int8",
+        "Nullable": false,
         "MaxLength": 0
       },
       {
         "Name": "org_id",
         "Type": "bigint",
-        "Nullable":  false,
+        "UdtType": "int8",
+        "Nullable": false,
         "MaxLength": 0
       },
       {
         "Name": "user_id",
         "Type": "bigint",
-        "Nullable":  false,
+        "UdtType": "int8",
+        "Nullable": false,
         "MaxLength": 0
       },
       {
         "Name": "role",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 64
       }
     ],
@@ -164,40 +232,107 @@
     "PrimaryKey": {
       "Name": "id",
       "Type": "bigint",
-      "Nullable":  false,
+      "UdtType": "int8",
+      "Nullable": false,
+      "MaxLength": 0
+    }
+  },
+  {
+    "Schema": "public",
+    "Name": "schema_migrations",
+    "IsView": false,
+    "Columns": [
+      {
+        "Name": "version",
+        "Type": "bigint",
+        "UdtType": "int8",
+        "Nullable": false,
+        "MaxLength": 0
+      },
+      {
+        "Name": "dirty",
+        "Type": "boolean",
+        "UdtType": "bool",
+        "Nullable": false,
+        "MaxLength": 0
+      }
+    ],
+    "Indexes": [
+      {
+        "Name": "schema_migrations_pkey",
+        "IsPrimary": true,
+        "IsUnique": true,
+        "ColumnNames": [
+          "version"
+        ]
+      }
+    ],
+    "PrimaryKey": {
+      "Name": "version",
+      "Type": "bigint",
+      "UdtType": "int8",
+      "Nullable": false,
       "MaxLength": 0
     }
   },
   {
     "Schema": "public",
     "Name": "user",
+    "IsView": false,
     "Columns": [
       {
         "Name": "id",
         "Type": "bigint",
-        "Nullable":  false,
+        "UdtType": "int8",
+        "Nullable": false,
         "MaxLength": 0
       },
       {
         "Name": "email",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 160
       },
       {
         "Name": "email_verified",
         "Type": "boolean",
-        "Nullable":  false,
+        "UdtType": "bool",
+        "Nullable": false,
         "MaxLength": 0
       },
       {
         "Name": "name",
         "Type": "character varying",
-        "Nullable":  false,
+        "UdtType": "varchar",
+        "Nullable": false,
         "MaxLength": 64
       }
     ],
-    "Indexes": null,
-    "PrimaryKey": null
+    "Indexes": [
+      {
+        "Name": "unique_users_email",
+        "IsPrimary": false,
+        "IsUnique": true,
+        "ColumnNames": [
+          "email"
+        ]
+      },
+      {
+        "Name": "users_pkey",
+        "IsPrimary": true,
+        "IsUnique": true,
+        "ColumnNames": [
+          "id"
+        ]
+      }
+    ],
+    "PrimaryKey": {
+      "Name": "id",
+      "Type": "bigint",
+      "UdtType": "int8",
+      "Nullable": false,
+      "MaxLength": 0
+    }
   }
 ]

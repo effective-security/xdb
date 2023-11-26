@@ -58,13 +58,21 @@ func TestParseID(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1234567), v)
 
-	id := xdb.ParseID("")
+	_, err = xdb.ParseID("")
+	assert.EqualError(t, err, "bad_request: invalid ID")
+	_, err = xdb.ParseID("@123")
+	assert.EqualError(t, err, "bad_request: invalid ID")
+
+	id := xdb.TryParseID("")
 	assert.Equal(t, uint64(0), id.UInt64())
 
-	id = xdb.ParseID("@123")
+	id = xdb.TryParseID("@123")
 	assert.Equal(t, uint64(0), id.UInt64())
 
-	id = xdb.ParseID("1234567")
+	id = xdb.TryParseID("1234567")
+	assert.Equal(t, uint64(1234567), id.UInt64())
+	id, err = xdb.ParseID("1234567")
+	require.NoError(t, err)
 	assert.Equal(t, uint64(1234567), id.UInt64())
 }
 
@@ -275,4 +283,182 @@ func TestNULLString(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, val, val2)
 	}
+}
+
+func TestID32Value(t *testing.T) {
+	tcases := []struct {
+		in  xdb.ID32
+		exp any
+	}{
+		{in: xdb.ID32(1), exp: int64(1)},
+		{in: xdb.ID32(0), exp: nil},
+	}
+
+	for _, tc := range tcases {
+		dr, err := tc.in.Value()
+		require.NoError(t, err)
+		assert.Equal(t, tc.exp, dr)
+	}
+}
+
+func TestID32Scan(t *testing.T) {
+	tcases := []struct {
+		exp xdb.ID32
+		val any
+	}{
+		{val: int64(1), exp: xdb.ID32(1)},
+		{val: int64(0), exp: xdb.ID32(0)},
+		{val: nil, exp: xdb.ID32(0)},
+	}
+
+	for _, tc := range tcases {
+		var val2 xdb.ID32
+		err := val2.Scan(tc.val)
+		require.NoError(t, err)
+		assert.EqualValues(t, tc.exp, val2)
+	}
+}
+
+func TestInt32Value(t *testing.T) {
+	tcases := []struct {
+		in  xdb.Int32
+		exp any
+	}{
+		{in: xdb.Int32(1), exp: int64(1)},
+		{in: xdb.Int32(0), exp: nil},
+	}
+
+	for _, tc := range tcases {
+		dr, err := tc.in.Value()
+		require.NoError(t, err)
+		assert.Equal(t, tc.exp, dr)
+	}
+}
+
+func TestInt32Scan(t *testing.T) {
+	tcases := []struct {
+		exp xdb.Int32
+		val any
+	}{
+		{val: int64(1), exp: xdb.Int32(1)},
+		{val: int64(0), exp: xdb.Int32(0)},
+		{val: nil, exp: xdb.Int32(0)},
+	}
+
+	for _, tc := range tcases {
+		var val2 xdb.Int32
+		err := val2.Scan(tc.val)
+		require.NoError(t, err)
+		assert.EqualValues(t, tc.exp, val2)
+	}
+}
+
+func TestFloatValue(t *testing.T) {
+	tcases := []struct {
+		in  xdb.Float
+		exp any
+	}{
+		{in: xdb.Float(1.2345), exp: float64(1.2345)},
+		{in: xdb.Float(0), exp: nil},
+	}
+
+	for _, tc := range tcases {
+		dr, err := tc.in.Value()
+		require.NoError(t, err)
+		assert.Equal(t, tc.exp, dr)
+	}
+}
+
+func TestFloatScan(t *testing.T) {
+	tcases := []struct {
+		exp xdb.Float
+		val any
+	}{
+		{val: float64(1.234), exp: xdb.Float(1.234)},
+		{val: float64(0), exp: xdb.Float(0)},
+		{val: nil, exp: xdb.Float(0)},
+	}
+
+	for _, tc := range tcases {
+		var val2 xdb.Float
+		err := val2.Scan(tc.val)
+		require.NoError(t, err)
+		assert.EqualValues(t, tc.exp, val2)
+	}
+}
+
+func TestBoolValue(t *testing.T) {
+	tcases := []struct {
+		in  xdb.Bool
+		exp any
+	}{
+		{in: xdb.Bool(true), exp: true},
+		{in: xdb.Bool(false), exp: nil},
+	}
+
+	for _, tc := range tcases {
+		dr, err := tc.in.Value()
+		require.NoError(t, err)
+		assert.Equal(t, tc.exp, dr)
+	}
+}
+
+func TestBooltScan(t *testing.T) {
+	tcases := []struct {
+		exp xdb.Bool
+		val any
+	}{
+		{val: true, exp: xdb.Bool(true)},
+		{val: false, exp: xdb.Bool(false)},
+		{val: nil, exp: xdb.Bool(false)},
+	}
+
+	for _, tc := range tcases {
+		var val2 xdb.Bool
+		err := val2.Scan(tc.val)
+		require.NoError(t, err)
+		assert.EqualValues(t, tc.exp, val2)
+	}
+}
+
+type withNulls struct {
+	ID      xdb.ID
+	Sid     xdb.ID32
+	Name    xdb.NULLString
+	Price   xdb.Float
+	Type    xdb.Int32
+	IsOwner xdb.Bool
+}
+
+func TestMarshal(t *testing.T) {
+	wn := withNulls{
+		ID:      xdb.NewID(12345453),
+		Sid:     xdb.ID32(1234),
+		Name:    xdb.NULLString("test"),
+		Price:   0.123132,
+		Type:    123233,
+		IsOwner: true,
+	}
+	assert.True(t, wn.ID.Valid())
+
+	js, err := json.Marshal(wn)
+	require.NoError(t, err)
+	assert.Equal(t, `{"ID":12345453,"Sid":1234,"Name":"test","Price":0.123132,"Type":123233,"IsOwner":true}`, string(js))
+
+	var wn2 withNulls
+	err = json.Unmarshal(js, &wn2)
+	require.NoError(t, err)
+
+	assert.Equal(t, wn.ID.String(), wn2.ID.String())
+	assert.Equal(t, wn, wn2)
+
+	var wn3 withNulls
+	js, err = json.Marshal(wn3)
+	require.NoError(t, err)
+	assert.Equal(t, `{"ID":0,"Sid":0,"Name":"","Price":0.000000,"Type":0,"IsOwner":false}`, string(js))
+
+	assert.False(t, wn3.ID.Valid())
+
+	assert.True(t, wn3.ID.Invalid())
+	assert.True(t, wn3.ID.IsZero())
 }

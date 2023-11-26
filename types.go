@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/effective-security/porto/x/slices"
 	"github.com/pkg/errors"
 )
 
@@ -155,6 +156,197 @@ func (ns NULLString) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns), nil
+}
+
+// Int32 represents SQL int NULL
+type Int32 int32
+
+// MarshalJSON implements json.Marshaler interface
+func (v Int32) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%d", v)), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (v *Int32) UnmarshalJSON(data []byte) error {
+	s := strings.Trim(string(data), "\"")
+	if s == "" || s == "0" || s == "NULL" {
+		*v = 0
+		return nil
+	}
+
+	f, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return errors.Errorf("expected number value to unmarshal ID: %s", s)
+	}
+	*v = Int32(f)
+	return nil
+}
+
+func (v Int32) String() string {
+	return strconv.FormatInt(int64(v), 10)
+}
+
+// Scan implements the Scanner interface.
+func (v *Int32) Scan(value any) error {
+	if value == nil {
+		return nil
+	}
+
+	var id int64
+	switch vid := value.(type) {
+	case uint64:
+		id = int64(vid)
+	case int64:
+		id = int64(vid)
+	case int:
+		id = int64(vid)
+	case uint:
+		id = int64(vid)
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	*v = Int32(id)
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (v Int32) Value() (driver.Value, error) {
+	// this makes sure ID can be used as NULL in SQL
+	// however this also means that ID(0) will be treated as NULL
+	if v == 0 {
+		return nil, nil
+	}
+
+	// driver.Value support only int64
+	return int64(v), nil
+}
+
+// Float represents SQL float64 NULL
+type Float float64
+
+// MarshalJSON implements json.Marshaler interface
+func (v Float) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%f", v)), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (v *Float) UnmarshalJSON(data []byte) error {
+	s := strings.Trim(string(data), "\"")
+	if s == "" || s == "0" || s == "NULL" {
+		*v = 0
+		return nil
+	}
+
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return errors.Errorf("expected number value to unmarshal ID: %s", s)
+	}
+	*v = Float(f)
+	return nil
+}
+
+func (v Float) String() string {
+	return strconv.FormatFloat(float64(v), 'f', 6, 64)
+}
+
+// Scan implements the Scanner interface.
+func (v *Float) Scan(value any) error {
+	if value == nil {
+		return nil
+	}
+
+	var id float64
+	switch vid := value.(type) {
+	case uint64:
+		id = float64(vid)
+	case int64:
+		id = float64(vid)
+	case int:
+		id = float64(vid)
+	case uint:
+		id = float64(vid)
+	case float32:
+		id = float64(vid)
+	case float64:
+		id = float64(vid)
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	*v = Float(id)
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (v Float) Value() (driver.Value, error) {
+	// this makes sure ID can be used as NULL in SQL
+	// however this also means that ID(0) will be treated as NULL
+	if v == 0 {
+		return nil, nil
+	}
+
+	// driver.Value support only float64
+	return float64(v), nil
+}
+
+// Bool represents SQL bool NULL
+type Bool bool
+
+// MarshalJSON implements json.Marshaler interface
+func (v Bool) MarshalJSON() ([]byte, error) {
+	return []byte(v.String()), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (v *Bool) UnmarshalJSON(data []byte) error {
+	s := strings.Trim(string(data), "\"")
+	if s == "true" || s == "1" || s == "TRUE" {
+		*v = true
+	} else {
+		*v = false
+	}
+	return nil
+}
+
+func (v Bool) String() string {
+	return slices.Select(bool(v), "true", "false")
+}
+
+// Scan implements the Scanner interface.
+func (v *Bool) Scan(value any) error {
+	if value == nil {
+		return nil
+	}
+
+	var id bool
+	switch vid := value.(type) {
+	case uint64:
+		id = vid > 0
+	case int64:
+		id = vid > 0
+	case int:
+		id = vid > 0
+	case uint:
+		id = vid > 0
+	case bool:
+		id = vid
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	*v = Bool(id)
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (v Bool) Value() (driver.Value, error) {
+	// this makes sure ID can be used as NULL in SQL
+	// however this also means that ID(0) will be treated as NULL
+	if !v {
+		return nil, nil
+	}
+	return bool(v), nil
 }
 
 // IsNotFoundError returns true, if error is NotFound

@@ -13,6 +13,9 @@ import (
 // DefaultTimeFormat is the default format for Time.String()
 var DefaultTimeFormat = "2006-01-02T15:04:05.999Z07:00"
 
+// DefaultTrucate is the default time to truncate as Postgres time precision is default to 6
+var DefaultTrucate = time.Microsecond
+
 // Time implements sql.Time functionality and always returns UTC
 type Time time.Time
 
@@ -48,18 +51,18 @@ func (ns Time) Value() (driver.Value, error) {
 
 // Now returns Time in UTC
 func Now() Time {
-	return Time(time.Now().UTC())
+	return Time(time.Now().Truncate(DefaultTrucate).UTC())
 }
 
 // UTC returns Time in UTC,
 func UTC(t time.Time) Time {
-	return Time(t.UTC())
+	return Time(t.Truncate(DefaultTrucate).UTC())
 }
 
 // FromNow returns Time in UTC after now,
 // with Second presicions
 func FromNow(after time.Duration) Time {
-	return Time(time.Now().Add(after).UTC())
+	return Time(time.Now().Add(after).Truncate(DefaultTrucate).UTC())
 }
 
 // FromUnixMilli returns Time from Unix milliseconds elapsed since January 1, 1970 UTC.
@@ -88,7 +91,7 @@ func ParseTime(val string) Time {
 	default:
 		t, _ = time.Parse(time.RFC3339Nano, val)
 	}
-	return Time(t.UTC())
+	return Time(t.Truncate(DefaultTrucate).UTC())
 }
 
 // UnixMilli returns t as a Unix time, the number of milliseconds elapsed since January 1, 1970 UTC.
@@ -99,7 +102,7 @@ func (ns Time) UnixMilli() int64 {
 // Add returns Time in UTC after this thime,
 // with Second presicions
 func (ns Time) Add(after time.Duration) Time {
-	return Time(time.Time(ns).Add(after).UTC())
+	return Time(time.Time(ns).Add(after).Truncate(DefaultTrucate).UTC())
 }
 
 // UTC returns t with the location set to UTC.

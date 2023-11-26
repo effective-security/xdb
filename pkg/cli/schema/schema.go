@@ -14,6 +14,7 @@ import (
 	"github.com/effective-security/porto/x/slices"
 	"github.com/effective-security/xdb/pkg/cli"
 	"github.com/effective-security/xdb/schema"
+	"github.com/effective-security/xpki/x/fileutil"
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
@@ -132,18 +133,20 @@ func (a *PrintFKCmd) Run(ctx *cli.Cli) error {
 
 // GenerateCmd generates database schema
 type GenerateCmd struct {
-	DB           string   `help:"database name" required:""`
-	Schema       string   `help:"optional schema name to filter"`
-	Table        []string `help:"optional, list of tables, default: all tables"`
-	View         []string `help:"optional, list of views"`
-	Dependencies bool     `help:"optional, to discover all dependencies"`
-	OutModel     string   `help:"folder name to store model files"`
-	OutSchema    string   `help:"folder name to store schema files"`
-	PkgModel     string   `help:"package name to override from --out-model path"`
-	PkgSchema    string   `help:"package name to override from --out-schema path"`
-	StructSuffix string   `help:"optional, suffix for struct names"`
-	Imports      []string `help:"optional go imports"`
-	UseSchema    bool     `help:"optional, use schema name in table name"`
+	DB           string            `help:"database name" required:""`
+	Schema       string            `help:"optional schema name to filter"`
+	Table        []string          `help:"optional, list of tables, default: all tables"`
+	View         []string          `help:"optional, list of views"`
+	Dependencies bool              `help:"optional, to discover all dependencies"`
+	OutModel     string            `help:"folder name to store model files"`
+	OutSchema    string            `help:"folder name to store schema files"`
+	PkgModel     string            `help:"package name to override from --out-model path"`
+	PkgSchema    string            `help:"package name to override from --out-schema path"`
+	StructSuffix string            `help:"optional, suffix for struct names"`
+	Imports      []string          `help:"optional go imports"`
+	UseSchema    bool              `help:"optional, use schema name in table name"`
+	Type         map[string]string `help:"optional, map of types to override"`
+	TypesDef     string            `help:"optional, path to types definition file"`
 }
 
 // Run the command
@@ -196,13 +199,12 @@ var templateFuncMap = template.FuncMap{
 	"concat": func(args ...string) string {
 		return strings.Join(args, "")
 	},
-	"join":  strings.Join,
-	"lower": strings.ToLower,
+	"join":        strings.Join,
+	"lower":       strings.ToLower,
+	"sqlToGoType": toGoType,
 }
 
 func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
-	templateFuncMap["sqlToGoType"] = sqlToGoType(provider)
-
 	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
@@ -218,6 +220,22 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		dialect = "xsql.SQLServer"
 	} else {
 		dialect = "xsql.NoDialect"
+	}
+
+	if a.TypesDef != "" {
+		var defs map[string]string
+		err := fileutil.Unmarshal(a.TypesDef, &defs)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to load types definition")
+		}
+		for k, v := range defs {
+			typeByColumnName[k] = v
+		}
+
+	}
+
+	for k, v := range a.Type {
+		typeByColumnName[k] = v
 	}
 
 	schemas := map[string]schema.Tables{}

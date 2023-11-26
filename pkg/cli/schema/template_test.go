@@ -19,15 +19,15 @@ func TestSqlToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "int", Nullable: true},
-			exp: "*int32",
+			exp: "xdb.Int32",
 		},
 		{
 			col: dbschema.Column{Type: "int", Nullable: false, Name: "AccountId"},
-			exp: "uint32",
+			exp: "xdb.ID32",
 		},
 		{
 			col: dbschema.Column{Type: "int", Nullable: true, Name: "RefId"},
-			exp: "*uint32",
+			exp: "xdb.ID32",
 		},
 
 		{
@@ -36,7 +36,7 @@ func TestSqlToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "bigint", Nullable: true},
-			exp: "*int64",
+			exp: "xdb.Int64",
 		},
 		{
 			col: dbschema.Column{Type: "bigint", Nullable: false, Name: "id"},
@@ -52,7 +52,7 @@ func TestSqlToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "decimal", Nullable: true},
-			exp: "*float64",
+			exp: "xdb.Float",
 		},
 		{
 			col: dbschema.Column{Type: "bit", Nullable: false},
@@ -60,7 +60,7 @@ func TestSqlToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "bit", Nullable: true},
-			exp: "*bool",
+			exp: "xdb.Bool",
 		},
 		{
 			col: dbschema.Column{Type: "varchar", Nullable: false},
@@ -90,13 +90,12 @@ func TestSqlToGoType(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.col.Type, func(t *testing.T) {
-			got := sqlserverToGoType(&tc.col)
+			got := toGoType(&tc.col)
 			assert.Equal(t, tc.exp, got, "sqlToGoType(%v) = %s; want %s", tc.col, got, tc.exp)
 		})
 	}
 
-	assert.Panics(t, func() { sqlserverToGoType(&dbschema.Column{Type: "unknown"}) }, "sqlserverToGoType(unknown) should panic")
-	assert.Panics(t, func() { sqlToGoType("unknown") }, "sqlToGoType(unknown) should panic")
+	assert.Panics(t, func() { toGoType(&dbschema.Column{Type: "unknown"}) }, "toGoType(unknown) should panic")
 }
 
 func TestPgToGoType(t *testing.T) {
@@ -111,7 +110,7 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "smallint", UdtType: "int2", Nullable: true},
-			exp: "*int16",
+			exp: "xdb.Int32",
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int2", Nullable: false},
@@ -119,7 +118,7 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int2", Nullable: true},
-			exp: "*int16",
+			exp: "xdb.Int32",
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int4", Nullable: false},
@@ -127,15 +126,15 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int4", Nullable: true},
-			exp: "*int32",
+			exp: "xdb.Int32",
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int4", Nullable: false, Name: "AccountId"},
-			exp: "uint32",
+			exp: "xdb.ID32",
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int4", Nullable: true, Name: "refId"},
-			exp: "*uint32",
+			exp: "xdb.ID32",
 		},
 
 		{
@@ -144,7 +143,7 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "int", UdtType: "int8", Nullable: true},
-			exp: "*int64",
+			exp: "xdb.Int64",
 		},
 		{
 			col: dbschema.Column{Type: "bigint", Name: "test_id", Nullable: false},
@@ -156,7 +155,7 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "bigint", Nullable: true},
-			exp: "*int64",
+			exp: "xdb.Int64",
 		},
 		{
 			col: dbschema.Column{Type: "decimal", Nullable: false},
@@ -164,7 +163,7 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "decimal", Nullable: true},
-			exp: "*float64",
+			exp: "xdb.Float",
 		},
 		{
 			col: dbschema.Column{Type: "real", Nullable: false},
@@ -172,7 +171,7 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "real", Nullable: true},
-			exp: "*float32",
+			exp: "xdb.Float",
 		},
 		{
 			col: dbschema.Column{Type: "boolean", Nullable: false},
@@ -180,22 +179,22 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "boolean", Nullable: true},
-			exp: "*bool",
+			exp: "xdb.Bool",
 		},
 		{
-			col: dbschema.Column{Type: "varchar", Nullable: false},
+			col: dbschema.Column{UdtType: "varchar", Nullable: false},
 			exp: "string",
 		},
 		{
-			col: dbschema.Column{Type: "varchar", Nullable: true},
+			col: dbschema.Column{UdtType: "varchar", Nullable: true},
 			exp: "xdb.NULLString",
 		},
 		{
-			col: dbschema.Column{Type: "timestamp with time zone", Nullable: false},
+			col: dbschema.Column{Type: "timestamp with time zone", UdtType: "timestamptz", Nullable: false},
 			exp: "xdb.Time",
 		},
 		{
-			col: dbschema.Column{Type: "timestamp without time zone", Nullable: true},
+			col: dbschema.Column{Type: "timestamp without time zone", UdtType: "timestamp", Nullable: true},
 			exp: "xdb.Time",
 		},
 		{
@@ -226,13 +225,12 @@ func TestPgToGoType(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.col.Type, func(t *testing.T) {
-			got := postgresToGoType(&tc.col)
-			assert.Equal(t, tc.exp, got, "postgresToGoType(%v) = %s; want %s", tc.col, got, tc.exp)
+			got := toGoType(&tc.col)
+			assert.Equal(t, tc.exp, got, "toGoType(%v) = %s; want %s", tc.col, got, tc.exp)
 		})
 	}
 
-	assert.Panics(t, func() { postgresToGoType(&dbschema.Column{Type: "unknown"}) }, "postgresToGoType(unknown) should panic")
-	assert.Panics(t, func() { sqlToGoType("unknown") }, "sqlToGoType(unknown) should panic")
+	assert.Panics(t, func() { toGoType(&dbschema.Column{Type: "unknown"}) }, "toGoType(unknown) should panic")
 }
 
 func TestGoName(t *testing.T) {

@@ -319,6 +319,40 @@ func TestID32Scan(t *testing.T) {
 	}
 }
 
+func TestInt64Value(t *testing.T) {
+	tcases := []struct {
+		in  xdb.Int64
+		exp any
+	}{
+		{in: xdb.Int64(1), exp: int64(1)},
+		{in: xdb.Int64(0), exp: nil},
+	}
+
+	for _, tc := range tcases {
+		dr, err := tc.in.Value()
+		require.NoError(t, err)
+		assert.Equal(t, tc.exp, dr)
+	}
+}
+
+func TestInt64Scan(t *testing.T) {
+	tcases := []struct {
+		exp xdb.Int64
+		val any
+	}{
+		{val: int64(1), exp: xdb.Int64(1)},
+		{val: int64(0), exp: xdb.Int64(0)},
+		{val: nil, exp: xdb.Int64(0)},
+	}
+
+	for _, tc := range tcases {
+		var val2 xdb.Int64
+		err := val2.Scan(tc.val)
+		require.NoError(t, err)
+		assert.EqualValues(t, tc.exp, val2)
+	}
+}
+
 func TestInt32Value(t *testing.T) {
 	tcases := []struct {
 		in  xdb.Int32
@@ -403,7 +437,7 @@ func TestBoolValue(t *testing.T) {
 	}
 }
 
-func TestBooltScan(t *testing.T) {
+func TestBoolScan(t *testing.T) {
 	tcases := []struct {
 		exp xdb.Bool
 		val any

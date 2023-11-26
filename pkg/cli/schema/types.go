@@ -4,18 +4,81 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/effective-security/porto/x/slices"
 	"github.com/effective-security/xdb/schema"
 )
 
-func sqlToGoType(provider string) func(c *schema.Column) string {
-	switch provider {
-	case "postgres":
-		return postgresToGoType
-	case "sqlserver":
-		return sqlserverToGoType
-	default:
-		panic("unknown provider")
-	}
+var typeByColumnName = map[string]string{}
+
+var typeByColumnType = map[string]string{
+	"id bigint":      "xdb.ID",
+	"id bigint NULL": "xdb.ID",
+	"id int8":        "xdb.ID",
+	"id int8 NULL":   "xdb.ID",
+
+	"id int":       "xdb.ID32",
+	"id int NULL":  "xdb.ID32",
+	"id int4":      "xdb.ID32",
+	"id int4 NULL": "xdb.ID32",
+
+	"bigint":      "int64",
+	"bigint NULL": "xdb.Int64",
+
+	"int8":     "int64",
+	"int4":     "int32",
+	"int":      "int32",
+	"int2":     "int16",
+	"smallint": "int16",
+	"tinyint":  "int8",
+
+	"decimal": "float64",
+	"numeric": "float64",
+	"real":    "float32",
+
+	"bool":    "bool",
+	"boolean": "bool",
+	"bit":     "bool",
+
+	"jsonb": "xdb.NULLString",
+	"bytea": "[]byte",
+
+	"nchar":            "string",
+	"nvarchar":         "string",
+	"char":             "string",
+	"varchar":          "string",
+	"bpchar":           "string",
+	"text":             "string",
+	"uniqueidentifier": "string",
+
+	"int8 NULL":     "xdb.Int64",
+	"int4 NULL":     "xdb.Int32",
+	"int NULL":      "xdb.Int32",
+	"int2 NULL":     "xdb.Int32",
+	"smallint NULL": "xdb.Int32",
+	"tinyint NULL":  "xdb.Int32",
+
+	"bool NULL":    "bool",
+	"boolean NULL": "xdb.Bool",
+	"bit NULL":     "xdb.Bool",
+
+	"decimal NULL": "xdb.Float",
+	"numeric NULL": "xdb.Float",
+	"real NULL":    "xdb.Float",
+
+	"time":        "xdb.Time",
+	"date":        "xdb.Time",
+	"datetime":    "xdb.Time",
+	"datetime2":   "xdb.Time",
+	"timestamp":   "xdb.Time",
+	"timestamptz": "xdb.Time",
+
+	"nchar NULL":            "xdb.NULLString",
+	"nvarchar NULL":         "xdb.NULLString",
+	"char NULL":             "xdb.NULLString",
+	"bpchar NULL":           "xdb.NULLString",
+	"varchar NULL":          "xdb.NULLString",
+	"text NULL":             "xdb.NULLString",
+	"uniqueidentifier NULL": "xdb.NULLString",
 }
 
 func isID(c *schema.Column) bool {
@@ -25,62 +88,16 @@ func isID(c *schema.Column) bool {
 		strings.HasSuffix(c.Name, "ID")
 }
 
-func postgresToGoType(c *schema.Column) string {
-	ptr := ""
-	if c.Nullable {
-		ptr = "*"
+func toGoType(c *schema.Column) string {
+
+	if res := typeByColumnName[c.Name]; res != "" {
+		return res
+	}
+	if res := typeByColumnName[c.SchemaName]; res != "" {
+		return res
 	}
 
-	switch c.Type {
-
-	case "bigint":
-		if isID(c) {
-			return "xdb.ID"
-		}
-
-		return ptr + "int64"
-
-	case "int", "integer":
-		typeName := "int"
-		switch c.UdtType {
-		case "int2":
-			typeName = "int16"
-		case "int4":
-			typeName = "int32"
-		case "int8":
-			typeName = "int64"
-		}
-		if isID(c) {
-			typeName = "u" + typeName
-		}
-		return ptr + typeName
-	case "smallint":
-		return ptr + "int16"
-	case "decimal", "numeric":
-		return ptr + "float64"
-
-	case "real":
-		return ptr + "float32"
-
-	case "boolean":
-		return ptr + "bool"
-
-	case "jsonb":
-		return "xdb.NULLString"
-
-	case "char", "varchar", "character", "character varying", "text":
-		if c.Nullable {
-			return "xdb.NULLString"
-		}
-		return "string"
-
-	case "timestamp", "timestamp with time zone", "timestamp without time zone":
-		return "xdb.Time"
-
-	case "bytea":
-		return "[]byte"
-
-	case "ARRAY":
+	if c.Type == "ARRAY" {
 		typeName := "[]"
 		switch c.UdtType {
 		case "_int8":
@@ -95,63 +112,29 @@ func postgresToGoType(c *schema.Column) string {
 			panic(fmt.Sprintf("don't know how to convert ARRAY: %s [%s]", c.UdtType, c.Name))
 		}
 		return typeName
-
-	default:
-		panic(fmt.Sprintf("don't know how to convert type: %s [%s]", c.Type, c.Name))
-	}
-}
-
-func sqlserverToGoType(c *schema.Column) string {
-	ptr := ""
-	if c.Nullable {
-		ptr = "*"
 	}
 
-	switch c.Type {
+	typ := slices.StringsCoalesce(c.UdtType, c.Type)
+	typs := []string{typ}
 
-	case "bigint":
-		if isID(c) {
-			return "xdb.ID"
-		}
+	if isID(c) {
+		typs = []string{"id " + typ, typ}
+	}
 
-		return ptr + "int64"
-
-	case "int", "integer":
-		if isID(c) {
-			return ptr + "uint32"
-		}
-		return ptr + "int32"
-
-	case "smallint":
-		return ptr + "int16"
-
-	case "tinyint":
-		return ptr + "int8"
-
-	case "decimal", "numeric":
-		return ptr + "float64"
-
-	case "bit", "boolean":
-		return ptr + "bool"
-
-	case "jsonb":
-		return "xdb.NULLString"
-
-	case "char", "nchar", "varchar", "varchar2", "nvarchar", "character", "character varying", "text":
+	for _, typ := range typs {
 		if c.Nullable {
-			return "xdb.NULLString"
+			if res := typeByColumnType[typ+" NULL"]; res != "" {
+				return res
+			}
 		}
-		return ptr + "string"
-
-	case "uniqueidentifier":
-		if c.Nullable {
-			return "xdb.NULLString"
+		if res := typeByColumnType[typ]; res != "" {
+			return res
 		}
-		return "string"
-
-	case "time", "date", "datetime", "datetime2":
-		return "xdb.Time"
-	default:
-		panic(fmt.Sprintf("don't know how to convert type: %s [%s]", c.Type, c.Name))
 	}
+
+	panic(fmt.Sprintf("don't know how to convert type: %s (%s) %s [%s]",
+		c.Type,
+		c.UdtType,
+		slices.Select(c.Nullable, "NULL", "NOT NULL"),
+		c.Name))
 }

@@ -2,6 +2,7 @@ package xdb_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/effective-security/xdb"
@@ -14,7 +15,11 @@ func TestID(t *testing.T) {
 	assert.Panics(t, func() { xdb.MustID("abd") })
 	assert.Panics(t, func() { xdb.MustID("") })
 
-	id := xdb.MustID("123456789")
+	var id xdb.ID
+	assert.Empty(t, id.String())
+	assert.Equal(t, uint64(0), id.UInt64())
+
+	id = xdb.MustID("123456789")
 	assert.Equal(t, uint64(123456789), id.UInt64())
 	assert.Equal(t, "123456789", id.String())
 	assert.False(t, id.IsZero())
@@ -123,7 +128,14 @@ type idTest struct {
 
 func TestIDLog(t *testing.T) {
 	var id xdb.ID
+
+	s, ok := any(&id).(fmt.Stringer)
+	require.True(t, ok)
+	_, ok = any(id).(fmt.Stringer)
+	require.True(t, ok)
+	assert.Equal(t, "", s.String())
 	assert.Equal(t, "", id.String())
+	assert.Equal(t, `""`, xlog.EscapedString(&id))
 	assert.Equal(t, `""`, xlog.EscapedString(id))
 
 	b, err := json.Marshal(id)
@@ -135,6 +147,10 @@ func TestIDLog(t *testing.T) {
 	b, err = json.Marshal(id)
 	require.NoError(t, err)
 	assert.Equal(t, `123456789`, string(b))
+
+	id2 := id
+	assert.Equal(t, id, id2)
+	assert.Equal(t, id.String(), id2.String())
 
 	b, err = json.Marshal(idTest{})
 	require.NoError(t, err)
@@ -149,5 +165,7 @@ func TestIDLog(t *testing.T) {
 	var c2 idTest
 	err = json.Unmarshal([]byte(exp), &c2)
 	require.NoError(t, err)
+	assert.NotEqual(t, c1, c2)
+	assert.Equal(t, c1.ID.String(), c2.ID.String())
 	assert.Equal(t, c1, c2)
 }

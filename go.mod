@@ -6,7 +6,7 @@ require (
 	dario.cat/mergo v1.0.0
 	github.com/alecthomas/kong v0.8.1
 	github.com/effective-security/porto v0.18.0
-	github.com/effective-security/x v0.1.0
+	github.com/effective-security/x v0.1.1-0.20231127132411-787e96263399
 	github.com/effective-security/xlog v0.6.1-0.20231117065932-e993e47f2aa3
 	github.com/effective-security/xpki v0.13.1-0.20231127104054-d907d7a83e58
 	github.com/ettle/strcase v0.2.0

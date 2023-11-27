@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
-	"github.com/effective-security/porto/x/slices"
+	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/print"
 	"github.com/effective-security/xdb/schema"

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/effective-security/porto/x/slices"
+	"github.com/effective-security/x/slices"
 	"github.com/pkg/errors"
 )
 

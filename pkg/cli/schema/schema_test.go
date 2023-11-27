@@ -3,7 +3,7 @@ package schema
 import (
 	"testing"
 
-	"github.com/effective-security/porto/x/fileutil"
+	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/xdb/mocks/mockschema"
 	"github.com/effective-security/xdb/pkg/cli/clisuite"
 	dbschema "github.com/effective-security/xdb/schema"
@@ -199,7 +199,7 @@ func (s *testSuite) TestGenerate() {
 	require := s.Require()
 
 	var res dbschema.Tables
-	err := fileutil.Unmarshal("testdata/pg_columns.json", &res)
+	err := configloader.Unmarshal("testdata/pg_columns.json", &res)
 	require.NoError(err)
 
 	cmd := GenerateCmd{

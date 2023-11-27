@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/effective-security/porto/pkg/flake"
-	"github.com/effective-security/porto/x/fileutil"
+	"github.com/effective-security/x/configloader"
+	"github.com/effective-security/x/flake"
+	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb/migrate"
-	"github.com/effective-security/xpki/x/slices"
 	"github.com/pkg/errors"
 )
 
@@ -117,7 +117,7 @@ type Provider interface {
 
 // Open returns an SQL connection instance, provider name or error
 func Open(dataSource, database string) (*sql.DB, string, string, error) {
-	ds, err := fileutil.LoadConfigWithSchema(dataSource)
+	ds, err := configloader.ResolveValue(dataSource)
 	if err != nil {
 		return nil, "", "", errors.WithMessagef(err, "failed to load config")
 	}
@@ -203,7 +203,7 @@ type Source struct {
 // ParseConnectionString return parsed Source from
 // sqlserver://username:password@host/instance?param1=value&param2=value
 func ParseConnectionString(dataSource string) (*Source, error) {
-	ds, err := fileutil.LoadConfigWithSchema(dataSource)
+	ds, err := configloader.ResolveValue(dataSource)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load config")
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/effective-security/porto/x/slices"
+	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb/schema"
 )
 

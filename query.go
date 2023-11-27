@@ -3,7 +3,7 @@ package xdb
 import (
 	"context"
 
-	"github.com/effective-security/porto/x/slices"
+	"github.com/effective-security/x/slices"
 	"github.com/pkg/errors"
 )
 
@@ -61,7 +61,7 @@ func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB
 // if there are more rows to fetch
 func (p *Result[T, RowPointer]) Execute(ctx context.Context, sql DB, query string, args ...any) error {
 	var err error
-	limit := slices.NvlNumber(p.Limit, DefaultPageSize)
+	limit := slices.NumbersCoalesce(p.Limit, DefaultPageSize)
 
 	list, err := ExecuteListQuery[T, RowPointer](ctx, sql, query, args...)
 	if err != nil {

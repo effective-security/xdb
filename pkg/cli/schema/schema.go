@@ -11,10 +11,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/effective-security/porto/x/slices"
+	"github.com/effective-security/x/configloader"
+	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb/pkg/cli"
 	"github.com/effective-security/xdb/schema"
-	"github.com/effective-security/xpki/x/fileutil"
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
 	"github.com/pkg/errors"
@@ -224,7 +224,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 
 	if a.TypesDef != "" {
 		var defs map[string]string
-		err := fileutil.Unmarshal(a.TypesDef, &defs)
+		err := configloader.Unmarshal(a.TypesDef, &defs)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to load types definition")
 		}

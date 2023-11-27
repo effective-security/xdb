@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb"
-	"github.com/effective-security/xpki/x/slices"
 	"github.com/pkg/errors"
 )
 

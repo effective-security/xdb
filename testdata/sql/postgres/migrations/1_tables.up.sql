@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.user
     email character varying(160) COLLATE pg_catalog."default" NOT NULL,
     email_verified boolean NOT NULL,
     name character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    uuid uuid NULL,
     CONSTRAINT users_pkey PRIMARY KEY (id)
 )
 WITH (

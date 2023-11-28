@@ -49,6 +49,7 @@ var typeByColumnType = map[string]string{
 	"bpchar":           "string",
 	"text":             "string",
 	"uniqueidentifier": "string",
+	"uuid":             "string",
 
 	"int8 NULL":     "xdb.Int64",
 	"int4 NULL":     "xdb.Int32",
@@ -79,6 +80,7 @@ var typeByColumnType = map[string]string{
 	"varchar NULL":          "xdb.NULLString",
 	"text NULL":             "xdb.NULLString",
 	"uniqueidentifier NULL": "xdb.NULLString",
+	"uuid NULL":             "xdb.NULLString",
 }
 
 func isID(c *schema.Column) bool {

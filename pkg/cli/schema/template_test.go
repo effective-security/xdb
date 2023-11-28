@@ -221,6 +221,21 @@ func TestPgToGoType(t *testing.T) {
 			col: dbschema.Column{Type: "ARRAY", UdtType: "_varchar", Nullable: true},
 			exp: "pq.StringArray",
 		},
+		{
+			col: dbschema.Column{Type: "uniqueidentifier", Nullable: false},
+			exp: "string",
+		},
+		{
+			col: dbschema.Column{Type: "uuid", UdtType: "uuid", Nullable: false},
+			exp: "string",
+		}, {
+			col: dbschema.Column{Type: "uniqueidentifier", Nullable: true},
+			exp: "xdb.NULLString",
+		},
+		{
+			col: dbschema.Column{Type: "uuid", UdtType: "uuid", Nullable: true},
+			exp: "xdb.NULLString",
+		},
 	}
 
 	for _, tc := range tcases {

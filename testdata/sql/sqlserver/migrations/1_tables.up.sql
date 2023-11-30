@@ -11,6 +11,7 @@ BEGIN
         email NVARCHAR(160) NOT NULL,
         email_verified BIT NOT NULL,
         name NVARCHAR(64) NOT NULL,
+        uuid uniqueidentifier NULL,
         CONSTRAINT PK_users PRIMARY KEY (id)
     );
 

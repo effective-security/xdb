@@ -14,7 +14,8 @@ import (
 var DefaultTimeFormat = "2006-01-02T15:04:05.999Z07:00"
 
 // DefaultTrucate is the default time to truncate as Postgres time precision is default to 6
-var DefaultTrucate = time.Microsecond
+// However, JavaScript and AWS accept time milliseconds only, 3 digits, so we truncate to 3
+var DefaultTrucate = time.Millisecond
 
 // Time implements sql.Time functionality and always returns UTC
 type Time time.Time

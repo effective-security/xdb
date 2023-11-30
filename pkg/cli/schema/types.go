@@ -34,6 +34,8 @@ var typeByColumnType = map[string]string{
 	"decimal": "float64",
 	"numeric": "float64",
 	"real":    "float32",
+	"float4":  "float32",
+	"float8":  "float64",
 
 	"bool":    "bool",
 	"boolean": "bool",
@@ -65,6 +67,8 @@ var typeByColumnType = map[string]string{
 	"decimal NULL": "xdb.Float",
 	"numeric NULL": "xdb.Float",
 	"real NULL":    "xdb.Float",
+	"float4 NULL":  "xdb.Float",
+	"float8 NULL":  "xdb.Float",
 
 	"time":        "xdb.Time",
 	"date":        "xdb.Time",

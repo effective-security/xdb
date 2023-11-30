@@ -75,11 +75,11 @@ func TestTimeParse(t *testing.T) {
 		},
 		{
 			"2019-11-30T17:45:59.999999999Z",
-			xdb.Time(time.Date(2019, 11, 30, 17, 45, 59, 999999000, time.UTC)),
+			xdb.Time(time.Date(2019, 11, 30, 17, 45, 59, 999000000, time.UTC)),
 		},
 		{
 			"2019-11-30T17:45:59.99999999Z",
-			xdb.Time(time.Date(2019, 11, 30, 17, 45, 59, 999999000, time.UTC)),
+			xdb.Time(time.Date(2019, 11, 30, 17, 45, 59, 999000000, time.UTC)),
 		},
 		{
 			"2019-11-30",

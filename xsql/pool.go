@@ -46,7 +46,7 @@ func reuseStmt(q *Stmt) {
 	q.sql = ""
 	q.name = ""
 
-	//stmtPool.Put(q)
+	stmtPool.Put(q)
 }
 
 func getBuffer() *bytebufferpool.ByteBuffer {
@@ -54,5 +54,5 @@ func getBuffer() *bytebufferpool.ByteBuffer {
 }
 
 func putBuffer(buf *bytebufferpool.ByteBuffer) {
-	//bytebufferpool.Put(buf)
+	bytebufferpool.Put(buf)
 }

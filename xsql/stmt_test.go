@@ -107,7 +107,7 @@ func TestPgPlaceholders(t *testing.T) {
 		Where("(time < ?)", time.Now().Add(time.Hour*-24*7))
 	defer q.Close()
 	sql, _ := q.String(), q.Args()
-	require.Equal(t, "SELECT id \nFROM series \nWHERE time > $1 AND (time < $2)", sql)
+	assert.Equal(t, "SELECT id \nFROM series \nWHERE time > $1 AND (time < $2)", sql)
 }
 
 func TestPgPlaceholderEscape(t *testing.T) {
@@ -117,7 +117,7 @@ func TestPgPlaceholderEscape(t *testing.T) {
 		Where("time < ?", time.Now().Add(time.Hour*-24*7))
 	defer q.Close()
 	sql, _ := q.String(), q.Args()
-	require.Equal(t, "SELECT id \nFROM series \nWHERE time ?> $1 + 1 AND time < $2", sql)
+	assert.Equal(t, "SELECT id \nFROM series \nWHERE time ?> $1 + 1 AND time < $2", sql)
 }
 
 func TestTo(t *testing.T) {
@@ -148,7 +148,7 @@ func TestManyClauses(t *testing.T) {
 	defer q.Close()
 	sql, args := q.String(), q.Args()
 
-	require.Equal(t, "SELECT field \nFROM table \nWHERE id > ? \nUNO \nDOS \nTRES \nQUATRO \nLIMIT ? \nOFFSET ? \nNO LOCK", sql)
+	assert.Equal(t, "SELECT field \nFROM table \nWHERE id > ? \nUNO \nDOS \nTRES \nQUATRO \nLIMIT ? \nOFFSET ? \nNO LOCK", sql)
 	require.Equal(t, []any{2, 5, 10}, args)
 }
 
@@ -165,7 +165,7 @@ func TestWith(t *testing.T) {
 		Bind(&row)
 	defer q.Close()
 
-	require.Equal(t, "WITH t AS (SELECT id, quantity \nFROM orders \nWHERE ts < ?) \nSELECT id, quantity \nFROM t", q.String())
+	assert.Equal(t, "WITH t AS (SELECT id, quantity \nFROM orders \nWHERE ts < ?) \nSELECT id, quantity \nFROM t", q.String())
 }
 
 func TestWithRecursive(t *testing.T) {
@@ -180,7 +180,7 @@ func TestWithRecursive(t *testing.T) {
 		GroupBy("region, product")
 	defer q.Close()
 
-	require.Equal(t, "WITH RECURSIVE regional_sales AS (SELECT region, SUM(amount) AS total_sales \nFROM orders \nGROUP BY region), top_regions AS (SELECT region \nFROM regional_sales \nORDER BY total_sales DESC \nLIMIT ?) \nSELECT region, product, SUM(quantity) AS product_units, SUM(amount) AS product_sales \nFROM orders \nWHERE region IN (SELECT region FROM top_regions) \nGROUP BY region, product", q.String())
+	assert.Equal(t, "WITH RECURSIVE regional_sales AS (SELECT region, SUM(amount) AS total_sales \nFROM orders \nGROUP BY region), top_regions AS (SELECT region \nFROM regional_sales \nORDER BY total_sales DESC \nLIMIT ?) \nSELECT region, product, SUM(quantity) AS product_units, SUM(amount) AS product_sales \nFROM orders \nWHERE region IN (SELECT region FROM top_regions) \nGROUP BY region, product", q.String())
 }
 
 func TestSubQueryDialect(t *testing.T) {
@@ -195,7 +195,7 @@ func TestSubQueryDialect(t *testing.T) {
 	defer q.Close()
 
 	// Parameter placeholder numbering should match the arguments
-	require.Equal(t, "SELECT email \nFROM users u \nWHERE registered > $1 AND EXISTS (SELECT id \nFROM orders \nWHERE user_id = u.id AND amount > $2)", q.String())
+	assert.Equal(t, "SELECT email \nFROM users u \nWHERE registered > $1 AND EXISTS (SELECT id \nFROM orders \nWHERE user_id = u.id AND amount > $2)", q.String())
 	require.Equal(t, []any{"2019-01-01", 100}, q.Args())
 }
 

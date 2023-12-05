@@ -1,6 +1,8 @@
 package xsql
 
 import (
+	"unsafe"
+
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -26,11 +28,6 @@ func (d *Dialect) getCache() sqlCache {
 	return d.cache
 }
 
-func (d *Dialect) getCachedSQL(buf *bytebufferpool.ByteBuffer) (string, bool) {
-	s := bufToString(&buf.B)
-	return d.GetCachedQuery(s)
-}
-
 func (d *Dialect) GetCachedQuery(name string) (string, bool) {
 	c := d.getCache()
 	d.cacheLock.RLock()
@@ -39,14 +36,17 @@ func (d *Dialect) GetCachedQuery(name string) (string, bool) {
 	return res, ok
 }
 
-func (d *Dialect) putCachedSQL(buf *bytebufferpool.ByteBuffer, sql string) {
-	key := string(buf.B)
-	d.PutCachedQuery(key, sql)
-}
-
 func (d *Dialect) PutCachedQuery(name, sql string) {
 	c := d.getCache()
 	d.cacheLock.Lock()
 	c[name] = sql
 	d.cacheLock.Unlock()
+}
+
+// bufToString returns a string pointing to a ByteBuffer contents
+// It helps to avoid memory copyng.
+// Use the returned string with care, make sure to never use it after
+// the ByteBuffer is deallocated or returned to a pool.
+func bufToString(buf *bytebufferpool.ByteBuffer) string {
+	return *(*string)(unsafe.Pointer(&buf.B))
 }

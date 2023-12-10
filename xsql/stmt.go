@@ -6,54 +6,291 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/effective-security/x/slices"
 	"github.com/valyala/bytebufferpool"
 )
 
 // Builder is an interface for SQL statement builders.
 type Builder interface {
+	/*
+		Args returns the list of arguments to be passed to
+		database driver for statement execution.
+
+		Do not access a slice returned by this method after Builder is closed.
+
+		An array, a returned slice points to, can be altered by any method that
+		adds a clause or an expression with arguments.
+
+		Make sure to make a copy of the returned slice if you need to preserve it.
+	*/
 	Args() []any
+
+	// Bind adds structure fields to SELECT statement.
+	// Structure fields have to be annotated with "db" tag.
+	// Reflect-based Bind is slightly slower than `Select("field").To(&record.field)`
+	// but provides an easier way to retrieve data.
+	//
+	// Note: this method does no type checks and returns no errors.
 	Bind(data any) Builder
+
+	/*
+		Clause appends a raw SQL fragment to the statement.
+
+		Use it to add a raw SQL fragment like ON CONFLICT, ON DUPLICATE KEY, WINDOW, etc.
+
+		An SQL fragment added via Clause method appears after the last clause previously
+		added. If called first, Clause method prepends a statement with a raw SQL.
+	*/
 	Clause(expr string, args ...any) Builder
+
+	// Clone creates a copy of the statement.
 	Clone() Builder
+
+	/*
+		Close puts buffers and other objects allocated to build an SQL statement
+		back to pool for reuse by other Builder instances.
+
+		Builder instance should not be used after Close method call.
+	*/
 	Close()
+
+	/*
+		DeleteFrom starts a DELETE statement.
+
+			err := xsql.DeleteFrom("table").Where("id = ?", id).ExecAndClose(ctx, db)
+	*/
 	DeleteFrom(tableName string) Builder
+
+	/*
+		Dest returns a list of value pointers passed via To method calls.
+		The order matches the constructed SQL statement.
+
+		Do not access a slice returned by this method after Builder is closed.
+
+		Note that an array, a returned slice points to, can be altered by To method
+		calls.
+
+		Make sure to make a copy if you need to preserve a slice returned by this method.
+	*/
 	Dest() []any
+
+	// Exec executes the statement.
 	Exec(ctx context.Context, db Executor) (sql.Result, error)
+
+	// ExecAndClose executes the statement and releases all the objects
+	// and buffers allocated by statement builder back to a pool.
+	//
+	// Do not call any Builder methods after this call.
 	ExecAndClose(ctx context.Context, db Executor) (sql.Result, error)
+
+	/*
+		Expr appends an expression to the most recently added clause.
+
+		Expressions are separated with commas.
+	*/
 	Expr(expr string, args ...any) Builder
+
+	/*
+		From starts a SELECT statement.
+
+			var cnt int64
+
+			err := xsql.From("table").
+				Select("COUNT(*)").To(&cnt)
+				Where("value >= ?", 42).
+				QueryRowAndClose(ctx, db)
+			if err != nil {
+				panic(err)
+			}
+	*/
 	From(expr string, args ...any) Builder
+
+	/*
+		FullJoin adds a FULL OUTER JOIN clause to SELECT statement
+	*/
 	FullJoin(table string, on string) Builder
+
+	// GroupBy adds the GROUP BY clause to SELECT statement
 	GroupBy(expr string) Builder
+
+	// Having adds the HAVING clause to SELECT statement
 	Having(expr string, args ...any) Builder
+
 	In(args ...any) Builder
 	InsertInto(tableName string) Builder
+
+	/*
+		Invalidate forces a rebuild on next query execution.
+
+		Most likely you don't need to call this method directly.
+	*/
 	Invalidate()
 	Join(table string, on string) Builder
 	LeftJoin(table string, on string) Builder
+
+	// Limit adds a limit on number of returned rows
 	Limit(limit any) Builder
+
+	/*
+		NewRow method helps to construct a bulk INSERT statement.
+
+		The following code
+
+				q := stmt.InsertInto("table")
+			    for k, v := range entries {
+					q.NewRow().
+						Set("key", k).
+						Set("value", v)
+				}
+
+		produces (assuming there were 2 key/value pairs at entries map):
+
+			INSERT INTO table ( key, value ) VALUES ( ?, ? ), ( ?, ? )
+	*/
 	NewRow() Row
+
+	// Offset adds a limit on number of returned rows
 	Offset(offset any) Builder
 	OrderBy(expr ...string) Builder
+
+	// Paginate provides an easy way to set both offset and limit
 	Paginate(page int, pageSize int) Builder
+
+	// Query executes the statement.
+	// For every row of a returned dataset it calls a handler function.
+	// If scan targets were set via To method calls, Query method
+	// executes rows.Scan right before calling a handler function.
 	Query(ctx context.Context, db Executor, handler func(rows *sql.Rows)) error
+
+	// QueryAndClose executes the statement and releases all the resources that
+	// can be reused to a pool. Do not call any Builder methods after this call.
+	// For every row of a returned dataset QueryAndClose executes a handler function.
+	// If scan targets were set via To method calls, QueryAndClose method
+	// executes rows.Scan right before calling a handler function.
 	QueryAndClose(ctx context.Context, db Executor, handler func(rows *sql.Rows)) error
+
+	// QueryRow executes the statement via Executor methods
+	// and scans values to variables bound via To method calls.
 	QueryRow(ctx context.Context, db Executor) error
+
+	// QueryRowAndClose executes the statement via Executor methods
+	// and scans values to variables bound via To method calls.
+	// All the objects allocated by query builder are moved to a pool
+	// to be reused.
+	//
+	// Do not call any Builder methods after this call.
 	QueryRowAndClose(ctx context.Context, db Executor) error
+
+	// Returning adds a RETURNING clause to a statement
 	Returning(expr string) Builder
+
+	/*
+		RightJoin adds a RIGHT OUTER JOIN clause to SELECT statement
+	*/
 	RightJoin(table string, on string) Builder
+
+	/*
+		Select starts a SELECT statement.
+
+			var cnt int64
+
+			err := xsql.Select("COUNT(*)").To(&cnt).
+				From("table").
+				Where("value >= ?", 42).
+				QueryRowAndClose(ctx, db)
+			if err != nil {
+				panic(err)
+			}
+
+		Note that From method can also be used to start a SELECT statement.
+	*/
 	Select(expr string, args ...any) Builder
+
+	/*
+		Set method:
+
+		- Adds a column to the list of columns and a value to VALUES clause of INSERT statement,
+
+		A call to Set method generates both the list of columns and
+		values to be inserted by INSERT statement:
+
+			q := xsql.InsertInto("table").Set("field", 42)
+
+		produces
+
+			INSERT INTO table (field) VALUES (42)
+
+		Do not use it to construct ON CONFLICT DO UPDATE SET or similar clauses.
+		Use generic Clause and Expr methods instead:
+
+			q.Clause("ON CONFLICT DO UPDATE SET").Expr("column_name = ?", value)
+	*/
 	Set(field string, value any) Builder
+
+	/*
+		SetExpr is an extended version of Set method.
+
+			q.SetExpr("field", "field + 1")
+			q.SetExpr("field", "? + ?", 31, 11)
+	*/
 	SetExpr(field string, expr string, args ...any) Builder
+
+	// String method builds and returns an SQL statement.
 	String() string
+
+	/*
+		SubQuery appends a sub query expression to a current clause.
+
+		SubQuery method call closes the Builder passed as query parameter.
+		Do not reuse it afterwards.
+	*/
 	SubQuery(prefix string, suffix string, query Builder) Builder
+
 	To(dest ...any) Builder
+
+	/*
+		Union adds a UNION clause to the statement.
+
+		all argument controls if UNION ALL or UNION clause
+		is to be constructed. Use UNION ALL if possible to
+		get faster queries.
+	*/
 	Union(all bool, query Builder) Builder
+
+	/*
+		Update starts an UPDATE statement.
+
+			err := xsql.Update("table").
+				Set("field1", "newvalue").
+				Where("id = ?", 42).
+				ExecAndClose(ctx, db)
+			if err != nil {
+				panic(err)
+			}
+	*/
 	Update(tableName string) Builder
+
+	/*
+		Where adds a filter:
+
+			xsql.From("users").
+				Select("id, name").
+				Where("email = ?", email).
+				Where("is_active = 1")
+	*/
 	Where(expr string, args ...any) Builder
+
+	// With prepends a statement with an WITH clause.
+	// With method calls a Close method of a given query, so
+	// make sure not to reuse it afterwards.
 	With(queryName string, query Builder) Builder
 
+	// Name returns the name of the statement
 	Name() string
+
+	// SetName sets the name of the statement
 	SetName(name string) Builder
+
 	// UseNewLines specifies an option to add new lines for each clause
 	UseNewLines(op bool) Builder
 }
@@ -475,7 +712,7 @@ In adds IN expression to the current filter.
 In method must be called after a Where method call.
 */
 func (q *Stmt) In(args ...any) Builder {
-	buf := bytebufferpool.Get()
+	buf := getBuffer()
 	_, _ = buf.WriteString("IN (")
 	l := len(args) - 1
 	for i := range args {
@@ -486,9 +723,10 @@ func (q *Stmt) In(args ...any) Builder {
 		}
 	}
 	_, _ = buf.WriteString(")")
-	q.addChunk(posWhere, "", bufToString(&buf.B), args, " ")
+	chunkStr := bufToString(buf)
+	q.addChunk(posWhere, "", chunkStr, args, " ")
 
-	//bytebufferpool.Put(buf)
+	putBuffer(buf)
 	return q
 }
 
@@ -590,7 +828,7 @@ func (q *Stmt) Expr(expr string, args ...any) Builder {
 /*
 SubQuery appends a sub query expression to a current clause.
 
-SubQuery method call closes the Stmt passed as query parameter.
+SubQuery method call closes the Builder passed as query parameter.
 Do not reuse it afterwards.
 */
 func (q *Stmt) SubQuery(prefix, suffix string, b Builder) Builder {
@@ -672,7 +910,8 @@ func (q *Stmt) Clause(expr string, args ...any) Builder {
 func (q *Stmt) String() string {
 	if q.sql == "" {
 		// Calculate the buffer hash and check for available queries
-		bufStrKey := bufToString(&q.buf.B)
+		// NOTE: can't use bufToString here as it returns Raw pointer
+		bufStrKey := slices.StringsCoalesce(q.name, q.buf.String())
 		sql, ok := q.dialect.GetCachedQuery(bufStrKey)
 		if ok {
 			q.sql = sql
@@ -699,9 +938,6 @@ func (q *Stmt) String() string {
 			q.sql = strings.TrimLeft(bstr, "\n\r\t ")
 			// Save it for reuse
 			q.dialect.PutCachedQuery(bufStrKey, q.sql)
-			if q.name != "" {
-				q.dialect.PutCachedQuery(q.name, q.sql)
-			}
 		}
 	}
 	return q.sql
@@ -803,16 +1039,17 @@ func (q *Stmt) Bind(data any) Builder {
 
 // join adds a join clause to a SELECT statement
 func (q *Stmt) join(joinType, table, on string) (index int) {
-	buf := bytebufferpool.Get()
+	buf := getBuffer()
 	_, _ = buf.WriteString(joinType)
 	_, _ = buf.WriteString(table)
 	_, _ = buf.Write(joinOn)
 	_, _ = buf.WriteString(on)
 	_ = buf.WriteByte(')')
 
-	index = q.addChunk(posFrom, "", bufToString(&buf.B), nil, " ")
+	chunkStr := bufToString(buf)
+	index = q.addChunk(posFrom, "", chunkStr, nil, " ")
 
-	//bytebufferpool.Put(buf)
+	putBuffer(buf)
 
 	return index
 }

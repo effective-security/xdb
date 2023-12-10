@@ -182,7 +182,7 @@ func writePg(argNo int, s []byte, buf *strings.Builder) (int, error) {
 	var err error
 	start := 0
 	// Iterate by runes
-	for pos, r := range bufToString(&s) {
+	for pos, r := range s {
 		if start > pos {
 			continue
 		}

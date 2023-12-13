@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/effective-security/porto/pkg/flake"
 	"github.com/effective-security/xdb"
+	"github.com/effective-security/xdb/pkg/flake"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

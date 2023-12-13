@@ -6,41 +6,27 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
-type sqlCache map[string]string
-
-/*
-ClearCache clears the statement cache.
-
-In most cases you don't need to care about it. It's there to
-let caller free memory when a caller executes zillions of unique
-SQL statements.
-*/
-func (d *Dialect) ClearCache() {
-	d.cacheLock.Lock()
-	d.cache = make(sqlCache)
-	d.cacheLock.Unlock()
-}
-
-func (d *Dialect) getCache() sqlCache {
-	d.cacheOnce.Do(func() {
-		d.cache = make(sqlCache)
-	})
-	return d.cache
-}
-
 func (d *Dialect) GetCachedQuery(name string) (string, bool) {
-	c := d.getCache()
-	d.cacheLock.RLock()
-	res, ok := c[name]
-	d.cacheLock.RUnlock()
-	return res, ok
+	res, ok := d.cache.Load(name)
+	if ok {
+		return res.(string), ok
+	}
+
+	return "", ok
 }
 
 func (d *Dialect) PutCachedQuery(name, sql string) {
-	c := d.getCache()
-	d.cacheLock.Lock()
-	c[name] = sql
-	d.cacheLock.Unlock()
+	d.cache.Store(name, sql)
+}
+
+// GetOrCreateQuery returns a cached query by name or creates a new one.
+func (d *Dialect) GetOrCreateQuery(name string, create func() string) string {
+	if qstr, ok := d.GetCachedQuery(name); ok {
+		return qstr
+	}
+	qstr := create()
+	d.PutCachedQuery(name, qstr)
+	return qstr
 }
 
 // bufToString returns a string pointing to a ByteBuffer contents

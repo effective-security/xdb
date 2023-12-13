@@ -7,12 +7,12 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
+	"github.com/effective-security/x/ctl"
 	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/print"
 	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/xlog"
-	"github.com/effective-security/xpki/x/ctl"
 	"github.com/pkg/errors"
 )
 

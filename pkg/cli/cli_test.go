@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kong"
-	"github.com/effective-security/xpki/x/ctl"
+	"github.com/effective-security/x/ctl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

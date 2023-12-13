@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/effective-security/porto/pkg/flake"
+	"github.com/effective-security/xdb/pkg/flake"
 	"github.com/effective-security/xlog"
 	"github.com/pkg/errors"
 )

@@ -5,10 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/effective-security/porto/xhttp/httperror"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
 )
 
 // ID defines a type to convert between internal uint64 and external string representations of ID
@@ -107,7 +105,7 @@ func (v *ID) Reset() {
 func (v *ID) Set(val string) error {
 	id, err := ParseUint(val)
 	if err != nil || id == 0 {
-		return httperror.NewGrpc(codes.InvalidArgument, "invalid ID")
+		return errors.Errorf("invalid ID")
 	}
 	if v.id == nil {
 		v.id = &idptr{}

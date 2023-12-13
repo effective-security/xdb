@@ -288,7 +288,7 @@ type Builder interface {
 	// Name returns the name of the statement
 	Name() string
 
-	// SetName sets the name of the statement
+	// SetName sets the name of the statement to be cached
 	SetName(name string) Builder
 
 	// UseNewLines specifies an option to add new lines for each clause

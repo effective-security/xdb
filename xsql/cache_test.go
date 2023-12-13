@@ -38,8 +38,10 @@ func TestSQLCache(t *testing.T) {
 
 	putBuffer(buf2)
 
-	q := "SELECT * FROM table"
-	assert.Equal(t, q, dialect.GetOrCreateQuery("test3", func(string) string { return q }))
+	q := "SELECT * \nFROM table"
+	assert.Equal(t, q, dialect.GetOrCreateQuery("test3", func(string) Builder {
+		return dialect.From("table").Select("*")
+	}))
 
 	count := 0
 	dialect.cache.Range(func(key, value any) bool {

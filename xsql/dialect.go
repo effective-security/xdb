@@ -22,7 +22,8 @@ type SQLDialect interface {
 	PutCachedQuery(name, query string)
 
 	// GetOrCreateQuery returns a cached query by name or creates a new one.
-	GetOrCreateQuery(name string, create func(name string) string) string
+	// The function will close the Builder
+	GetOrCreateQuery(name string, create func(name string) Builder) string
 
 	// DeleteFrom starts a DELETE statement.
 	DeleteFrom(tableName string) Builder

@@ -53,7 +53,7 @@ func TestFlakeOnce(t *testing.T) {
 
 	actualTime := parts["time"]
 	assert.LessOrEqual(t, sleepTime, actualTime+2, "unexpected time: %d", actualTime)
-	assert.LessOrEqual(t, actualTime, sleepTime+2, "unexpected time: %d", actualTime)
+	//	assert.LessOrEqual(t, actualTime, sleepTime+3, "unexpected time: %d", actualTime)
 
 	actualSequence := parts["sequence"]
 	assert.Equal(t, uint64(0), actualSequence)

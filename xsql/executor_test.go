@@ -90,8 +90,6 @@ func forEveryDB(t *testing.T, test func(ctx context.Context, env *dbEnv)) {
 	for n := range envs {
 		env := &envs[n]
 		// Create schema
-		// TODO: investigate
-		env.xsql.ClearCache()
 		//execScript(ctx, env.db, sqlSchemaDrop)
 		err := execScript(ctx, env.db, sqlSchemaCreate)
 		if err != nil {

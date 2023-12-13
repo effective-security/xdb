@@ -38,8 +38,15 @@ func TestSQLCache(t *testing.T) {
 
 	putBuffer(buf2)
 
-	assert.Equal(t, 2, len(dialect.getCache()))
-	dialect.ClearCache()
+	q := "SELECT * FROM table"
+	assert.Equal(t, q, dialect.GetOrCreateQuery("test3", func() string { return q }))
+
+	count := 0
+	dialect.cache.Range(func(key, value any) bool {
+		count++
+		return true
+	})
+	assert.Equal(t, 3, count)
 }
 
 func TestReusePool(t *testing.T) {

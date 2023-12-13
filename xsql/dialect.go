@@ -15,9 +15,14 @@ type SQLDialect interface {
 	// UseNewLines specifies an option to add new lines for each clause
 	UseNewLines(op bool)
 
-	ClearCache()
+	// GetCachedQuery returns a cached query by name.
 	GetCachedQuery(name string) (string, bool)
+
+	// PutCachedQuery stores a query in the cache.
 	PutCachedQuery(name, query string)
+
+	// GetOrCreateQuery returns a cached query by name or creates a new one.
+	GetOrCreateQuery(name string, create func() string) string
 
 	// DeleteFrom starts a DELETE statement.
 	DeleteFrom(tableName string) Builder
@@ -78,7 +83,7 @@ type Dialect struct {
 	provider    string
 	cacheOnce   sync.Once
 	cacheLock   sync.RWMutex
-	cache       sqlCache
+	cache       sync.Map
 	useNewLines bool
 }
 

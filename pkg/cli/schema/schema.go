@@ -133,20 +133,19 @@ func (a *PrintFKCmd) Run(ctx *cli.Cli) error {
 
 // GenerateCmd generates database schema
 type GenerateCmd struct {
-	DB           string            `help:"database name" required:""`
-	Schema       string            `help:"optional schema name to filter"`
-	Table        []string          `help:"optional, list of tables, default: all tables"`
-	View         []string          `help:"optional, list of views"`
-	Dependencies bool              `help:"optional, to discover all dependencies"`
-	OutModel     string            `help:"folder name to store model files"`
-	OutSchema    string            `help:"folder name to store schema files"`
-	PkgModel     string            `help:"package name to override from --out-model path"`
-	PkgSchema    string            `help:"package name to override from --out-schema path"`
-	StructSuffix string            `help:"optional, suffix for struct names"`
-	Imports      []string          `help:"optional go imports"`
-	UseSchema    bool              `help:"optional, use schema name in table name"`
-	Type         map[string]string `help:"optional, map of types to override"`
-	TypesDef     string            `help:"optional, path to types definition file"`
+	DB           string   `help:"database name" required:""`
+	Schema       string   `help:"optional schema name to filter"`
+	Table        []string `help:"optional, list of tables, default: all tables"`
+	View         []string `help:"optional, list of views"`
+	Dependencies bool     `help:"optional, to discover all dependencies"`
+	OutModel     string   `help:"folder name to store model files"`
+	OutSchema    string   `help:"folder name to store schema files"`
+	PkgModel     string   `help:"package name to override from --out-model path"`
+	PkgSchema    string   `help:"package name to override from --out-schema path"`
+	StructSuffix string   `help:"optional, suffix for struct names"`
+	Imports      []string `help:"optional go imports"`
+	UseSchema    bool     `help:"optional, use schema name in table name"`
+	TypesDef     string   `help:"optional, path to types definition file"`
 }
 
 // Run the command
@@ -204,6 +203,12 @@ var templateFuncMap = template.FuncMap{
 	"sqlToGoType": toGoType,
 }
 
+type override struct {
+	Tables map[string]string `json:"tables" yaml:"tables"`
+	Fields map[string]string `json:"fields" yaml:"fields"`
+	Types  map[string]string `json:"types" yaml:"types"`
+}
+
 func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
 	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
@@ -223,23 +228,27 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	}
 
 	if a.TypesDef != "" {
-		var defs map[string]string
+		var defs override
 		err := configloader.Unmarshal(a.TypesDef, &defs)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to load types definition")
 		}
-		for k, v := range defs {
-			typeByColumnName[k] = v
+		for k, v := range defs.Types {
+			typesMap[k] = v
 		}
-
-	}
-
-	for k, v := range a.Type {
-		typeByColumnName[k] = v
+		for k, v := range defs.Fields {
+			fieldNamesMap[k] = v
+		}
+		for k, v := range defs.Tables {
+			tableNamesMap[k] = v
+		}
 	}
 
 	schemas := map[string]schema.Tables{}
 	for _, t := range res {
+		if name, ok := tableNamesMap[t.SchemaName]; ok {
+			t.Name = name
+		}
 		schemas[t.Schema] = append(schemas[t.Schema], t)
 	}
 
@@ -306,6 +315,13 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				Indexes:    t.Indexes,
 				PrimaryKey: t.PrimaryKey,
 			}
+
+			for _, c := range td.Columns {
+				if res, ok := fieldNamesMap[c.SchemaName]; ok {
+					c.Name = res
+				}
+			}
+
 			err = rowCodeTemplate.Execute(buf, td)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to generate model for %s.%s", t.Schema, t.Name)

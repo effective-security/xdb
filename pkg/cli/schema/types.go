@@ -8,7 +8,9 @@ import (
 	"github.com/effective-security/xdb/schema"
 )
 
-var typeByColumnName = map[string]string{}
+var typesMap = map[string]string{}
+var fieldNamesMap = map[string]string{}
+var tableNamesMap = map[string]string{}
 
 var typeByColumnType = map[string]string{
 	"id bigint":      "xdb.ID",
@@ -95,11 +97,10 @@ func isID(c *schema.Column) bool {
 }
 
 func toGoType(c *schema.Column) string {
-
-	if res := typeByColumnName[c.Name]; res != "" {
+	if res, ok := typesMap[c.Name]; ok {
 		return res
 	}
-	if res := typeByColumnName[c.SchemaName]; res != "" {
+	if res, ok := typesMap[c.SchemaName]; ok {
 		return res
 	}
 

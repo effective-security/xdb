@@ -22,8 +22,8 @@ func TestTableInfo(t *testing.T) {
 		Schema:  "public",
 		Columns: []string{"id", "meta", "name"},
 	}
-	assert.Equal(t, "id,meta,name", ti.AllColumns())
-	assert.Equal(t, "a.id,NULL,a.name", ti.AliasedColumns("a", nulls))
+	assert.Equal(t, "id, meta, name", ti.AllColumns())
+	assert.Equal(t, "a.id, NULL, a.name", ti.AliasedColumns("a", nulls))
 }
 
 func TestNullTime(t *testing.T) {

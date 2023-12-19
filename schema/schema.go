@@ -61,7 +61,7 @@ func (t *TableInfo) Select(cols ...string) xsql.Builder {
 // AllColumns returns list of all columns separated by comma
 func (t *TableInfo) AllColumns() string {
 	if t.allColumns == "" {
-		t.allColumns = strings.Join(t.Columns, ",")
+		t.allColumns = strings.Join(t.Columns, ", ")
 	}
 	return t.allColumns
 }
@@ -78,7 +78,7 @@ func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string 
 			prefixed[i] = prefix + "." + c
 		}
 	}
-	return strings.Join(prefixed, ",")
+	return strings.Join(prefixed, ", ")
 }
 
 // Table definition

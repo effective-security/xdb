@@ -935,7 +935,7 @@ func (q *Stmt) String() string {
 				pos = chunk.pos
 			}
 			bstr := buf.String()
-			q.sql = strings.TrimLeft(bstr, "\n\r\t ")
+			q.sql = strings.Trim(bstr, "\n\r\t ")
 			// Save it for reuse
 			q.dialect.PutCachedQuery(bufStrKey, q.sql)
 		}

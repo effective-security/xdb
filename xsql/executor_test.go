@@ -360,7 +360,7 @@ ON CONFLICT (email) DO UPDATE SET
 			token_expires_at=EXCLUDED.token_expires_at,
 			login_count = logins.login_count + 1,
 			last_login_at=CURRENT_TIMESTAMP 
-RETURNING id,extern_id,provider,email,email_verified,name,access_token,refresh_token,token_expires_at,login_count,last_login_at`
+RETURNING ` + LoginTable.AllColumns()
 		assert.Equal(t, exp, q.String())
 
 		row := env.db.QueryRowContext(ctx, q.String(), login.ID, login.ExternID, login.Provider, login.Email, login.EmailVerified, login.Name, login.AccessToken, login.RefreshToken, login.TokenExpiresAt)

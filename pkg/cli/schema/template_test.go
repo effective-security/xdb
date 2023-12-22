@@ -80,11 +80,11 @@ func TestSqlToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "uniqueidentifier", Nullable: false},
-			exp: "string",
+			exp: "xdb.UUID",
 		},
 		{
 			col: dbschema.Column{Type: "uniqueidentifier", Nullable: true},
-			exp: "xdb.NULLString",
+			exp: "xdb.UUID",
 		},
 	}
 
@@ -223,18 +223,18 @@ func TestPgToGoType(t *testing.T) {
 		},
 		{
 			col: dbschema.Column{Type: "uniqueidentifier", Nullable: false},
-			exp: "string",
+			exp: "xdb.UUID",
 		},
 		{
 			col: dbschema.Column{Type: "uuid", UdtType: "uuid", Nullable: false},
-			exp: "string",
+			exp: "xdb.UUID",
 		}, {
 			col: dbschema.Column{Type: "uniqueidentifier", Nullable: true},
-			exp: "xdb.NULLString",
+			exp: "xdb.UUID",
 		},
 		{
 			col: dbschema.Column{Type: "uuid", UdtType: "uuid", Nullable: true},
-			exp: "xdb.NULLString",
+			exp: "xdb.UUID",
 		},
 	}
 

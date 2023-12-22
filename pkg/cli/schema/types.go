@@ -46,14 +46,12 @@ var typeByColumnType = map[string]string{
 	"jsonb": "xdb.NULLString",
 	"bytea": "[]byte",
 
-	"nchar":            "string",
-	"nvarchar":         "string",
-	"char":             "string",
-	"varchar":          "string",
-	"bpchar":           "string",
-	"text":             "string",
-	"uniqueidentifier": "string",
-	"uuid":             "string",
+	"nchar":    "string",
+	"nvarchar": "string",
+	"char":     "string",
+	"varchar":  "string",
+	"bpchar":   "string",
+	"text":     "string",
 
 	"int8 NULL":     "xdb.Int64",
 	"int4 NULL":     "xdb.Int32",
@@ -79,14 +77,17 @@ var typeByColumnType = map[string]string{
 	"timestamp":   "xdb.Time",
 	"timestamptz": "xdb.Time",
 
-	"nchar NULL":            "xdb.NULLString",
-	"nvarchar NULL":         "xdb.NULLString",
-	"char NULL":             "xdb.NULLString",
-	"bpchar NULL":           "xdb.NULLString",
-	"varchar NULL":          "xdb.NULLString",
-	"text NULL":             "xdb.NULLString",
-	"uniqueidentifier NULL": "xdb.NULLString",
-	"uuid NULL":             "xdb.NULLString",
+	"nchar NULL":    "xdb.NULLString",
+	"nvarchar NULL": "xdb.NULLString",
+	"char NULL":     "xdb.NULLString",
+	"bpchar NULL":   "xdb.NULLString",
+	"varchar NULL":  "xdb.NULLString",
+	"text NULL":     "xdb.NULLString",
+
+	"uniqueidentifier":      "xdb.UUID",
+	"uuid":                  "xdb.UUID",
+	"uniqueidentifier NULL": "xdb.UUID",
+	"uuid NULL":             "xdb.UUID",
 }
 
 func isID(c *schema.Column) bool {

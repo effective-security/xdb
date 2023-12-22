@@ -158,6 +158,43 @@ func (ns NULLString) Value() (driver.Value, error) {
 	return string(ns), nil
 }
 
+// UUID de/encodes the string a SQL string.
+type UUID string
+
+// Scan implements the Scanner interface.
+func (ns *UUID) Scan(value any) error {
+	if value == nil {
+		*ns = ""
+		return nil
+	}
+
+	var s string
+	var err error
+	switch vid := value.(type) {
+	case []byte:
+		if len(vid) != 16 {
+			return errors.WithMessagef(err, "failed to parse UUID: %v", vid)
+		}
+		s = fmt.Sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+			vid[3], vid[2], vid[1], vid[0], vid[5], vid[4], vid[7], vid[6], vid[8], vid[9], vid[10], vid[11], vid[12], vid[13], vid[14], vid[15])
+	case string:
+		s = vid
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	*ns = UUID(s)
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (ns UUID) Value() (driver.Value, error) {
+	if ns == "" {
+		return nil, nil
+	}
+	return string(ns), nil
+}
+
 // Int64 represents SQL int64 NULL
 type Int64 int64
 
@@ -320,25 +357,31 @@ func (v *Float) Scan(value any) error {
 		return nil
 	}
 
-	var id float64
+	var f float64
+	var err error
 	switch vid := value.(type) {
+	case []byte:
+		sf := string(vid)
+		if f, err = strconv.ParseFloat(sf, 64); err != nil {
+			return errors.WithMessagef(err, "failed to parse float: %v", sf)
+		}
 	case uint64:
-		id = float64(vid)
+		f = float64(vid)
 	case int64:
-		id = float64(vid)
+		f = float64(vid)
 	case int:
-		id = float64(vid)
+		f = float64(vid)
 	case uint:
-		id = float64(vid)
+		f = float64(vid)
 	case float32:
-		id = float64(vid)
+		f = float64(vid)
 	case float64:
-		id = float64(vid)
+		f = float64(vid)
 	default:
 		return errors.Errorf("unsupported scan type: %T", value)
 	}
 
-	*v = Float(id)
+	*v = Float(f)
 	return nil
 }
 

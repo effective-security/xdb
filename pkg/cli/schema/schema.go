@@ -188,13 +188,38 @@ func goName(s string) string {
 	return strcase.ToGoPascal(s)
 }
 
-func tableStructName(s string) string {
-	return goName(pluralizeClient.Singular(s)) + "Table"
+func tableStructName(t *schema.Table) string {
+	name := t.Name
+	if res, ok := tableNamesMap[t.SchemaName]; ok {
+		return res + "Table"
+	}
+
+	return goName(pluralizeClient.Singular(name)) + "Table"
+}
+
+func tableInfoStructName(t *schema.TableInfo) string {
+	name := t.Name
+	if res, ok := tableNamesMap[t.SchemaName]; ok {
+		return res + "Table"
+	}
+
+	return goName(pluralizeClient.Singular(name)) + "Table"
+}
+
+func columnStructName(c *schema.Column) string {
+	name := c.Name
+	if res, ok := fieldNamesMap[c.SchemaName]; ok {
+		return res
+	}
+
+	return goName(name)
 }
 
 var templateFuncMap = template.FuncMap{
-	"goName":          goName,
-	"tableStructName": tableStructName,
+	"goName":              goName,
+	"tableStructName":     tableStructName,
+	"tableInfoStructName": tableInfoStructName,
+	"columnStructName":    columnStructName,
 	"concat": func(args ...string) string {
 		return strings.Join(args, "")
 	},
@@ -246,15 +271,12 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 
 	schemas := map[string]schema.Tables{}
 	for _, t := range res {
-		if name, ok := tableNamesMap[t.SchemaName]; ok {
-			t.Name = name
-		}
 		schemas[t.Schema] = append(schemas[t.Schema], t)
 	}
 
 	var err error
-	var tableInfos []schema.TableInfo
-	var tableDefs []tableDefinition
+	var tableInfos []*schema.TableInfo
+	var tableDefs []*tableDefinition
 
 	w := ctx.Writer()
 	buf := &bytes.Buffer{}
@@ -289,7 +311,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				tName += t.Name + strcase.ToGoPascal(a.StructSuffix)
 			}
 
-			tableInfos = append(tableInfos, schema.TableInfo{
+			tableInfos = append(tableInfos, &schema.TableInfo{
 				Schema:     t.Schema,
 				Name:       t.Name,
 				SchemaName: t.SchemaName,
@@ -302,24 +324,23 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				prefix = sName
 			}
 
-			td := tableDefinition{
-				DB:         dbName,
-				Package:    modelPkg,
-				Imports:    imports,
-				Dialect:    dialect,
-				Name:       prefix + tName,
-				StructName: prefix + tName,
-				SchemaName: t.Schema,
-				TableName:  t.Name,
-				Columns:    t.Columns,
-				Indexes:    t.Indexes,
-				PrimaryKey: t.PrimaryKey,
+			td := &tableDefinition{
+				DB:              dbName,
+				Package:         modelPkg,
+				Imports:         imports,
+				Dialect:         dialect,
+				Name:            prefix + tName,
+				StructName:      prefix + tName,
+				SchemaName:      t.Schema,
+				TableName:       t.Name,
+				TableStructName: tableStructName(t),
+				Columns:         t.Columns,
+				Indexes:         t.Indexes,
+				PrimaryKey:      t.PrimaryKey,
 			}
 
-			for _, c := range td.Columns {
-				if res, ok := fieldNamesMap[c.SchemaName]; ok {
-					c.Name = res
-				}
+			if res, ok := tableNamesMap[t.SchemaName]; ok {
+				td.StructName = res
 			}
 
 			err = rowCodeTemplate.Execute(buf, td)

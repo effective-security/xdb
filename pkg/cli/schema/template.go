@@ -5,17 +5,18 @@ import (
 )
 
 type tableDefinition struct {
-	DB         string
-	Package    string
-	Imports    []string
-	Name       string
-	Dialect    string
-	StructName string
-	SchemaName string
-	TableName  string
-	Columns    schema.Columns
-	Indexes    schema.Indexes
-	PrimaryKey *schema.Column
+	DB              string
+	Package         string
+	Imports         []string
+	Name            string
+	Dialect         string
+	StructName      string
+	SchemaName      string
+	TableName       string
+	TableStructName string
+	Columns         schema.Columns
+	Indexes         schema.Indexes
+	PrimaryKey      *schema.Column
 }
 
 type schemaDefinition struct {
@@ -23,8 +24,8 @@ type schemaDefinition struct {
 	Package string
 	Imports []string
 	Dialect string
-	Tables  []schema.TableInfo
-	Defs    []tableDefinition
+	Tables  []*schema.TableInfo
+	Defs    []*tableDefinition
 }
 
 var codeHeaderTemplateText = `// DO NOT EDIT!
@@ -62,14 +63,13 @@ var {{ .StructName }} = struct {
 	Table *schema.TableInfo
 
 {{- range .Columns }}
-{{- $fieldName := goName .Name }}
-	{{$fieldName}} schema.Column // {{.Name}} {{.Type}}
+	{{columnStructName .}} schema.Column // {{.Name}} {{.Type}}
 {{- end }}
 }{
-	Table: &{{tableStructName .TableName}},
+	Table: &{{.TableStructName}},
 
 	{{- range .Columns }}
-	{{ goName .Name}}: schema.Column{{.StructString}},
+	{{ columnStructName .}}: schema.Column{{.StructString}},
 	{{- end }}
 }
 `
@@ -88,7 +88,7 @@ var codeModelTemplateText = `
 {{- end }}
 type {{ .StructName }} struct {
 {{- range .Columns }}
-{{- $fieldName := goName .Name }}
+{{- $fieldName := columnStructName . }}
 	// {{$fieldName}} represents '{{.Name}}' column of '{{.Type}}'
 	{{$fieldName}} {{ sqlToGoType . }} ` + "`" + `{{ .Tag }}` + "`" + `
 {{- end }}
@@ -98,7 +98,7 @@ type {{ .StructName }} struct {
 func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 	err := rows.Scan(
 {{- range $i, $e := .Columns }}
-		&m.{{ goName $e.Name }},
+		&m.{{ columnStructName $e }},
 {{- end }}
 	)
 	if err != nil {
@@ -129,7 +129,7 @@ var Dialect = {{ .Dialect }}
 {{- $dialect := .Dialect }}
 
 {{ range .Tables }}
-{{- $tableName := tableStructName .Name }}
+{{- $tableName := tableInfoStructName . }}
 // {{ $tableName }} provides table info for '{{ .Name }}'
 var {{ $tableName }} = schema.TableInfo{
 	SchemaName : "{{ .SchemaName }}",
@@ -145,7 +145,7 @@ var {{ $tableName }} = schema.TableInfo{
 // {{ goName .DB }}Tables provides tables map for {{ .DB }}
 var {{ goName .DB }}Tables = map[string]*schema.TableInfo{
 {{- range .Tables }}
- 	"{{ .Name }}": &{{ tableStructName .Name }},
+ 	"{{ .Name }}": &{{ tableInfoStructName . }},
 {{- end }}
 }
 `

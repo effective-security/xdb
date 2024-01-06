@@ -108,7 +108,22 @@ func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 }
 
 type {{ .StructName }}Slice []*{{ .StructName }}
-type {{ .StructName }}Result = xdb.Result[{{ .StructName }}, *{{ .StructName }}]
+type {{ .StructName }}Result xdb.Result[{{ .StructName }}, *{{ .StructName }}]
+
+// Execute runs a query and populates the result with a list of models and the next offset,
+// if there are more rows to fetch
+func (p *{{ .StructName }}Result) Execute(ctx context.Context, sql xdb.DB, query string, args ...any) error {
+	p.Limit = slices.NumbersCoalesce(p.Limit, xdb.DefaultPageSize)
+	list, err := xdb.ExecuteListQuery[{{ .StructName }}, *{{ .StructName }}](ctx, sql, query, args...)
+	if err != nil {
+		return err
+	}
+	p.Rows = list
+	count := uint32(len(list))
+	p.NextOffset = slices.Select(count >= p.Limit, p.NextOffset+count, 0)
+	return nil
+}
+
 `
 
 var codeSchemaTemplateText = `// DO NOT EDIT!

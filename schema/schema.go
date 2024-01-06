@@ -58,6 +58,11 @@ func (t *TableInfo) Select(cols ...string) xsql.Builder {
 	return t.Dialect.From(t.SchemaName).Select(expr)
 }
 
+// Select starts SELECT FROM  expression
+func (t *TableInfo) SelectAliased(prefix string, nulls map[string]bool) xsql.Builder {
+	return t.Dialect.From(t.SchemaName).Select(t.AliasedColumns(prefix, nulls))
+}
+
 // AllColumns returns list of all columns separated by comma
 func (t *TableInfo) AllColumns() string {
 	if t.allColumns == "" {
@@ -75,7 +80,11 @@ func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string 
 		if nulls[c] {
 			prefixed[i] = "NULL"
 		} else {
-			prefixed[i] = prefix + "." + c
+			if prefix == "" {
+				prefixed[i] = c
+			} else {
+				prefixed[i] = prefix + "." + c
+			}
 		}
 	}
 	return strings.Join(prefixed, ", ")

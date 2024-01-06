@@ -6,6 +6,7 @@ import (
 
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/flake"
+	"github.com/effective-security/xdb/xsql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -172,4 +173,29 @@ func TestListPostgres(t *testing.T) {
 	tt, err = p.ListViews(context.Background(), "public", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(tt))
+}
+
+func TestTableInfo(t *testing.T) {
+	nulls := map[string]bool{
+		"meta": true,
+	}
+	ti := TableInfo{
+		Schema:     "public",
+		Name:       "org",
+		SchemaName: "public.org",
+		Columns:    []string{"id", "meta", "name"},
+		PrimaryKey: "id",
+		Dialect:    xsql.Postgres,
+	}
+	assert.Equal(t, "id, meta, name", ti.AllColumns())
+	assert.Equal(t, "a.id, NULL, a.name", ti.AliasedColumns("a", nulls))
+	assert.Equal(t, "id, NULL, name", ti.AliasedColumns("", nulls))
+
+	assert.Equal(t, `FROM public.org`, ti.From().String())
+	assert.Equal(t, "SELECT id, meta, name \nFROM public.org", ti.Select().String())
+	assert.Equal(t, "SELECT o.id, NULL, o.name \nFROM public.org", ti.SelectAliased("o", map[string]bool{"meta": true}).String())
+	assert.Equal(t, "SELECT id \nFROM public.org", ti.Select("id").String())
+	assert.Equal(t, "UPDATE public.org \nSET id=$1 \nWHERE id = $2", ti.Update().Set("id", nil).Where("id = ?", nil).String())
+	assert.Equal(t, "DELETE FROM public.org \nWHERE id = $1", ti.DeleteFrom().Where("id = ?", nil).String())
+	assert.Equal(t, "INSERT INTO public.org \n( id \n) VALUES ( $1 \n)", ti.InsertInto().Set("id", nil).String())
 }

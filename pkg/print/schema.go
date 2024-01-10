@@ -3,7 +3,9 @@ package print
 import (
 	"fmt"
 	"io"
+	"strings"
 
+	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb/schema"
 	"github.com/olekukonko/tablewriter"
 )
@@ -22,7 +24,7 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 	table.SetBorder(false)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAutoWrapText(false)
-	table.SetHeader([]string{"Name", "Type", "UDT", "NULL", "Max", "Ref"})
+	table.SetHeader([]string{"Name", "Type", "UDT", "NULL", "Max", "Index", "Ref"})
 	table.SetHeaderLine(true)
 
 	for _, c := range r.Columns {
@@ -35,17 +37,43 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 		if c.Ref != nil {
 			ref = c.Ref.RefColumnSchemaName()
 		}
-		nullable := ""
-		if c.Nullable {
-			nullable = "YES"
-		}
+
 		table.Append([]string{
 			c.Name,
 			c.Type,
 			c.UdtType,
-			nullable,
+			slices.Select(c.Nullable, "YES", ""),
 			maxL,
+			slices.Select(c.IsIndex(), "YES", ""),
 			ref,
+		})
+	}
+
+	table.Render()
+
+	if len(r.Indexes) > 0 {
+		fmt.Fprintf(w, "\nIndexes:\n")
+		SchemaIndexes(w, r.Indexes)
+	} else {
+		fmt.Fprintln(w)
+	}
+}
+
+// SchemaIndexes prints schema.Indexes
+func SchemaIndexes(w io.Writer, r schema.Indexes) {
+	table := tablewriter.NewWriter(w)
+	table.SetBorder(false)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAutoWrapText(false)
+	table.SetHeader([]string{"Name", "Primary", "Unique", "Columns"})
+	table.SetHeaderLine(true)
+
+	for _, c := range r {
+		table.Append([]string{
+			c.Name,
+			slices.Select(c.IsPrimary, "YES", ""),
+			slices.Select(c.IsUnique, "YES", ""),
+			strings.Join(c.ColumnNames, ", "),
 		})
 	}
 

@@ -20,7 +20,7 @@ func TestObject(t *testing.T) {
 	}{
 		{"yaml", []string{"schema: dbo\nname: test\nisview: false\ncolumns: []\nindexes: []\nprimarykey: null\n"}},
 		{"json", []string{"{\n  \"Schema\": \"dbo\",\n  \"Name\": \"test\",\n  \"IsView\": false,\n  \"Columns\": null,\n  \"Indexes\": null,\n  \"PrimaryKey\": null\n}\n"}},
-		{"", []string{"Schema: dbo\nTable: test\n\n  NAME | TYPE | UDT | NULL | MAX | REF  \n-------+------+-----+------+-----+------\n\n"}},
+		{"", []string{"Schema: dbo\nTable: test\n\n  NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n-------+------+-----+------+-----+-------+------\n\n"}},
 	}
 	w := bytes.NewBuffer([]byte{})
 	for _, tc := range tcases {
@@ -37,10 +37,7 @@ func TestObject(t *testing.T) {
 	w.Reset()
 	_ = print.Object(w, "", &ver)
 	assert.Equal(t,
-		"Schema: dbo\n"+
-			"Table: test\n\n"+
-			"  NAME | TYPE | UDT | NULL | MAX | REF  \n"+
-			"-------+------+-----+------+-----+------\n\n",
+		"Schema: dbo\nTable: test\n\n  NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n-------+------+-----+------+-----+-------+------\n\n",
 		w.String())
 }
 
@@ -51,6 +48,13 @@ func checkFormat(t *testing.T, val any, has ...string) {
 	for _, exp := range has {
 		assert.Contains(t, out, exp, "%T", val)
 	}
+}
+
+func checkEqual(t *testing.T, val any, exp string) {
+	w := bytes.NewBuffer([]byte{})
+	print.Print(w, val)
+	out := w.String()
+	assert.Equal(t, exp, out)
 }
 
 func TestPrintSchema(t *testing.T) {
@@ -73,14 +77,42 @@ func TestPrintSchema(t *testing.T) {
 					MaxLength: 255,
 				},
 			},
+			Indexes: schema.Indexes{
+				{
+					Name:        "a",
+					IsPrimary:   true,
+					ColumnNames: []string{"col1", "col2"},
+				},
+			},
 		}
-		checkFormat(t, &o,
-			"Schema: dbo\n"+
-				"Table: test\n\n"+
-				"  NAME |  TYPE  |   UDT   | NULL | MAX | REF  \n"+
-				"-------+--------+---------+------+-----+------\n"+
-				"  ID   | uint64 | int8    |      |     |      \n"+
-				"  Name | string | varchar | YES  | 255 |      \n\n",
+		checkEqual(t, &o,
+			`Schema: dbo
+Table: test
+
+  NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
+-------+--------+---------+------+-----+-------+------
+  ID   | uint64 | int8    |      |     |       |      
+  Name | string | varchar | YES  | 255 |       |      
+
+Indexes:
+  NAME | PRIMARY | UNIQUE |  COLUMNS    
+-------+---------+--------+-------------
+  a    | YES     |        | col1, col2  
+
+`,
+		)
+
+		o.Indexes = nil
+		checkEqual(t, &o,
+			`Schema: dbo
+Table: test
+
+  NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
+-------+--------+---------+------+-----+-------+------
+  ID   | uint64 | int8    |      |     |       |      
+  Name | string | varchar | YES  | 255 |       |      
+
+`,
 		)
 	})
 
@@ -101,5 +133,21 @@ func TestPrintSchema(t *testing.T) {
 				"-------+--------+-------+--------+-----------+----------+------------\n"+
 				"  FK_1 | dbo    | from  | col1   | dbo       | to       | col2       \n\n",
 		)
+	})
+
+	t.Run("Indexes", func(t *testing.T) {
+		o := schema.Indexes{
+			{
+				Name:        "a",
+				IsPrimary:   true,
+				ColumnNames: []string{"col1", "col2"},
+			},
+		}
+		checkEqual(t, o,
+			`  NAME | PRIMARY | UNIQUE |  COLUMNS    
+-------+---------+--------+-------------
+  a    | YES     |        | col1, col2  
+
+`)
 	})
 }

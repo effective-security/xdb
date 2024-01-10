@@ -53,11 +53,14 @@ func (s *testSuite) TestPrintColumnsCmd() {
 
 	err := cmd.Run(s.Ctl)
 	require.NoError(err)
-	s.Equal("Schema: dbo\n"+
-		"Table: test\n\n"+
-		"  NAME |  TYPE  | UDT  | NULL | MAX | REF  \n"+
-		"-------+--------+------+------+-----+------\n"+
-		"  ID   | uint64 | int8 |      |     |      \n\n", s.Out.String())
+	s.Equal(`Schema: dbo
+Table: test
+
+  NAME |  TYPE  | UDT  | NULL | MAX | INDEX | REF  
+-------+--------+------+------+-----+-------+------
+  ID   | uint64 | int8 |      |     |       |      
+
+`, s.Out.String())
 
 	s.Ctl.O = "json"
 	s.Out.Reset()

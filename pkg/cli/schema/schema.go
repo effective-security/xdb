@@ -33,7 +33,7 @@ type Cmd struct {
 
 // PrintColumnsCmd prints database schema
 type PrintColumnsCmd struct {
-	DB           string   `help:"database name: DataHub|DataHub.BrokerData|DataHub.HubspotData" required:""`
+	DB           string   `help:"database name" required:""`
 	Schema       string   `help:"optional schema name to filter"`
 	Table        []string `help:"optional, list of tables, default: all tables"`
 	Dependencies bool     `help:"optional, to discover all dependencies"`

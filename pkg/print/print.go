@@ -53,6 +53,8 @@ func Print(w io.Writer, value any) {
 		SchemaTables(w, t)
 	case schema.ForeignKeys:
 		SchemaForeingKeys(w, t)
+	case schema.Indexes:
+		SchemaIndexes(w, t)
 
 	default:
 		_ = JSON(w, value)

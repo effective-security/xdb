@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/effective-security/x/configloader"
+	"github.com/effective-security/xdb/internal/cli/clisuite"
 	"github.com/effective-security/xdb/mocks/mockschema"
-	"github.com/effective-security/xdb/pkg/cli/clisuite"
 	dbschema "github.com/effective-security/xdb/schema"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"

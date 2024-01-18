@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/pkg/errors"
 )
 
@@ -417,7 +417,7 @@ func (v *Bool) UnmarshalJSON(data []byte) error {
 }
 
 func (v Bool) String() string {
-	return slices.Select(bool(v), "true", "false")
+	return values.Select(bool(v), "true", "false")
 }
 
 // Scan implements the Scanner interface.

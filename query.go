@@ -3,7 +3,7 @@ package xdb
 import (
 	"context"
 
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/pkg/errors"
 )
 
@@ -60,13 +60,13 @@ func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB
 // Execute runs a query and populates the result with a list of models and the next offset,
 // if there are more rows to fetch
 func (p *Result[T, RowPointer]) Execute(ctx context.Context, sql DB, query string, args ...any) error {
-	p.Limit = slices.NumbersCoalesce(p.Limit, DefaultPageSize)
+	p.Limit = values.NumbersCoalesce(p.Limit, DefaultPageSize)
 	list, err := ExecuteListQuery[T, RowPointer](ctx, sql, query, args...)
 	if err != nil {
 		return err
 	}
 	p.Rows = list
 	count := uint32(len(list))
-	p.NextOffset = slices.Select(count >= p.Limit, p.NextOffset+count, 0)
+	p.NextOffset = values.Select(count >= p.Limit, p.NextOffset+count, 0)
 	return nil
 }

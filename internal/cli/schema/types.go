@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/schema"
 )
 
 var typesMap = map[string]string{}
 var fieldNamesMap = map[string]string{}
 var tableNamesMap = map[string]string{}
+var modelWithCacheMap = map[string]bool{}
 
 var typeByColumnType = map[string]string{
 	"id bigint":      "xdb.ID",
@@ -122,7 +123,7 @@ func toGoType(c *schema.Column) string {
 		return typeName
 	}
 
-	typ := slices.StringsCoalesce(c.UdtType, c.Type)
+	typ := values.StringsCoalesce(c.UdtType, c.Type)
 	typs := []string{typ}
 
 	if isID(c) {
@@ -143,6 +144,6 @@ func toGoType(c *schema.Column) string {
 	panic(fmt.Sprintf("don't know how to convert type: %s (%s) %s [%s]",
 		c.Type,
 		c.UdtType,
-		slices.Select(c.Nullable, "NULL", "NOT NULL"),
+		values.Select(c.Nullable, "NULL", "NOT NULL"),
 		c.Name))
 }

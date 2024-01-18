@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -911,7 +911,7 @@ func (q *Stmt) String() string {
 	if q.sql == "" {
 		// Calculate the buffer hash and check for available queries
 		// NOTE: can't use bufToString here as it returns Raw pointer
-		bufStrKey := slices.StringsCoalesce(q.name, q.buf.String())
+		bufStrKey := values.StringsCoalesce(q.name, q.buf.String())
 		sql, ok := q.dialect.GetCachedQuery(bufStrKey)
 		if ok {
 			q.sql = sql

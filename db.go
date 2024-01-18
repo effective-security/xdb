@@ -11,7 +11,7 @@ import (
 
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/flake"
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/migrate"
 	"github.com/pkg/errors"
 )
@@ -220,7 +220,7 @@ func ParseConnectionString(dataSource string) (*Source, error) {
 		Driver:   u.Scheme,
 		Host:     u.Host,
 		User:     u.User.Username(),
-		Database: slices.StringsCoalesce(q.Get("dbname"), q.Get("database")),
+		Database: values.StringsCoalesce(q.Get("dbname"), q.Get("database")),
 		Params:   make(map[string]string),
 	}
 	if pwd, ok := u.User.Password(); ok {

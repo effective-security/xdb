@@ -6,8 +6,8 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/effective-security/x/ctl"
-	"github.com/effective-security/xdb/pkg/cli"
-	"github.com/effective-security/xdb/pkg/cli/schema"
+	"github.com/effective-security/xdb/internal/cli"
+	"github.com/effective-security/xdb/internal/cli/schema"
 )
 
 // version is set by the build script

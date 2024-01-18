@@ -17,6 +17,7 @@ type tableDefinition struct {
 	Columns         schema.Columns
 	Indexes         schema.Indexes
 	PrimaryKey      *schema.Column
+	WithCache       bool
 }
 
 type schemaDefinition struct {
@@ -37,6 +38,7 @@ package {{ .Package }}
 import (
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/schema"
+	"github.com/effective-security/x/values"
 	"github.com/pkg/errors"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
@@ -92,7 +94,24 @@ type {{ .StructName }} struct {
 	// {{$fieldName}} represents '{{.Name}}' column of '{{.Type}}'
 	{{$fieldName}} {{ sqlToGoType . }} ` + "`" + `{{ .Tag }}` + "`" + `
 {{- end }}
+{{- if .WithCache }}
+
+	// cachedProps is used to store computed and cached properties of the model,
+	// for example from JSON blobs
+	cachedProps values.MapAny ` + "`" + `json:"-"` + "`" + `
+{{- end }}
 }
+
+{{- if .WithCache }}
+
+// Cached returns cached properties of the model.
+func(m *{{ .StructName }}) Cached() values.MapAny {
+	if m.cachedProps == nil {
+		m.cachedProps = values.MapAny{}
+	}
+	return m.cachedProps
+}
+{{- end }}
 
 // ScanRow scans one row for {{ .TableName }}.
 func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
@@ -113,14 +132,14 @@ type {{ .StructName }}Result xdb.Result[{{ .StructName }}, *{{ .StructName }}]
 // Execute runs a query and populates the result with a list of models and the next offset,
 // if there are more rows to fetch
 func (p *{{ .StructName }}Result) Execute(ctx context.Context, sql xdb.DB, query string, args ...any) error {
-	p.Limit = slices.NumbersCoalesce(p.Limit, xdb.DefaultPageSize)
+	p.Limit = values.NumbersCoalesce(p.Limit, xdb.DefaultPageSize)
 	list, err := xdb.ExecuteListQuery[{{ .StructName }}, *{{ .StructName }}](ctx, sql, query, args...)
 	if err != nil {
 		return err
 	}
 	p.Rows = list
 	count := uint32(len(list))
-	p.NextOffset = slices.Select(count >= p.Limit, p.NextOffset+count, 0)
+	p.NextOffset = values.Select(count >= p.Limit, p.NextOffset+count, 0)
 	return nil
 }
 

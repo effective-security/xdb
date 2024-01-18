@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/schema"
 	"github.com/olekukonko/tablewriter"
 )
@@ -42,9 +42,9 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 			c.Name,
 			c.Type,
 			c.UdtType,
-			slices.Select(c.Nullable, "YES", ""),
+			values.Select(c.Nullable, "YES", ""),
 			maxL,
-			slices.Select(c.IsIndex(), "YES", ""),
+			values.Select(c.IsIndex(), "YES", ""),
 			ref,
 		})
 	}
@@ -71,8 +71,8 @@ func SchemaIndexes(w io.Writer, r schema.Indexes) {
 	for _, c := range r {
 		table.Append([]string{
 			c.Name,
-			slices.Select(c.IsPrimary, "YES", ""),
-			slices.Select(c.IsUnique, "YES", ""),
+			values.Select(c.IsPrimary, "YES", ""),
+			values.Select(c.IsUnique, "YES", ""),
 			strings.Join(c.ColumnNames, ", "),
 		})
 	}

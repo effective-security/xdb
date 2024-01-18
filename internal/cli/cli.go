@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/effective-security/x/ctl"
-	"github.com/effective-security/x/slices"
+	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/print"
 	"github.com/effective-security/xdb/schema"
@@ -103,7 +103,7 @@ func (c *Cli) AfterApply(_ *kong.Kong, _ kong.Vars) error {
 		xlog.SetGlobalLogLevel(xlog.ERROR)
 	}
 
-	c.SQLSource = slices.StringsCoalesce(c.SQLSource, os.Getenv("XDB_DATASOURCE"))
+	c.SQLSource = values.StringsCoalesce(c.SQLSource, os.Getenv("XDB_DATASOURCE"))
 	if c.SQLSource == "" {
 		return errors.Errorf("use --sql-source or set XDB_DATASOURCE")
 	}

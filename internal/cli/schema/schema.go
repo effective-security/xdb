@@ -13,7 +13,8 @@ import (
 
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/slices"
-	"github.com/effective-security/xdb/pkg/cli"
+	"github.com/effective-security/x/values"
+	"github.com/effective-security/xdb/internal/cli"
 	"github.com/effective-security/xdb/schema"
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -229,17 +230,18 @@ var templateFuncMap = template.FuncMap{
 }
 
 type override struct {
-	Tables map[string]string `json:"tables" yaml:"tables"`
-	Fields map[string]string `json:"fields" yaml:"fields"`
-	Types  map[string]string `json:"types" yaml:"types"`
+	Tables    map[string]string `json:"tables" yaml:"tables"`
+	Fields    map[string]string `json:"fields" yaml:"fields"`
+	Types     map[string]string `json:"types" yaml:"types"`
+	WithCache []string          `json:"with_cached_props" yaml:"with_cached_props"`
 }
 
 func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
 	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
-	modelPkg := slices.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
-	schemaPkg := slices.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
+	modelPkg := values.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
+	schemaPkg := values.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
 
 	var dialect string
 	imports := a.Imports
@@ -266,6 +268,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		}
 		for k, v := range defs.Tables {
 			tableNamesMap[k] = v
+		}
+		for _, v := range defs.WithCache {
+			modelWithCacheMap[v] = true
 		}
 	}
 
@@ -337,6 +342,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				Columns:         t.Columns,
 				Indexes:         t.Indexes,
 				PrimaryKey:      t.PrimaryKey,
+				WithCache:       modelWithCacheMap[t.SchemaName],
 			}
 
 			if res, ok := tableNamesMap[t.SchemaName]; ok {

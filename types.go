@@ -112,12 +112,22 @@ func (n *Metadata) Scan(value any) error {
 		*n = nil
 		return nil
 	}
-	v := fmt.Sprint(value)
-	if len(v) == 0 {
+
+	var s []byte
+	switch vid := value.(type) {
+	case []byte:
+		s = vid
+	case string:
+		s = []byte(vid)
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	if len(s) == 0 {
 		*n = Metadata{}
 		return nil
 	}
-	return errors.WithStack(json.Unmarshal([]byte(v), n))
+	return errors.WithStack(json.Unmarshal(s, n))
 }
 
 // Value implements the driver Valuer interface.

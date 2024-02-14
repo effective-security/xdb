@@ -162,6 +162,18 @@ func TestMetadata(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(tc.val), len(val2))
 	}
+
+	m1 := xdb.Metadata{"one": "two"}
+	m2 := xdb.Metadata{"three": "four"}
+
+	m1.Merge(m2)
+	assert.Equal(t, 2, len(m1))
+
+	var mm xdb.Metadata
+	mm.Merge(m2)
+	assert.Equal(t, 1, len(mm))
+	mm.Merge(m1)
+	assert.Equal(t, 2, len(mm))
 }
 
 func TestDbTime(t *testing.T) {

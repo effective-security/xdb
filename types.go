@@ -106,6 +106,16 @@ func (n Strings) Value() (driver.Value, error) {
 // Metadata de/encodes the string map to/from a SQL string.
 type Metadata map[string]string
 
+// Merge merges metadata
+func (n *Metadata) Merge(m Metadata) {
+	if *n == nil {
+		*n = Metadata{}
+	}
+	for k, v := range m {
+		(*n)[k] = v
+	}
+}
+
 // Scan implements the Scanner interface.
 func (n *Metadata) Scan(value any) error {
 	if value == nil {

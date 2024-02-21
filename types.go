@@ -107,13 +107,14 @@ func (n Strings) Value() (driver.Value, error) {
 type Metadata map[string]string
 
 // Merge merges metadata
-func (n *Metadata) Merge(m Metadata) {
+func (n *Metadata) Merge(m Metadata) *Metadata {
 	if *n == nil {
 		*n = Metadata{}
 	}
 	for k, v := range m {
 		(*n)[k] = v
 	}
+	return n
 }
 
 // Scan implements the Scanner interface.
@@ -155,6 +156,11 @@ func (n Metadata) Value() (driver.Value, error) {
 // NULLString de/encodes the string a SQL string.
 type NULLString string
 
+// String returns string
+func (ns NULLString) String() string {
+	return string(ns)
+}
+
 // Scan implements the Scanner interface.
 func (ns *NULLString) Scan(value any) error {
 	var v sql.NullString
@@ -180,6 +186,11 @@ func (ns NULLString) Value() (driver.Value, error) {
 
 // UUID de/encodes the string a SQL string.
 type UUID string
+
+// String returns string
+func (ns UUID) String() string {
+	return string(ns)
+}
 
 // Scan implements the Scanner interface.
 func (ns *UUID) Scan(value any) error {

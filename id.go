@@ -156,6 +156,15 @@ func (v ID) Value() (driver.Value, error) {
 // IDArray defines a list of IDArray
 type IDArray []ID
 
+// NewIDArray returns IDArray
+func NewIDArray(vals []uint64) IDArray {
+	var ids IDArray
+	for _, id := range vals {
+		ids = append(ids, NewID(id))
+	}
+	return ids
+}
+
 // Scan implements the Scanner interface for IDs
 func (n *IDArray) Scan(value any) error {
 	*n = nil
@@ -207,6 +216,25 @@ func (n IDArray) Strings() []string {
 		list = append(list, id.String())
 	}
 	return list
+}
+
+// List returns list of IDs
+func (n IDArray) List() []uint64 {
+	var list []uint64
+	for _, id := range n {
+		list = append(list, id.UInt64())
+	}
+	return list
+}
+
+// Add returns new list
+func (n IDArray) Add(id ID) IDArray {
+	for _, v := range n {
+		if v.UInt64() == id.UInt64() {
+			return n
+		}
+	}
+	return append(n, id)
 }
 
 // ID32 defines a type to convert between internal uint32 and NULL values in DB

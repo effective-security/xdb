@@ -54,6 +54,16 @@ func TestID(t *testing.T) {
 	require.Nil(t, dr)
 	require.NoError(t, err)
 }
+func TestIDs(t *testing.T) {
+	var ids xdb.IDArray
+	ids = ids.Add(xdb.NewID(1))
+	ids = ids.Add(xdb.NewID(2))
+	ids = ids.Add(xdb.NewID(3))
+	ids = ids.Add(xdb.NewID(1))
+	l := []uint64{1, 2, 3}
+	assert.Equal(t, l, ids.List())
+	assert.Equal(t, l, xdb.NewIDArray(l).List())
+}
 
 func TestIDsValue(t *testing.T) {
 	tcases := []struct {

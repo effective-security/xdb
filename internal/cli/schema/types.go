@@ -61,7 +61,7 @@ var typeByColumnType = map[string]string{
 	"smallint NULL": "xdb.Int32",
 	"tinyint NULL":  "xdb.Int32",
 
-	"bool NULL":    "bool",
+	"bool NULL":    "xdb.Bool",
 	"boolean NULL": "xdb.Bool",
 	"bit NULL":     "xdb.Bool",
 

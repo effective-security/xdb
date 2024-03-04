@@ -160,7 +160,7 @@ type IDArray []ID
 func NewIDArray(vals []uint64) IDArray {
 	var ids IDArray
 	for _, id := range vals {
-		ids = append(ids, NewID(id))
+		ids = ids.Add(NewID(id))
 	}
 	return ids
 }
@@ -235,6 +235,17 @@ func (n IDArray) Add(id ID) IDArray {
 		}
 	}
 	return append(n, id)
+}
+
+// Concat returns new list
+func (n IDArray) Concat(other IDArray) IDArray {
+	if len(other) < len(n) {
+		return other.Concat(n)
+	}
+	for _, id := range other {
+		n = n.Add(id)
+	}
+	return n
 }
 
 // ID32 defines a type to convert between internal uint32 and NULL values in DB

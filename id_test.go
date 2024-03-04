@@ -60,9 +60,21 @@ func TestIDs(t *testing.T) {
 	ids = ids.Add(xdb.NewID(2))
 	ids = ids.Add(xdb.NewID(3))
 	ids = ids.Add(xdb.NewID(1))
-	l := []uint64{1, 2, 3}
+	ids = ids.Add(xdb.NewID(4))
+	l := []uint64{1, 2, 3, 4}
 	assert.Equal(t, l, ids.List())
-	assert.Equal(t, l, xdb.NewIDArray(l).List())
+	al := xdb.NewIDArray(l)
+	assert.Equal(t, l, al.List())
+
+	assert.Equal(t, l, al.Concat(al).List())
+
+	var ids2 xdb.IDArray
+	ids2 = ids2.Add(xdb.NewID(5))
+	ids2 = ids2.Add(xdb.NewID(6))
+	ids2 = ids2.Add(xdb.NewID(7))
+	ids2 = ids2.Add(xdb.NewID(5))
+
+	assert.Equal(t, []uint64{5, 6, 7, 1, 2, 3, 4}, al.Concat(ids2).List())
 }
 
 func TestIDsValue(t *testing.T) {

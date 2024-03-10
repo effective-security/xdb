@@ -39,7 +39,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           paths_ignore: '["**.md", "**.png", "**.jpg", "**/Documentation/**"]'
-          #do_not_skip: '["push","schedule","release"]'
+          do_not_skip: '["push","schedule","release"]'
           concurrent_skipping: false
           paths_filter: |
             go:

@@ -39,7 +39,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           paths_ignore: '["**.md", "**.png", "**.jpg", "**/Documentation/**"]'
-          do_not_skip: '["push","schedule","release"]'
+          #do_not_skip: '["push","schedule","release"]'
           concurrent_skipping: false
           paths_filter: |
             go:
@@ -109,7 +109,7 @@ jobs:
           echo "git tag ${VERSION}"
 
       - name: Create Tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.detect-noop.outputs.paths_result.version != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !fromJSON(needs.detect-noop.outputs.paths_result).version.should_skip
         uses: actions/github-script@v6
         with:
           script: |

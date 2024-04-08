@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/kong v0.9.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/effective-security/x v0.4.31
-	github.com/effective-security/xlog v0.8.79
+	github.com/effective-security/xlog v0.8.81
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.17.0

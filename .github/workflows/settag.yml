@@ -26,7 +26,7 @@ jobs:
         run: |
           if [ -z "${{ github.event.inputs.tag }}" ]; then
             echo "No tag provided, using default"         
-            VERSION=$(cat .VERSION).${{env.RUN_NUMBER}}
+            VERSION=$(cat .VERSION).$(git rev-list --count HEAD)
             echo "VERSION: ${VERSION}"
             echo "DIST_VERSION=${VERSION}" >> $GITHUB_ENV
           else
@@ -34,7 +34,7 @@ jobs:
           fi
 
       - name: Create Tag
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const {DIST_VERSION} = process.env          

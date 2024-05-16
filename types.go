@@ -250,8 +250,14 @@ func (v *Int64) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// String returns string
 func (v Int64) String() string {
 	return strconv.FormatInt(int64(v), 10)
+}
+
+// Int64 returns int64
+func (v Int64) Int64() int64 {
+	return int64(v)
 }
 
 // Scan implements the Scanner interface.
@@ -318,6 +324,16 @@ func (v Int32) String() string {
 	return strconv.FormatInt(int64(v), 10)
 }
 
+// Int32 returns int32
+func (v Int32) Int32() int32 {
+	return int32(v)
+}
+
+// Int64 returns int64
+func (v Int32) Int64() int64 {
+	return int64(v)
+}
+
 // Scan implements the Scanner interface.
 func (v *Int32) Scan(value any) error {
 	if value == nil {
@@ -378,8 +394,14 @@ func (v *Float) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// String returns string
 func (v Float) String() string {
 	return strconv.FormatFloat(float64(v), 'f', 6, 64)
+}
+
+// Float returns float64
+func (v Float) Float() float64 {
+	return float64(v)
 }
 
 // Scan implements the Scanner interface.
@@ -447,8 +469,14 @@ func (v *Bool) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// String returns string
 func (v Bool) String() string {
 	return values.Select(bool(v), "true", "false")
+}
+
+// Bool returns bool
+func (v Bool) Bool() bool {
+	return bool(v)
 }
 
 // Scan implements the Scanner interface.

@@ -125,6 +125,7 @@ type Column struct {
 	UdtType   string
 	Nullable  bool
 	MaxLength uint32
+	Position  uint32
 
 	// GoName string
 	// GoType string

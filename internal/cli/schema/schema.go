@@ -38,6 +38,7 @@ type PrintColumnsCmd struct {
 	Schema       string   `help:"optional schema name to filter"`
 	Table        []string `help:"optional, list of tables, default: all tables"`
 	Dependencies bool     `help:"optional, to discover all dependencies"`
+	Views        bool     `help:"optional, to include views"`
 }
 
 // Run the command
@@ -51,7 +52,18 @@ func (a *PrintColumnsCmd) Run(ctx *cli.Cli) error {
 		return err
 	}
 
-	return ctx.Print(res)
+	_ = ctx.Print(res)
+
+	if a.Views {
+		res, err = r.ListViews(ctx.Context(), a.Schema, a.Table)
+		if err != nil {
+			return err
+		}
+		if len(res) > 0 {
+			_ = ctx.Print(res)
+		}
+	}
+	return nil
 }
 
 // PrintTablesCmd prints database tables with dependencies
@@ -59,6 +71,7 @@ type PrintTablesCmd struct {
 	DB     string   `help:"database name" required:""`
 	Schema string   `help:"optional schema name to filter"`
 	Table  []string `help:"optional, list of tables, default: all tables"`
+	Views  bool     `help:"optional, to include views"`
 }
 
 // Run the command
@@ -71,6 +84,15 @@ func (a *PrintTablesCmd) Run(ctx *cli.Cli) error {
 	if err != nil {
 		return err
 	}
+
+	if a.Views {
+		vres, err := r.ListViews(ctx.Context(), a.Schema, a.Table)
+		if err != nil {
+			return err
+		}
+		res = append(res, vres...)
+	}
+
 	w := ctx.Writer()
 
 	if ctx.O == "json" || ctx.O == "yaml" {

@@ -56,9 +56,9 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	s.Equal(`Schema: dbo
 Table: test
 
-  NAME |  TYPE  | UDT  | NULL | MAX | INDEX | REF  
--------+--------+------+------+-----+-------+------
-  ID   | uint64 | int8 |      |     |       |      
+  ORD | NAME |  TYPE  | UDT  | NULL | MAX | INDEX | REF  
+------+------+--------+------+------+-----+-------+------
+  0   | ID   | uint64 | int8 |      |     |       |      
 
 `, s.Out.String())
 
@@ -68,7 +68,7 @@ Table: test
 	err = cmd.Run(s.Ctl)
 	require.NoError(err)
 	s.Equal(
-		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": false,\n        \"MaxLength\": 0\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
+		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": false,\n        \"MaxLength\": 0,\n        \"Position\": 0\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
 		s.Out.String())
 
 	err = cmd.Run(s.Ctl)

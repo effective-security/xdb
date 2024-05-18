@@ -150,7 +150,8 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 		c := &Column{}
 		var nullable string
 		var max *int
-		if err := rows.Scan(&schemaName, &tableName, &c.Name, &c.Type, &c.UdtType, &nullable, &max); err != nil {
+		var ordinal int
+		if err := rows.Scan(&schemaName, &tableName, &c.Name, &c.Type, &c.UdtType, &nullable, &max, &ordinal); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		if schema != "" && !strings.EqualFold(schema, schemaName) {
@@ -164,6 +165,7 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 		c.MaxLength = maxLength(max)
 		c.Name = columnName(c.Name)
 		c.SchemaName = fmt.Sprintf("%s.%s.%s", schemaName, tableName, c.Name)
+		c.Position = uint32(ordinal)
 		r.columns[c.SchemaName] = c
 
 		tSchemaName := fmt.Sprintf("%s.%s", schemaName, tableName)
@@ -185,6 +187,10 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 
 	tt := Tables{}
 	for _, c := range tablesMap {
+		sort.Slice(c.Columns, func(i int, j int) bool {
+			return c.Columns[i].Position < c.Columns[j].Position
+		})
+
 		tt = append(tt, c)
 	}
 
@@ -207,9 +213,11 @@ func (r *SQLServerProvider) readColumnsSchema(ctx context.Context, schema, table
 		c := &Column{}
 		var nullable string
 		var max *int
-		if err := rows.Scan(&c.Name, &c.Type, &c.UdtType, &nullable, &max); err != nil {
+		var ordinal int
+		if err := rows.Scan(&c.Name, &c.Type, &c.UdtType, &nullable, &max, &ordinal); err != nil {
 			return nil, errors.WithStack(err)
 		}
+		c.Position = uint32(ordinal)
 		c.Nullable = slices.ContainsStringEqualFold(nullableVals, nullable)
 		c.MaxLength = maxLength(max)
 		c.Name = columnName(c.Name)
@@ -222,6 +230,10 @@ func (r *SQLServerProvider) readColumnsSchema(ctx context.Context, schema, table
 	if rows.Err() != nil {
 		return nil, rows.Err()
 	}
+
+	sort.Slice(cc, func(i int, j int) bool {
+		return cc[i].Position < cc[j].Position
+	})
 
 	return cc, nil
 }

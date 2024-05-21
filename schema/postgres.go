@@ -32,7 +32,7 @@ func (p postgres) QueryTables(ctx context.Context) (*sql.Rows, error) {
 
 func (p postgres) QueryColumns(ctx context.Context, schema, table string) (*sql.Rows, error) {
 	qry := fmt.Sprintf(`
-	SELECT column_name, data_type, udt_name, is_nullable, character_maximum_length
+	SELECT column_name, data_type, udt_name, is_nullable, character_maximum_length, ordinal_position 
   	FROM information_schema.columns
  	WHERE table_schema = '%s'
    	AND table_name = '%s';
@@ -49,7 +49,8 @@ SELECT
 	c.data_type,
 	c.udt_name,
 	c.is_nullable,
-	c.character_maximum_length
+	c.character_maximum_length,
+	c.ordinal_position 
 FROM information_schema.tables t
 LEFT JOIN information_schema.columns c 
 	   ON t.table_schema = c.table_schema 

@@ -20,7 +20,7 @@ func TestObject(t *testing.T) {
 	}{
 		{"yaml", []string{"schema: dbo\nname: test\nisview: false\ncolumns: []\nindexes: []\nprimarykey: null\n"}},
 		{"json", []string{"{\n  \"Schema\": \"dbo\",\n  \"Name\": \"test\",\n  \"IsView\": false,\n  \"Columns\": null,\n  \"Indexes\": null,\n  \"PrimaryKey\": null\n}\n"}},
-		{"", []string{"Schema: dbo\nTable: test\n\n  NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n-------+------+-----+------+-----+-------+------\n\n"}},
+		{"", []string{"Schema: dbo\nTable: test\n\n  ORD | NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n------+------+------+-----+------+-----+-------+------\n\n"}},
 	}
 	w := bytes.NewBuffer([]byte{})
 	for _, tc := range tcases {
@@ -37,7 +37,7 @@ func TestObject(t *testing.T) {
 	w.Reset()
 	_ = print.Object(w, "", &ver)
 	assert.Equal(t,
-		"Schema: dbo\nTable: test\n\n  NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n-------+------+-----+------+-----+-------+------\n\n",
+		"Schema: dbo\nTable: test\n\n  ORD | NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n------+------+------+-----+------+-----+-------+------\n\n",
 		w.String())
 }
 
@@ -89,10 +89,10 @@ func TestPrintSchema(t *testing.T) {
 			`Schema: dbo
 Table: test
 
-  NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
--------+--------+---------+------+-----+-------+------
-  ID   | uint64 | int8    |      |     |       |      
-  Name | string | varchar | YES  | 255 |       |      
+  ORD | NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
+------+------+--------+---------+------+-----+-------+------
+  0   | ID   | uint64 | int8    |      |     |       |      
+  0   | Name | string | varchar | YES  | 255 |       |      
 
 Indexes:
   NAME | PRIMARY | UNIQUE |  COLUMNS    
@@ -107,10 +107,10 @@ Indexes:
 			`Schema: dbo
 Table: test
 
-  NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
--------+--------+---------+------+-----+-------+------
-  ID   | uint64 | int8    |      |     |       |      
-  Name | string | varchar | YES  | 255 |       |      
+  ORD | NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
+------+------+--------+---------+------+-----+-------+------
+  0   | ID   | uint64 | int8    |      |     |       |      
+  0   | Name | string | varchar | YES  | 255 |       |      
 
 `,
 		)

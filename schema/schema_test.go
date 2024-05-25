@@ -193,7 +193,7 @@ func TestTableInfo(t *testing.T) {
 
 	assert.Equal(t, `FROM public.org`, ti.From().String())
 	assert.Equal(t, "SELECT id, meta, name \nFROM public.org", ti.Select().String())
-	assert.Equal(t, "SELECT o.id, NULL, o.name \nFROM public.org", ti.SelectAliased("o", map[string]bool{"meta": true}).String())
+	assert.Equal(t, "SELECT o.id, NULL, o.name \nFROM public.org o", ti.SelectAliased("o", map[string]bool{"meta": true}).String())
 	assert.Equal(t, "SELECT id \nFROM public.org", ti.Select("id").String())
 	assert.Equal(t, "UPDATE public.org \nSET id=$1 \nWHERE id = $2", ti.Update().Set("id", nil).Where("id = ?", nil).String())
 	assert.Equal(t, "DELETE FROM public.org \nWHERE id = $1", ti.DeleteFrom().Where("id = ?", nil).String())

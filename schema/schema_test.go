@@ -49,7 +49,7 @@ func TestModel(t *testing.T) {
 	assert.False(t, c.IsIndex())
 	assert.False(t, c.IsPrimary())
 	assert.Equal(t, `db:"org_id,int8,null"`, c.Tag())
-	assert.Equal(t, `{ Name: "org_id", Type: "bigint", UdtType: "int8", Nullable: true }`, c.StructString())
+	assert.Equal(t, `{ Name: "org_id", Position: 0, Type: "bigint", UdtType: "int8", Nullable: true }`, c.StructString())
 
 	c2 := &Column{
 		Name:      "id",
@@ -63,7 +63,7 @@ func TestModel(t *testing.T) {
 	assert.True(t, c2.IsIndex())
 	assert.True(t, c2.IsPrimary())
 	assert.Equal(t, `db:"id,int8,max:32,index,primary,fk:smb.t2.c2"`, c2.Tag())
-	assert.Equal(t, `{ Name: "id", Type: "bigint", UdtType: "int8", Nullable: false , MaxLength: 32 }`, c2.StructString())
+	assert.Equal(t, `{ Name: "id", Position: 0, Type: "bigint", UdtType: "int8", Nullable: false , MaxLength: 32 }`, c2.StructString())
 
 	cols := Columns{c, c2}
 	assert.Equal(t, []string{"org_id", "id"}, cols.Names())

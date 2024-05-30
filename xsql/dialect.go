@@ -23,7 +23,7 @@ type SQLDialect interface {
 
 	// GetOrCreateQuery returns a cached query by name or creates a new one.
 	// The function will close the Builder
-	GetOrCreateQuery(name string, create func(name string) Builder) string
+	GetOrCreateQuery(name string, create func(name string) Builder) (query string, key string)
 
 	// DeleteFrom starts a DELETE statement.
 	DeleteFrom(tableName string) Builder
@@ -82,8 +82,6 @@ type SQLDialect interface {
 // replaced with numbered positional arguments like $1, $2...
 type Dialect struct {
 	provider    string
-	cacheOnce   sync.Once
-	cacheLock   sync.RWMutex
 	cache       sync.Map
 	useNewLines bool
 }

@@ -20,13 +20,13 @@ func (d *Dialect) PutCachedQuery(name, sql string) {
 }
 
 // GetOrCreateQuery returns a cached query by name or creates a new one.
-func (d *Dialect) GetOrCreateQuery(name string, create func(name string) Builder) string {
+func (d *Dialect) GetOrCreateQuery(name string, create func(name string) Builder) (string, string) {
 	if qstr, ok := d.GetCachedQuery(name); ok {
-		return qstr
+		return qstr, name
 	}
 	q := create(name)
 	// will store query in cache
-	return q.SetName(name).String()
+	return q.SetName(name).String(), name
 }
 
 // bufToString returns a string pointing to a ByteBuffer contents

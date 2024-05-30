@@ -383,7 +383,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	if err != nil {
 		return errors.WithMessagef(err, "failed to format")
 	}
-	w.Write(code)
+	_, _ = w.Write(code)
 
 	var schemaCodeTemplate = template.Must(template.New("schemaCode").Funcs(templateFuncMap).Parse(codeSchemaTemplateText))
 	var collsCodeTemplate = template.Must(template.New("collsCode").Funcs(templateFuncMap).Parse(codeTableColTemplateText))
@@ -425,7 +425,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	if err != nil {
 		return errors.WithMessagef(err, "failed to format")
 	}
-	w.Write(code)
+	_, _ = w.Write(code)
 
 	return nil
 }

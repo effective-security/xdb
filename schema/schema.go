@@ -147,8 +147,8 @@ func (c *Column) StructString() string {
 	if c.MaxLength > 0 {
 		ml = fmt.Sprintf(", MaxLength: %d ", c.MaxLength)
 	}
-	return fmt.Sprintf(`{ Name: "%s", Type: "%s", UdtType: "%s", Nullable: %t %s}`,
-		c.Name, c.Type, c.UdtType, c.Nullable, ml,
+	return fmt.Sprintf(`{ Name: "%s", Position: %d, Type: "%s", UdtType: "%s", Nullable: %t %s}`,
+		c.Name, c.Position, c.Type, c.UdtType, c.Nullable, ml,
 	)
 }
 

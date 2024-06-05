@@ -16,13 +16,6 @@ type RowPointer[T any] interface {
 	RowScanner
 }
 
-// Result describes the result of a list query
-type Result[T any, TPointer RowPointer[T]] struct {
-	Rows       []TPointer
-	NextOffset uint32
-	Limit      uint32
-}
-
 // QueryRow runs a query and returns a single model
 func QueryRow[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) (TPointer, error) {
 	row := sql.QueryRowContext(ctx, query, args...)
@@ -57,16 +50,59 @@ func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB
 	return list, nil
 }
 
-// Execute runs a query and populates the result with a list of models and the next offset,
-// if there are more rows to fetch
-func (p *Result[T, RowPointer]) Execute(ctx context.Context, sql DB, query string, args ...any) error {
-	p.Limit = values.NumbersCoalesce(p.Limit, DefaultPageSize)
-	list, err := ExecuteListQuery[T, RowPointer](ctx, sql, query, args...)
+// Result describes the result of a list query
+type Result[T any, TPointer RowPointer[T]] interface {
+	SetResult(rows []TPointer, nextOffset uint32, hasNextPage bool)
+}
+
+// ExecuteQueryWithPagination runs a query and populates the result with a list of models and the next offset,
+// if there are more rows to fetch.
+// args can be a QueryParams or a list of arguments followed by the limit and offset.
+func ExecuteQueryWithPagination[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, res Result[T, TPointer], query string, args ...any) error {
+	var (
+		limit  uint32
+		offset uint32
+	)
+	if len(args) == 1 {
+		if qp, ok := args[0].(QueryParams); ok {
+			limit, offset = qp.Page()
+			args = qp.Args()
+		}
+	} else if len(args) >= 2 {
+		clen := len(args)
+		// Limit and Offset are the last two arguments
+		limit = PageParam(args[clen-2])
+		offset = PageParam(args[clen-1])
+	}
+
+	list, err := ExecuteListQuery[T, TPointer](ctx, sql, query, args...)
 	if err != nil {
 		return err
 	}
-	p.Rows = list
+
 	count := uint32(len(list))
-	p.NextOffset = values.Select(count >= p.Limit, p.NextOffset+count, 0)
+	hasNextPage := count >= limit
+	nextOffset := values.Select(hasNextPage, offset+count, 0)
+
+	res.SetResult(list, nextOffset, hasNextPage)
+
+	return nil
+}
+
+// ExecuteQuery runs a query and populates the result with a list of models.
+// args can be a QueryParams or a list of arguments
+func ExecuteQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, res Result[T, TPointer], query string, args ...any) error {
+	if len(args) == 1 {
+		if qp, ok := args[0].(QueryParams); ok {
+			args = qp.Args()
+		}
+	}
+
+	list, err := ExecuteListQuery[T, TPointer](ctx, sql, query, args...)
+	if err != nil {
+		return err
+	}
+
+	res.SetResult(list, 0, false)
 	return nil
 }

@@ -1,9 +1,16 @@
-package xsql
+package xdb
 
 import (
+	"database/sql"
 	"strconv"
 	"strings"
 )
+
+// Pageable is an interface for pagination.
+type Pageable interface {
+	// Page returns the limit and offset for pagination.
+	Page() (limit uint32, offset uint32)
+}
 
 // HasQueryParams is an interface for objects with query parameters.
 type HasQueryParams interface {
@@ -25,6 +32,8 @@ func GetQueryParams(args ...any) QueryParams {
 
 // QueryParams is an interface for query parameters.
 type QueryParams interface {
+	Pageable
+
 	Name() string
 	Args() []any
 	// IsSet checks if a positional query parameter is set.
@@ -49,6 +58,11 @@ type QueryParamsBuilder struct {
 	enums     []enumPosition
 	args      []any
 	hash      string
+
+	// Limit specifies maximimum number of records to return
+	limit uint32
+	// Offset specifies the offset for pagination
+	offset uint32
 }
 
 // NewQueryParams creates a new query parameters builder.
@@ -102,12 +116,33 @@ func (b *QueryParamsBuilder) Set(pos uint32, v any) {
 	if pos > 63 {
 		panic("enum position is out of range")
 	}
+	b.checkPage()
 	b.positions |= 1 << pos
 	b.args = append(b.args, v)
 }
 
+func (b *QueryParamsBuilder) checkPage() {
+	if b.limit > 0 {
+		panic("limit already set: limit and offset must be last arguments")
+	}
+}
+
+// SetPage sets the limit for pagination, and adds it to the list of arguments.
+func (b *QueryParamsBuilder) SetPage(limit, offset uint32) {
+	b.checkPage()
+	b.limit = limit
+	b.offset = offset
+	b.args = append(b.args, limit, offset)
+}
+
+// Page returns the limit and offset for pagination, if supported
+func (b *QueryParamsBuilder) Page() (limit uint32, offset uint32) {
+	return b.limit, b.offset
+}
+
 // AddArgs adds an additional query arguments, such as Limit or Offset
 func (b *QueryParamsBuilder) AddArgs(v ...any) {
+	b.checkPage()
 	b.args = append(b.args, v...)
 }
 
@@ -121,6 +156,7 @@ func (b *QueryParamsBuilder) SetEnum(pos uint32, v int32) {
 	if pos > 63 {
 		panic("enum position is out of range")
 	}
+	b.checkPage()
 	b.positions |= 1 << pos
 	b.enums = append(b.enums, enumPosition{pos, v})
 }
@@ -144,4 +180,18 @@ func (b *QueryParamsBuilder) SetFlags(v ...int32) {
 // GetFlags returns additional flags for query parameter.
 func (b *QueryParamsBuilder) GetFlags() []int32 {
 	return b.flags
+}
+
+// PageParam converts a parameter to uint32
+func PageParam(p any) uint32 {
+	switch p := p.(type) {
+	case int:
+		return uint32(p)
+	case uint32:
+		return p
+	case sql.NamedArg:
+		return PageParam(p.Value)
+	default:
+		panic("invalid parameter type: expected int, uint32, sql.NamedArg")
+	}
 }

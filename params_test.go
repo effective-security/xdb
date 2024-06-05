@@ -1,4 +1,4 @@
-package xsql
+package xdb
 
 import (
 	"testing"

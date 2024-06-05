@@ -127,22 +127,17 @@ func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 }
 
 type {{ .StructName }}Slice []*{{ .StructName }}
-type {{ .StructName }}Result xdb.Result[{{ .StructName }}, *{{ .StructName }}]
-
-// Execute runs a query and populates the result with a list of models and the next offset,
-// if there are more rows to fetch
-func (p *{{ .StructName }}Result) Execute(ctx context.Context, sql xdb.DB, query string, args ...any) error {
-	p.Limit = values.NumbersCoalesce(p.Limit, xdb.DefaultPageSize)
-	list, err := xdb.ExecuteListQuery[{{ .StructName }}, *{{ .StructName }}](ctx, sql, query, args...)
-	if err != nil {
-		return err
-	}
-	p.Rows = list
-	count := uint32(len(list))
-	p.NextOffset = values.Select(count >= p.Limit, p.NextOffset+count, 0)
-	return nil
+type {{ .StructName }}Result struct {
+	Rows        []*{{ .StructName }}
+	NextOffset  uint32
+	HasNextPage bool
 }
 
+func (p *{{ .StructName }}Result) SetResult(rows []*{{ .StructName }}, nextOffset uint32, hasNextPage bool) {
+	p.Rows = rows
+	p.NextOffset = nextOffset
+	p.HasNextPage = hasNextPage
+}
 `
 
 var codeSchemaTemplateText = `// DO NOT EDIT!

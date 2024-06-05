@@ -38,6 +38,18 @@ func (m *user) ScanRow(row xdb.Row) error {
 	return nil
 }
 
+type UserResult struct {
+	Rows        []*user
+	NextOffset  uint32
+	HasNextPage bool
+}
+
+func (p *UserResult) SetResult(rows []*user, nextOffset uint32, hasNextPage bool) {
+	p.Rows = rows
+	p.NextOffset = nextOffset
+	p.HasNextPage = hasNextPage
+}
+
 func TestProv(t *testing.T) {
 	s, err := xdb.ParseConnectionString("postgres://u1:p2@127.0.0.1:55432?sslmode=disable&dbname=testdb")
 	require.NoError(t, err)
@@ -103,22 +115,33 @@ func TestPG(t *testing.T) {
 		assert.Equal(t, expectedTables, tables)
 	})
 
-	t.Run("RunQueryResult", func(t *testing.T) {
-		rs := xdb.Result[user, *user]{
-			Limit:      2,
-			NextOffset: 0,
-		}
-		err = rs.Execute(ctx,
-			provider.DB(),
-			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
+	t.Run("ExecuteQueryWithPagination", func(t *testing.T) {
+		qp := xdb.NewQueryParams("ListUsers")
+		qp.SetPage(2, 0)
+
+		var rs UserResult
+		err := xdb.ExecuteQueryWithPagination(ctx, provider.DB(), &rs,
+			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, qp)
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
+		assert.True(t, rs.HasNextPage)
 
-		err = rs.Execute(ctx,
-			provider.DB(),
-			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
+		err = xdb.ExecuteQueryWithPagination[user, *user](ctx, provider.DB(), &rs,
+			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, 2, rs.NextOffset)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(rs.Rows))
+		assert.Equal(t, uint32(0), rs.NextOffset)
+		assert.False(t, rs.HasNextPage)
+	})
+
+	t.Run("ExecuteQuery", func(t *testing.T) {
+		qp := xdb.NewQueryParams("ListUsers")
+
+		var rs UserResult
+		err := xdb.ExecuteQuery(ctx, provider.DB(), &rs,
+			`SELECT id, email,email_verified, name FROM public.user LIMIT 3`, qp)
+		require.NoError(t, err)
+		assert.Equal(t, 3, len(rs.Rows))
 		assert.Equal(t, uint32(0), rs.NextOffset)
 	})
 
@@ -129,13 +152,9 @@ func TestPG(t *testing.T) {
 		_, err = ptx.BeginTx(ctx, nil)
 		assert.EqualError(t, err, "transaction already started")
 
-		rs := xdb.Result[user, *user]{
-			Limit:      2,
-			NextOffset: 0,
-		}
-		err = rs.Execute(ctx,
-			ptx.DB(),
-			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, rs.Limit, rs.NextOffset)
+		var rs UserResult
+		err = xdb.ExecuteQueryWithPagination(ctx, ptx.DB(), &rs,
+			`SELECT id, email,email_verified, name FROM public.user LIMIT $1 OFFSET $2`, 2, 0)
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
@@ -236,30 +255,18 @@ func TestMS(t *testing.T) {
 		assert.Equal(t, expectedTables, tables)
 	})
 
-	t.Run("Execute", func(t *testing.T) {
-		rs := xdb.Result[user, *user]{
-			Limit:      2,
-			NextOffset: 0,
-		}
-		err = rs.Execute(ctx,
-			provider.DB(),
-			`SELECT id, email,email_verified, name FROM [dbo].[user] 
-			ORDER BY id 
-			OFFSET @offset ROWS 
-			FETCH NEXT @take ROWS ONLY`,
-			sql.Named("offset", rs.NextOffset),
-			sql.Named("take", rs.Limit))
+	t.Run("ExecuteQueryWithPagination", func(t *testing.T) {
+		q := `SELECT id, email,email_verified, name FROM [dbo].[user] 
+ORDER BY id 
+OFFSET @offset ROWS 
+FETCH NEXT @take ROWS ONLY`
+
+		var rs UserResult
+		err := xdb.ExecuteQueryWithPagination(ctx, provider.DB(), &rs, q, sql.Named("take", 2), sql.Named("offset", 0))
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 
-		err = rs.Execute(ctx,
-			provider.DB(),
-			`SELECT id, email,email_verified, name FROM [dbo].[user] 
-			ORDER BY id 
-			OFFSET @offset ROWS 
-			FETCH NEXT @take ROWS ONLY`,
-			sql.Named("offset", rs.NextOffset),
-			sql.Named("take", rs.Limit))
+		err = xdb.ExecuteQueryWithPagination(ctx, provider.DB(), &rs, q, sql.Named("take", 2), sql.Named("offset", rs.NextOffset))
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(rs.Rows))
 		assert.Equal(t, uint32(0), rs.NextOffset)
@@ -271,18 +278,13 @@ func TestMS(t *testing.T) {
 		assert.NotNil(t, ptx.Tx())
 		assert.NotNil(t, ptx.DB())
 
-		rs := xdb.Result[user, *user]{
-			Limit:      2,
-			NextOffset: 0,
-		}
-		err = rs.Execute(ctx,
-			provider.DB(),
-			`SELECT id, email,email_verified, name FROM [dbo].[user] 
-			ORDER BY id 
-			OFFSET @offset ROWS 
-			FETCH NEXT @take ROWS ONLY`,
-			sql.Named("offset", rs.NextOffset),
-			sql.Named("take", rs.Limit))
+		q := `SELECT id, email,email_verified, name FROM [dbo].[user] 
+		ORDER BY id 
+		OFFSET @offset ROWS 
+		FETCH NEXT @take ROWS ONLY`
+
+		var rs UserResult
+		err = xdb.ExecuteQueryWithPagination(ctx, provider.DB(), &rs, q, sql.Named("take", 2), sql.Named("offset", 0))
 		require.NoError(t, err)
 		assert.Equal(t, uint32(len(rs.Rows)), rs.NextOffset)
 

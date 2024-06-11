@@ -116,10 +116,10 @@ jobs:
           echo "VERSION: ${VERSION}"
           echo "DIST_VERSION=${VERSION}" >> $GITHUB_ENV
           echo "git tag ${VERSION}"
-          echo ".VERSION: ${{steps.version-changed.outputs.paths_result}}"
+          echo "should_skip: ${{steps.version-changed.outputs.should_skip}}"
 
       - name: Create Tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && fromJSON(steps.version-changed.outputs.paths_result).global.should_skip == 'false'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.version-changed.outputs.should_skip != 'true'
         uses: actions/github-script@v7
         with:
           script: |

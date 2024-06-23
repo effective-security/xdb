@@ -54,14 +54,15 @@ func TestID(t *testing.T) {
 	require.Nil(t, dr)
 	require.NoError(t, err)
 }
+
 func TestIDs(t *testing.T) {
 	var ids xdb.IDArray
+	ids = ids.Add(xdb.NewID(4))
 	ids = ids.Add(xdb.NewID(1))
 	ids = ids.Add(xdb.NewID(2))
 	ids = ids.Add(xdb.NewID(3))
 	ids = ids.Add(xdb.NewID(1))
-	ids = ids.Add(xdb.NewID(4))
-	l := []uint64{1, 2, 3, 4}
+	l := []uint64{4, 1, 2, 3}
 	assert.Equal(t, l, ids.List())
 	al := xdb.NewIDArray(l)
 	assert.Equal(t, l, al.List())
@@ -69,12 +70,16 @@ func TestIDs(t *testing.T) {
 	assert.Equal(t, l, al.Concat(al).List())
 
 	var ids2 xdb.IDArray
+	ids2 = ids2.Add(xdb.NewID(9))
+	ids2 = ids2.Add(xdb.NewID(8))
 	ids2 = ids2.Add(xdb.NewID(5))
 	ids2 = ids2.Add(xdb.NewID(6))
 	ids2 = ids2.Add(xdb.NewID(7))
 	ids2 = ids2.Add(xdb.NewID(5))
+	assert.Equal(t, "9,8,5,6,7", ids2.String())
 
-	assert.Equal(t, []uint64{5, 6, 7, 1, 2, 3, 4}, al.Concat(ids2).List())
+	assert.Equal(t, []uint64{4, 1, 2, 3, 9, 8, 5, 6, 7}, al.Concat(ids2).List())
+	assert.Equal(t, "1,2,3,4,5,6,7,8,9", al.Concat(ids2).Sort().String())
 }
 
 func TestIDsValue(t *testing.T) {

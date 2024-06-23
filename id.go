@@ -2,6 +2,7 @@ package xdb
 
 import (
 	"database/sql/driver"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -209,13 +210,18 @@ func (n IDArray) Value() (driver.Value, error) {
 	return int64Array, nil
 }
 
-// Strings returns string representation of IDs
+// Strings returns string list representation of IDs
 func (n IDArray) Strings() []string {
 	var list []string
 	for _, id := range n {
 		list = append(list, id.String())
 	}
 	return list
+}
+
+// String returns string representation of IDs, concatenated with comma
+func (n IDArray) String() string {
+	return strings.Join(n.Strings(), ",")
 }
 
 // List returns list of IDs
@@ -245,6 +251,18 @@ func (n IDArray) Concat(other IDArray) IDArray {
 	for _, id := range other {
 		n = n.Add(id)
 	}
+	return n
+}
+
+// Sort returns sorted list
+func (n IDArray) Sort() IDArray {
+	if len(n) < 2 {
+		return n
+	}
+
+	sort.Slice(n, func(i, j int) bool {
+		return n[i].UInt64() < n[j].UInt64()
+	})
 	return n
 }
 

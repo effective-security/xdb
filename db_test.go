@@ -42,12 +42,21 @@ type UserResult struct {
 	Rows        []*user
 	NextOffset  uint32
 	HasNextPage bool
+	Cursor      string
 }
 
-func (p *UserResult) SetResult(rows []*user, nextOffset uint32, hasNextPage bool) {
+func (p *UserResult) SetResult(rows []*user, hasNextPage bool, nextOffset uint32) {
 	p.Rows = rows
 	p.NextOffset = nextOffset
 	p.HasNextPage = hasNextPage
+}
+
+func (p *UserResult) SetResultWithCursor(rows []*user, hasNextPage bool, cursor func(lastRow *user) string) {
+	p.Rows = rows
+	p.HasNextPage = hasNextPage
+	if hasNextPage && len(rows) > 0 {
+		p.Cursor = cursor(rows[len(rows)-1])
+	}
 }
 
 func TestProv(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/xlog"
@@ -507,4 +508,15 @@ func TestMarshal(t *testing.T) {
 
 	assert.True(t, wn3.ID.Invalid())
 	assert.True(t, wn3.ID.IsZero())
+}
+
+func TestCursor(t *testing.T) {
+	scur := xdb.EncodeCursor(values.MapAny{"after": 1234567})
+	assert.Equal(t, "eyJhZnRlciI6MTIzNDU2N30", scur)
+
+	m, err := xdb.DecodeCursor(scur)
+	require.NoError(t, err)
+	assert.Equal(t, 1234567, m.Int("after"))
+	assert.Equal(t, uint64(0x12d687), m.UInt64("after"))
+
 }

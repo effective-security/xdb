@@ -2,6 +2,8 @@ package xdb
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 
 	"github.com/effective-security/x/values"
 	"github.com/pkg/errors"
@@ -52,8 +54,15 @@ func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB
 
 // Result describes the result of a list query
 type Result[T any, TPointer RowPointer[T]] interface {
-	SetResult(rows []TPointer, nextOffset uint32, hasNextPage bool)
+	SetResult(rows []TPointer, hasNextPage bool, nextOffset uint32)
 }
+
+// ResultWithCursor describes the result of a list query with a cursor
+type ResultWithCursor[T any, TPointer RowPointer[T]] interface {
+	SetResultWithCursor(rows []TPointer, hasNextPage bool, cursor func(lastRow TPointer) string)
+}
+
+type SetCursor[T any, TPointer RowPointer[T]] func(lastRow TPointer) string
 
 // ExecuteQueryWithPagination runs a query and populates the result with a list of models and the next offset,
 // if there are more rows to fetch.
@@ -84,7 +93,39 @@ func ExecuteQueryWithPagination[T any, TPointer RowPointer[T]](ctx context.Conte
 	hasNextPage := count >= limit
 	nextOffset := values.Select(hasNextPage, offset+count, 0)
 
-	res.SetResult(list, nextOffset, hasNextPage)
+	res.SetResult(list, hasNextPage, nextOffset)
+
+	return nil
+}
+
+// ExecuteQueryWithCursor runs a query and populates the result with a list of models and the next cursor,
+// if there are more rows to fetch.
+// args can be a QueryParams or a list of arguments followed by the limit and offset.
+func ExecuteQueryWithCursor[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, cursor SetCursor[T, TPointer], res ResultWithCursor[T, TPointer], query string, args ...any) error {
+	var (
+		limit uint32
+	)
+	if len(args) == 1 {
+		if qp, ok := args[0].(QueryParams); ok {
+			limit, _ = qp.Cursor()
+			args = qp.Args()
+		}
+	} else if len(args) >= 2 {
+		clen := len(args)
+		// Cursor and Limit are the last two arguments
+		// cursor = PageParam(args[clen-2])
+		limit = PageParam(args[clen-1])
+	}
+
+	list, err := ExecuteListQuery[T, TPointer](ctx, sql, query, args...)
+	if err != nil {
+		return err
+	}
+
+	count := uint32(len(list))
+	hasNextPage := count >= limit
+
+	res.SetResultWithCursor(list, hasNextPage, cursor)
 
 	return nil
 }
@@ -103,6 +144,25 @@ func ExecuteQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, re
 		return err
 	}
 
-	res.SetResult(list, 0, false)
+	res.SetResult(list, false, 0)
 	return nil
+}
+
+// EncodeCursor encodes the offset or value into a cursor
+func EncodeCursor(val values.MapAny) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(val.JSON()))
+}
+
+// DecodeCursor decodes the cursor into a map
+func DecodeCursor(cursor string) (values.MapAny, error) {
+	js, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode cursor")
+	}
+	var m values.MapAny
+	err = json.Unmarshal(js, &m)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal cursor")
+	}
+	return m, nil
 }

@@ -2,6 +2,9 @@ package xdb
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"reflect"
 
 	"github.com/effective-security/x/values"
 	"github.com/pkg/errors"
@@ -105,4 +108,32 @@ func ExecuteQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, re
 
 	res.SetResult(list, 0, false)
 	return nil
+}
+
+// EncodeCursor encodes the offset or value into a cursor
+func EncodeCursor(val any) string {
+	typ := reflect.TypeOf(val)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	if typ.Kind() != reflect.Struct {
+		panic("cursor value must be a struct")
+	}
+
+	js, _ := json.Marshal(val)
+	return base64.URLEncoding.EncodeToString(js)
+}
+
+// DecodeCursor decodes the cursor into a map
+func DecodeCursor(cursor string) (values.MapAny, error) {
+	js, err := base64.URLEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode cursor")
+	}
+	var m values.MapAny
+	err = json.Unmarshal(js, &m)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal cursor")
+	}
+	return m, nil
 }

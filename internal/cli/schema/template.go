@@ -131,12 +131,21 @@ type {{ .StructName }}Result struct {
 	Rows        []*{{ .StructName }}
 	NextOffset  uint32
 	HasNextPage bool
+	Cursor 	string
 }
 
-func (p *{{ .StructName }}Result) SetResult(rows []*{{ .StructName }}, nextOffset uint32, hasNextPage bool) {
+func (p *{{ .StructName }}Result) SetResult(rows []*{{ .StructName }}, hasNextPage bool, nextOffset uint32) {
 	p.Rows = rows
 	p.NextOffset = nextOffset
 	p.HasNextPage = hasNextPage
+}
+
+func (p *{{ .StructName }}Result) SetResultWithCursor(rows []*{{ .StructName }}, hasNextPage bool, cursor func(lastRow *{{ .StructName }}) string) {
+	p.Rows = rows
+	p.HasNextPage = hasNextPage
+	if hasNextPage && len(rows) > 0 {
+		p.Cursor = cursor(rows[len(rows)-1])
+    }
 }
 `
 

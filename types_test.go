@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/xlog"
@@ -509,17 +510,9 @@ func TestMarshal(t *testing.T) {
 	assert.True(t, wn3.ID.IsZero())
 }
 
-type idCursor struct {
-	After uint64 `json:"after"`
-}
-
 func TestCursor(t *testing.T) {
-	assert.Panics(t, func() {
-		xdb.EncodeCursor(1234567)
-	})
-
-	scur := xdb.EncodeCursor(idCursor{After: 1234567})
-	assert.Equal(t, "eyJhZnRlciI6MTIzNDU2N30=", scur)
+	scur := xdb.EncodeCursor(values.MapAny{"after": 1234567})
+	assert.Equal(t, "eyJhZnRlciI6MTIzNDU2N30", scur)
 
 	m, err := xdb.DecodeCursor(scur)
 	require.NoError(t, err)

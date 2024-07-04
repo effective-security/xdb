@@ -4,12 +4,23 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
+
+	"github.com/effective-security/x/values"
 )
 
-// Pageable is an interface for pagination.
-type Pageable interface {
+// PageableByOffset is an interface for pagination.
+// The limit and offset are the last two arguments.
+type PageableByOffset interface {
 	// Page returns the limit and offset for pagination.
 	Page() (limit uint32, offset uint32)
+}
+
+// PageableByCursor is an interface for pagination.
+// The cursor and limit are the last two arguments.
+// The cursor argument is before limit because it's used in WHERE clause.
+type PageableByCursor interface {
+	// Cursor returns the limit and cursor for pagination.
+	Cursor() (limit uint32, cursor any)
 }
 
 // HasQueryParams is an interface for objects with query parameters.
@@ -32,7 +43,8 @@ func GetQueryParams(args ...any) QueryParams {
 
 // QueryParams is an interface for query parameters.
 type QueryParams interface {
-	Pageable
+	PageableByOffset
+	PageableByCursor
 
 	Name() string
 	Args() []any
@@ -63,6 +75,8 @@ type QueryParamsBuilder struct {
 	limit uint32
 	// Offset specifies the offset for pagination
 	offset uint32
+	// Cursor specifies the cursor for pagination
+	cursor any
 }
 
 // NewQueryParams creates a new query parameters builder.
@@ -78,6 +92,9 @@ func (b *QueryParamsBuilder) Reset() {
 	b.enums = nil
 	b.args = nil
 	b.hash = ""
+	b.limit = 0
+	b.offset = 0
+	b.cursor = nil
 }
 
 // Name returns a hash of the query parameters.
@@ -99,6 +116,11 @@ func (b *QueryParamsBuilder) Name() string {
 		for _, f := range b.flags {
 			n.WriteString("_fx")
 			n.WriteString(strconv.FormatInt(int64(f), 16))
+		}
+		if b.cursor != nil {
+			n.WriteString("_c")
+		} else if b.offset > 0 {
+			n.WriteString("_o")
 		}
 
 		b.hash = n.String()
@@ -130,14 +152,27 @@ func (b *QueryParamsBuilder) checkPage() {
 // SetPage sets the limit for pagination, and adds it to the list of arguments.
 func (b *QueryParamsBuilder) SetPage(limit, offset uint32) {
 	b.checkPage()
-	b.limit = limit
+	b.limit = values.NumbersCoalesce(limit, DefaultPageSize)
 	b.offset = offset
-	b.args = append(b.args, limit, offset)
+	b.args = append(b.args, b.limit, b.offset)
 }
 
 // Page returns the limit and offset for pagination, if supported
 func (b *QueryParamsBuilder) Page() (limit uint32, offset uint32) {
 	return b.limit, b.offset
+}
+
+// SetCursor sets the limit for pagination, and adds it to the list of arguments.
+func (b *QueryParamsBuilder) SetCursor(limit uint32, pos uint32, cursor any) {
+	b.Set(pos, cursor)
+	b.cursor = cursor
+	b.limit = values.NumbersCoalesce(limit, DefaultPageSize)
+	b.args = append(b.args, b.limit)
+}
+
+// Cursor returns the limit and cursor for pagination, if supported
+func (b *QueryParamsBuilder) Cursor() (limit uint32, cursor any) {
+	return b.limit, b.cursor
 }
 
 // AddArgs adds an additional query arguments, such as Limit or Offset

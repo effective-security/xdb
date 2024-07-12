@@ -266,6 +266,24 @@ func (n IDArray) Sort() IDArray {
 	return n
 }
 
+// Int64Array returns pq.Int64Array
+func (n IDArray) Int64Array() pq.Int64Array {
+	ids := make(pq.Int64Array, len(n))
+	for i, id := range n {
+		ids[i] = int64(id.UInt64())
+	}
+	return ids
+}
+
+// Int64Array returns pq.Int64Array
+func Int64Array(list []uint64) pq.Int64Array {
+	ids := make(pq.Int64Array, len(list))
+	for i, id := range list {
+		ids[i] = int64(id)
+	}
+	return ids
+}
+
 // ID32 defines a type to convert between internal uint32 and NULL values in DB
 type ID32 uint32
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xlog"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -80,6 +81,9 @@ func TestIDs(t *testing.T) {
 
 	assert.Equal(t, []uint64{4, 1, 2, 3, 9, 8, 5, 6, 7}, al.Concat(ids2).List())
 	assert.Equal(t, "1,2,3,4,5,6,7,8,9", al.Concat(ids2).Sort().String())
+
+	assert.Equal(t, pq.Int64Array{9, 8, 5, 6, 7}, ids2.Int64Array())
+	assert.Equal(t, pq.Int64Array{9, 8, 5, 6, 7}, xdb.Int64Array([]uint64{9, 8, 5, 6, 7}))
 }
 
 func TestIDsValue(t *testing.T) {

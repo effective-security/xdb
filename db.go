@@ -103,6 +103,7 @@ type Provider interface {
 
 	// Name returns provider name: postgres, sqlserver, etc
 	Name() string
+	ConnectionString() string
 
 	// DB returns underlying DB connection
 	DB() DB
@@ -170,7 +171,7 @@ type MigrationConfig struct {
 
 // NewProvider creates a Provider instance
 func NewProvider(dataSource, dbName string, idGen flake.IDGenerator, migrateCfg *MigrationConfig) (Provider, error) {
-	d, provider, _, err := Open(dataSource, dbName)
+	d, provider, connstr, err := Open(dataSource, dbName)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to open DB")
 	}
@@ -186,7 +187,12 @@ func NewProvider(dataSource, dbName string, idGen flake.IDGenerator, migrateCfg 
 			return nil, errors.WithMessagef(err, "unable to migrate Orgs DB")
 		}
 	}
-	return New(provider, d, idGen)
+	p, err := New(provider, d, idGen)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "unable to create provider")
+	}
+	p.WithConnectionString(connstr)
+	return p, nil
 }
 
 // Source describes connection info

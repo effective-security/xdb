@@ -512,6 +512,20 @@ func (mr *MockProviderMockRecorder) Commit() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockProvider)(nil).Commit))
 }
 
+// ConnectionString mocks base method.
+func (m *MockProvider) ConnectionString() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConnectionString")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ConnectionString indicates an expected call of ConnectionString.
+func (mr *MockProviderMockRecorder) ConnectionString() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConnectionString", reflect.TypeOf((*MockProvider)(nil).ConnectionString))
+}
+
 // DB mocks base method.
 func (m *MockProvider) DB() xdb.DB {
 	m.ctrl.T.Helper()

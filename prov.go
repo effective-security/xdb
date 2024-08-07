@@ -14,12 +14,13 @@ var logger = xlog.NewPackageLogger("github.com/effective-security/xdb", "xdb")
 
 // SQLProvider represents SQL client instance
 type SQLProvider struct {
-	name   string
-	conn   *sql.DB
-	db     DB
-	idGen  flake.IDGenerator
-	tx     Tx
-	ticker *time.Ticker
+	name    string
+	conn    *sql.DB
+	connstr string
+	db      DB
+	idGen   flake.IDGenerator
+	tx      Tx
+	ticker  *time.Ticker
 }
 
 // New creates a Provider instance
@@ -37,6 +38,15 @@ func New(name string, db *sql.DB, idGen flake.IDGenerator) (*SQLProvider, error)
 	p.keepAlive(60 * time.Second)
 
 	return p, nil
+}
+
+func (p *SQLProvider) WithConnectionString(connstr string) *SQLProvider {
+	p.connstr = connstr
+	return p
+}
+
+func (p *SQLProvider) ConnectionString() string {
+	return p.connstr
 }
 
 // Name returns provider name

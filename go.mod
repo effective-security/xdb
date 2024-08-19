@@ -3,7 +3,7 @@ module github.com/effective-security/xdb
 go 1.22.3
 
 require (
-	dario.cat/mergo v1.0.0
+	dario.cat/mergo v1.0.1
 	github.com/alecthomas/kong v0.9.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/effective-security/x v0.6.40

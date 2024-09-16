@@ -284,6 +284,26 @@ func Int64Array(list []uint64) pq.Int64Array {
 	return ids
 }
 
+// Contains returns true if id is in the list
+func (n IDArray) Contains(id ID) bool {
+	for _, v := range n {
+		if v.UInt64() == id.UInt64() {
+			return true
+		}
+	}
+	return false
+}
+
+// Overlaps returns true if any of the IDs in the list is in the other list
+func (n IDArray) Overlaps(other IDArray) bool {
+	for _, v := range n {
+		if other.Contains(v) {
+			return true
+		}
+	}
+	return false
+}
+
 // ID32 defines a type to convert between internal uint32 and NULL values in DB
 type ID32 uint32
 

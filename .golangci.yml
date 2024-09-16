@@ -1,7 +1,3 @@
-run:
-  skip-files:
-    - ".*_test\\.go$"
-
 linters:
   enable:
     - revive
@@ -13,3 +9,5 @@ issues:
     - SA1019 # tc.gtc.OverrideServerName is deprecated: use grpc.WithAuthority instead. Will be supported throughout 1.x. (staticcheck)
     - SA1019 # "io/ioutil" has been deprecated since Go 1.16: As of Go 1.16, the same functionality is now provided by package io or package os, and those implementations should be preferred in new code. See the specific function documentation for details. (staticcheck)
     - SA1019 # "io/ioutil" has been deprecated since Go 1.16: As of Go 1.16, the same functionality is now provided by package io or package os, and those implementations should be preferred in new code. See the specific function documentation for details. (staticcheck)
+  exclude-files:
+    - ".*_test\\.go$"

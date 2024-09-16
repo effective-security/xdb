@@ -78,6 +78,11 @@ func TestIDs(t *testing.T) {
 	ids2 = ids2.Add(xdb.NewID(7))
 	ids2 = ids2.Add(xdb.NewID(5))
 	assert.Equal(t, "9,8,5,6,7", ids2.String())
+	assert.True(t, ids2.Contains(xdb.NewID(5)))
+	assert.False(t, ids2.Contains(xdb.NewID(55)))
+
+	assert.False(t, ids2.Overlaps(ids))
+	assert.True(t, ids.Overlaps(al))
 
 	assert.Equal(t, []uint64{4, 1, 2, 3, 9, 8, 5, 6, 7}, al.Concat(ids2).List())
 	assert.Equal(t, "1,2,3,4,5,6,7,8,9", al.Concat(ids2).Sort().String())

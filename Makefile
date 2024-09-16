@@ -58,12 +58,12 @@ start-sql:
 	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h 168.137.11.101 -p 5432 -U $(XDB_PG_USER) -a -f /postgres/create_local_db.sql
 	echo "*** creating ms server tables "
 	sleep 5
-	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/create_local_db.sql
+	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/create_local_db.sql
 
 drop-sql:
 	echo "*** dropping SQL tables "
 	docker exec -e 'PGPASSWORD=$(XDB_PG_PASSWORD)' xdb_localstack-postgres-1 psql -h 168.137.11.101 -p 5432 -U $(XDB_PG_USER) -a -f /postgres/drop_local_db.sql
-	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools/bin/sqlcmd -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/drop_local_db.sql
+	docker exec xdb_localstack-sqlserver-1 /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $(XDB_SQL_PASSWORD) -i /sqlserver/drop_local_db.sql
 
 gen-sql-schema:
 	rm -rf testdata/e2e

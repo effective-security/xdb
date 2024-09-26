@@ -105,6 +105,9 @@ func toGoType(c *schema.Column) string {
 	if res, ok := typesMap[c.SchemaName]; ok {
 		return res
 	}
+	if res, ok := typesMap["_count"]; ok && c.Type == "int4" && !c.Nullable && strings.HasSuffix(c.Name, "_count") {
+		return res
+	}
 
 	if c.Type == "ARRAY" {
 		typeName := "[]"

@@ -48,7 +48,6 @@ func TryParseID(val string) ID {
 
 // MarshalJSON implements json.Marshaler interface
 func (v ID) MarshalJSON() ([]byte, error) {
-
 	return []byte(strconv.FormatUint(v.id.val(), 10)), nil
 }
 
@@ -65,6 +64,19 @@ func (v *ID) UnmarshalJSON(data []byte) error {
 		return errors.Errorf("expected number value to unmarshal ID: %s", s)
 	}
 	*v = ID{id: &idptr{id: f, str: s}}
+	return nil
+}
+
+func (v ID) MarshalYAML() (interface{}, error) {
+	return v.UInt64(), nil
+}
+
+func (v *ID) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var val uint64
+	if err := unmarshal(&val); err != nil {
+		return err
+	}
+	*v = NewID(val)
 	return nil
 }
 

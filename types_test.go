@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 func TestTableInfo(t *testing.T) {
@@ -468,8 +469,9 @@ func TestBoolScan(t *testing.T) {
 	}
 }
 
-type withNulls struct {
+type testStruct struct {
 	ID      xdb.ID
+	IDS     xdb.IDArray
 	Sid     xdb.ID32
 	Name    xdb.NULLString
 	Price   xdb.Float
@@ -478,8 +480,9 @@ type withNulls struct {
 }
 
 func TestMarshal(t *testing.T) {
-	wn := withNulls{
-		ID:      xdb.NewID(12345453),
+	wn := testStruct{
+		ID:      xdb.NewID(253518220474974837),
+		IDS:     xdb.IDArray{xdb.NewID(1), xdb.NewID(2)},
 		Sid:     xdb.ID32(1234),
 		Name:    xdb.NULLString("test"),
 		Price:   0.123132,
@@ -490,24 +493,59 @@ func TestMarshal(t *testing.T) {
 
 	js, err := json.Marshal(wn)
 	require.NoError(t, err)
-	assert.Equal(t, `{"ID":12345453,"Sid":1234,"Name":"test","Price":0.123132,"Type":123233,"IsOwner":true}`, string(js))
+	assert.Equal(t, `{"ID":253518220474974837,"IDS":[1,2],"Sid":1234,"Name":"test","Price":0.123132,"Type":123233,"IsOwner":true}`, string(js))
 
-	var wn2 withNulls
+	var wn2 testStruct
 	err = json.Unmarshal(js, &wn2)
 	require.NoError(t, err)
-
 	assert.Equal(t, wn.ID.String(), wn2.ID.String())
+	assert.Equal(t, wn.IDS.String(), wn2.IDS.String())
 	assert.Equal(t, wn, wn2)
 
-	var wn3 withNulls
+	withQuotes := `{"ID":"253518220474974837","IDS":["1","2"],"Sid":"1234","Name":"test","Price":0.123132,"Type":123233,"IsOwner":true}`
+	err = json.Unmarshal([]byte(withQuotes), &wn2)
+	require.NoError(t, err)
+	assert.Equal(t, wn.ID.String(), wn2.ID.String())
+	assert.Equal(t, wn.IDS.String(), wn2.IDS.String())
+
+	yms, err := yaml.Marshal(wn)
+	require.NoError(t, err)
+	assert.Equal(t, `id: 253518220474974837
+ids:
+- 1
+- 2
+sid: 1234
+name: test
+price: 0.123132
+type: 123233
+isowner: true
+`, string(yms))
+
+	var wn2y testStruct
+	err = yaml.Unmarshal(yms, &wn2y)
+	require.NoError(t, err)
+	assert.Equal(t, wn.ID.String(), wn2y.ID.String())
+	assert.Equal(t, wn.IDS.String(), wn2y.IDS.String())
+	assert.Equal(t, wn, wn2y)
+
+	var wn3 testStruct
 	js, err = json.Marshal(wn3)
 	require.NoError(t, err)
-	assert.Equal(t, `{"ID":0,"Sid":0,"Name":"","Price":0.000000,"Type":0,"IsOwner":false}`, string(js))
-
+	assert.Equal(t, `{"ID":0,"IDS":null,"Sid":0,"Name":"","Price":0.000000,"Type":0,"IsOwner":false}`, string(js))
 	assert.False(t, wn3.ID.Valid())
-
 	assert.True(t, wn3.ID.Invalid())
 	assert.True(t, wn3.ID.IsZero())
+
+	yms, err = yaml.Marshal(wn3)
+	require.NoError(t, err)
+	assert.Equal(t, `id: 0
+ids: []
+sid: 0
+name: ""
+price: 0
+type: 0
+isowner: false
+`, string(yms))
 }
 
 func TestCursor(t *testing.T) {

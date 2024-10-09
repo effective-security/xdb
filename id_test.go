@@ -89,6 +89,9 @@ func TestIDs(t *testing.T) {
 
 	assert.Equal(t, pq.Int64Array{9, 8, 5, 6, 7}, ids2.Int64Array())
 	assert.Equal(t, pq.Int64Array{9, 8, 5, 6, 7}, xdb.Int64Array([]uint64{9, 8, 5, 6, 7}))
+
+	ids3 := xdb.IDArrayFromStrings([]string{"1", "2", "3", "4", "5"})
+	assert.Equal(t, []uint64{1, 2, 3, 4, 5}, ids3.List())
 }
 
 func TestIDsValue(t *testing.T) {

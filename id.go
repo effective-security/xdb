@@ -178,6 +178,18 @@ func NewIDArray(vals []uint64) IDArray {
 	return ids
 }
 
+// IDArray returns IDArray
+func IDArrayFromStrings(vals []string) IDArray {
+	var ids IDArray
+	for _, val := range vals {
+		id, err := ParseID(val)
+		if err == nil {
+			ids = ids.Add(id)
+		}
+	}
+	return ids
+}
+
 // Scan implements the Scanner interface for IDs
 func (n *IDArray) Scan(value any) error {
 	*n = nil

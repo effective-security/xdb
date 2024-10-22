@@ -67,11 +67,11 @@ func (v *ID) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (v ID) MarshalYAML() (interface{}, error) {
+func (v ID) MarshalYAML() (any, error) {
 	return v.UInt64(), nil
 }
 
-func (v *ID) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (v *ID) UnmarshalYAML(unmarshal func(any) error) error {
 	var val uint64
 	if err := unmarshal(&val); err != nil {
 		return err
@@ -116,9 +116,13 @@ func (v *ID) Reset() {
 
 // Set the value
 func (v *ID) Set(val string) error {
+	if val == "" || val == "0" {
+		return errors.Errorf("invalid ID: empty value")
+	}
+
 	id, err := ParseUint(val)
 	if err != nil || id == 0 {
-		return errors.Errorf("invalid ID")
+		return errors.Errorf("invalid ID: '%s'", val)
 	}
 	if v.id == nil {
 		v.id = &idptr{}

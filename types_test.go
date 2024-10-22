@@ -61,9 +61,9 @@ func TestParseID(t *testing.T) {
 	assert.Equal(t, uint64(1234567), v)
 
 	_, err = xdb.ParseID("")
-	assert.EqualError(t, err, "invalid ID")
+	assert.EqualError(t, err, "invalid ID: empty value")
 	_, err = xdb.ParseID("@123")
-	assert.EqualError(t, err, "invalid ID")
+	assert.EqualError(t, err, "invalid ID: '@123'")
 
 	id := xdb.TryParseID("")
 	assert.Equal(t, uint64(0), id.UInt64())

@@ -191,7 +191,7 @@ func (c *Column) Tag() string {
 	if c.Ref != nil {
 		ops += ",fk:" + c.Ref.RefColumnSchemaName()
 	}
-	return fmt.Sprintf("db:\"%s%s\"", c.Name, ops)
+	return fmt.Sprintf("db:\"%s%s\" json:\",omitempty\"", c.Name, ops)
 }
 
 // Columns defines slice of Column

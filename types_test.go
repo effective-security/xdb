@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestTableInfo(t *testing.T) {
@@ -172,6 +172,45 @@ func TestMetadata(t *testing.T) {
 	assert.Equal(t, 2, len(m1))
 
 	var mm xdb.Metadata
+	mm.Merge(m2)
+	assert.Equal(t, 1, len(mm))
+	mm.Merge(m1)
+	assert.Equal(t, 2, len(mm))
+}
+
+func TestKVSet(t *testing.T) {
+	tcases := []struct {
+		val xdb.KVSet
+		exp string
+	}{
+		{val: xdb.KVSet{"one": []string{"two"}}, exp: "{\"one\":[\"two\"]}"},
+		{val: xdb.KVSet{}, exp: ""},
+		{val: nil, exp: ""},
+	}
+
+	for _, tc := range tcases {
+		dr, err := tc.val.Value()
+		require.NoError(t, err)
+
+		var drv string
+		if v, ok := dr.(string); ok {
+			drv = v
+		}
+		assert.Equal(t, tc.exp, drv)
+
+		var val2 xdb.KVSet
+		err = val2.Scan(dr)
+		require.NoError(t, err)
+		assert.Equal(t, len(tc.val), len(val2))
+	}
+
+	m1 := xdb.KVSet{"one": []string{"two"}}
+	m2 := xdb.KVSet{"three": []string{"four"}}
+
+	m1.Merge(m2)
+	assert.Equal(t, 2, len(m1))
+
+	var mm xdb.KVSet
 	mm.Merge(m2)
 	assert.Equal(t, 1, len(mm))
 	mm.Merge(m1)
@@ -512,8 +551,8 @@ func TestMarshal(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, `id: 253518220474974837
 ids:
-- 1
-- 2
+    - 1
+    - 2
 sid: 1234
 name: test
 price: 0.123132

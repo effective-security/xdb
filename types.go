@@ -153,6 +153,56 @@ func (n Metadata) Value() (driver.Value, error) {
 	return string(value), nil
 }
 
+// KVSet de/encodes the string map to/from a SQL string.
+type KVSet map[string][]string
+
+// Merge merges metadata
+func (n *KVSet) Merge(m KVSet) *KVSet {
+	if *n == nil {
+		*n = KVSet{}
+	}
+	for k, v := range m {
+		(*n)[k] = v
+	}
+	return n
+}
+
+// Scan implements the Scanner interface.
+func (n *KVSet) Scan(value any) error {
+	if value == nil {
+		*n = nil
+		return nil
+	}
+
+	var s []byte
+	switch vid := value.(type) {
+	case []byte:
+		s = vid
+	case string:
+		s = []byte(vid)
+	default:
+		return errors.Errorf("unsupported scan type: %T", value)
+	}
+
+	if len(s) == 0 {
+		*n = KVSet{}
+		return nil
+	}
+	return errors.WithStack(json.Unmarshal(s, n))
+}
+
+// Value implements the driver Valuer interface.
+func (n KVSet) Value() (driver.Value, error) {
+	if len(n) == 0 {
+		return nil, nil
+	}
+	value, err := json.Marshal(n)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return string(value), nil
+}
+
 // NULLString de/encodes the string a SQL string.
 type NULLString string
 

@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	dario.cat/mergo v1.0.1
-	github.com/alecthomas/kong v1.6.1
+	github.com/alecthomas/kong v1.8.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/effective-security/x v0.9.48
 	github.com/effective-security/xlog v0.9.39

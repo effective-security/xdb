@@ -56,6 +56,8 @@ func (p *UserResult) SetResultWithCursor(rows []*user, hasNextPage bool, cursor 
 	p.HasNextPage = hasNextPage
 	if hasNextPage && len(rows) > 0 {
 		p.Cursor = cursor(rows[len(rows)-1])
+	} else {
+		p.Cursor = ""
 	}
 }
 

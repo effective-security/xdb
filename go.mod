@@ -1,12 +1,12 @@
 module github.com/effective-security/xdb
 
-go 1.22.3
+go 1.23.5
 
 require (
 	dario.cat/mergo v1.0.1
 	github.com/alecthomas/kong v1.8.1
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.9.48
+	github.com/effective-security/x v0.9.49
 	github.com/effective-security/xlog v0.9.41
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
@@ -37,6 +37,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.0.0 // indirect
 	github.com/oleiade/reflections v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/config v1.4.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect

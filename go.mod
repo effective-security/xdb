@@ -1,12 +1,13 @@
 module github.com/effective-security/xdb
 
 go 1.22.3
+toolchain go1.23.6
 
 require (
 	dario.cat/mergo v1.0.1
 	github.com/alecthomas/kong v1.8.1
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.9.48
+	github.com/effective-security/x v0.9.49
 	github.com/effective-security/xlog v0.9.41
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1

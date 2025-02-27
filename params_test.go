@@ -50,6 +50,17 @@ func TestParams(t *testing.T) {
 	})
 }
 
+func TestParamsWithNuls(t *testing.T) {
+	b := NewQueryParams("ListXXX")
+	b.Reset()
+	nulls := []string{"a", "b", "c"}
+	b.SetNullColums(nulls)
+
+	assert.Equal(t, "ListXXX_x0_nb4963f3f3fad7867", b.Name())
+	assert.Empty(t, b.Args())
+	assert.Equal(t, nulls, b.GetNullColumns())
+}
+
 type testQueryParams struct {
 	Pos1 int
 }

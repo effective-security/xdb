@@ -58,13 +58,16 @@ func (t *TableInfo) Select(cols ...string) xsql.Builder {
 	return t.Dialect.From(t.SchemaName).Select(expr)
 }
 
-// Select starts SELECT FROM  expression
-func (t *TableInfo) SelectAliased(prefix string, nulls map[string]bool) xsql.Builder {
+// Select starts SELECT FROM expression with aliased columns and NULL columns
+// Columns identified in nullColumns, will be replaced with NULL.
+// If prefix is provided, then columns will be prefixed with prefix:
+// a.C1, NULL, a.C2 etc.
+func (t *TableInfo) SelectAliased(prefix string, nullColumns map[string]bool) xsql.Builder {
 	tn := t.SchemaName
 	if prefix != "" {
 		tn = tn + " " + prefix
 	}
-	return t.Dialect.From(tn).Select(t.AliasedColumns(prefix, nulls))
+	return t.Dialect.From(tn).Select(t.AliasedColumns(prefix, nullColumns))
 }
 
 // AllColumns returns list of all columns separated by comma
@@ -77,11 +80,13 @@ func (t *TableInfo) AllColumns() string {
 
 // AliasedColumns returns list of columns separated by comma,
 // with prefix a.C1, NULL, a.C2 etc.
-// Columns identified in nulls, will be replaced with NULL.
-func (t *TableInfo) AliasedColumns(prefix string, nulls map[string]bool) string {
+// Columns identified in nullColumns, will be replaced with NULL.
+// If prefix is provided, then columns will be prefixed with prefix:
+// a.C1, NULL, a.C2 etc.
+func (t *TableInfo) AliasedColumns(prefix string, nullColumns map[string]bool) string {
 	prefixed := make([]string, len(t.Columns))
 	for i, c := range t.Columns {
-		if nulls[c] {
+		if nullColumns[c] {
 			prefixed[i] = "NULL"
 		} else {
 			if prefix == "" {

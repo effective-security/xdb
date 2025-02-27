@@ -2,10 +2,12 @@ package xdb
 
 import (
 	"database/sql"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/effective-security/x/values"
+	"github.com/spaolacci/murmur3"
 )
 
 // PageableByOffset is an interface for pagination.
@@ -54,6 +56,8 @@ type QueryParams interface {
 	GetEnum(pos uint32) (int32, bool)
 	// GetFlags returns additional flags for query parameter.
 	GetFlags() []int32
+	// GetNullColumns returns a list of columns that should be replaced with NULL.
+	GetNullColumns() []string
 }
 
 type enumPosition struct {
@@ -65,11 +69,12 @@ type enumPosition struct {
 type QueryParamsBuilder struct {
 	queryName string
 
-	flags     []int32
-	positions uint64 // bit flags for positional parameters
-	enums     []enumPosition
-	args      []any
-	hash      string
+	flags       []int32
+	positions   uint64 // bit flags for positional parameters
+	enums       []enumPosition
+	args        []any
+	hash        string
+	nullColumns []string
 
 	// Limit specifies maximimum number of records to return
 	limit uint32
@@ -123,9 +128,30 @@ func (b *QueryParamsBuilder) Name() string {
 			n.WriteString("_o")
 		}
 
+		if len(b.nullColumns) > 0 {
+			h := murmur3.New64()
+			sort.Strings(b.nullColumns)
+			for _, c := range b.nullColumns {
+				h.Write([]byte(c))
+			}
+			n.WriteString("_n")
+			n.WriteString(strconv.FormatUint(h.Sum64(), 16))
+		}
+
 		b.hash = n.String()
 	}
 	return b.hash
+}
+
+// SetNullColums sets a list of columns that should be replaced with NULL.
+func (b *QueryParamsBuilder) SetNullColums(nullColumns []string) *QueryParamsBuilder {
+	b.nullColumns = nullColumns
+	return b
+}
+
+// GetNullColumns returns a list of columns that should be replaced with NULL.
+func (b *QueryParamsBuilder) GetNullColumns() []string {
+	return b.nullColumns
 }
 
 // Args returns a list of query arguments.
@@ -134,13 +160,14 @@ func (b *QueryParamsBuilder) Args() []any {
 }
 
 // Set sets a positional query parameter, and adds it to the list of arguments.
-func (b *QueryParamsBuilder) Set(pos uint32, v any) {
+func (b *QueryParamsBuilder) Set(pos uint32, v any) *QueryParamsBuilder {
 	if pos > 63 {
 		panic("enum position is out of range")
 	}
 	b.checkPage()
 	b.positions |= 1 << pos
 	b.args = append(b.args, v)
+	return b
 }
 
 func (b *QueryParamsBuilder) checkPage() {
@@ -150,11 +177,12 @@ func (b *QueryParamsBuilder) checkPage() {
 }
 
 // SetPage sets the limit for pagination, and adds it to the list of arguments.
-func (b *QueryParamsBuilder) SetPage(limit, offset uint32) {
+func (b *QueryParamsBuilder) SetPage(limit, offset uint32) *QueryParamsBuilder {
 	b.checkPage()
 	b.limit = values.NumbersCoalesce(limit, DefaultPageSize)
 	b.offset = offset
 	b.args = append(b.args, b.limit, b.offset)
+	return b
 }
 
 // Page returns the limit and offset for pagination, if supported
@@ -163,11 +191,12 @@ func (b *QueryParamsBuilder) Page() (limit uint32, offset uint32) {
 }
 
 // SetCursor sets the limit for pagination, and adds it to the list of arguments.
-func (b *QueryParamsBuilder) SetCursor(limit uint32, pos uint32, cursor any) {
+func (b *QueryParamsBuilder) SetCursor(limit uint32, pos uint32, cursor any) *QueryParamsBuilder {
 	b.Set(pos, cursor)
 	b.cursor = cursor
 	b.limit = values.NumbersCoalesce(limit, DefaultPageSize)
 	b.args = append(b.args, b.limit)
+	return b
 }
 
 // Cursor returns the limit and cursor for pagination, if supported
@@ -176,9 +205,10 @@ func (b *QueryParamsBuilder) Cursor() (limit uint32, cursor any) {
 }
 
 // AddArgs adds an additional query arguments, such as Limit or Offset
-func (b *QueryParamsBuilder) AddArgs(v ...any) {
+func (b *QueryParamsBuilder) AddArgs(v ...any) *QueryParamsBuilder {
 	b.checkPage()
 	b.args = append(b.args, v...)
+	return b
 }
 
 // IsSet checks if a positional query parameter is set.
@@ -187,13 +217,14 @@ func (b *QueryParamsBuilder) IsSet(pos uint32) bool {
 }
 
 // SetEnum sets an enum query parameter, without adding it to the list of arguments.
-func (b *QueryParamsBuilder) SetEnum(pos uint32, v int32) {
+func (b *QueryParamsBuilder) SetEnum(pos uint32, v int32) *QueryParamsBuilder {
 	if pos > 63 {
 		panic("enum position is out of range")
 	}
 	b.checkPage()
 	b.positions |= 1 << pos
 	b.enums = append(b.enums, enumPosition{pos, v})
+	return b
 }
 
 // GetEnum checks if an enum query parameter is set.
@@ -208,8 +239,9 @@ func (b *QueryParamsBuilder) GetEnum(pos uint32) (int32, bool) {
 }
 
 // SetFlags sets additional flags for query parameter.
-func (b *QueryParamsBuilder) SetFlags(v ...int32) {
+func (b *QueryParamsBuilder) SetFlags(v ...int32) *QueryParamsBuilder {
 	b.flags = v
+	return b
 }
 
 // GetFlags returns additional flags for query parameter.

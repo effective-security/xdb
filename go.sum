@@ -24,8 +24,8 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
 github.com/alecthomas/assert/v2 v2.11.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
-github.com/alecthomas/kong v1.8.1 h1:6aamvWBE/REnR/BCq10EcozmcpUPc5aGI1lPAWdB0EE=
-github.com/alecthomas/kong v1.8.1/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
+github.com/alecthomas/kong v1.9.0 h1:Wgg0ll5Ys7xDnpgYBuBn/wPeLGAuK0NvYmEcisJgrIs=
+github.com/alecthomas/kong v1.9.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -45,8 +45,8 @@ github.com/docker/go-connections v0.5.0 h1:USnMq7hx7gwdVZq1L49hLXaFtUdTADjXGp+uj
 github.com/docker/go-connections v0.5.0/go.mod h1:ov60Kzw0kKElRwhNs9UlUHAE/F9Fe6GLaXnqyDdmEXc=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
-github.com/effective-security/x v0.9.49 h1:ylFGNU9Y+NV/CCNsuQkZWHyTX06tdJkhFh+1FARQYzU=
-github.com/effective-security/x v0.9.49/go.mod h1:DEZvE2UNSNDYS8mQzbFP2AOcSCHAuUiQ6c2+fLvVOwI=
+github.com/effective-security/x v0.10.50 h1:WrgSsEDmZBFgJEtyc0XCM2azUOE6Tb7xRqG5L1bsNCk=
+github.com/effective-security/x v0.10.50/go.mod h1:IPTivMoOgZijI/sqCHiBionbyf+P3L1xLPdqLfxRkOQ=
 github.com/effective-security/xlog v0.9.41 h1:z+35GBV0BSybcl0rtuqxaqoDHa5ayY1CrjWPDRL9cdc=
 github.com/effective-security/xlog v0.9.41/go.mod h1:bK02QBVCwMTcPDkkzpJRI1cu+Rs0q19XaoFbBowtC64=
 github.com/ettle/strcase v0.2.0 h1:fGNiVF21fHXpX1niBgk0aROov1LagYsOwV/xqKDKR/Q=

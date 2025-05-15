@@ -20,12 +20,8 @@ func SchemaTables(w io.Writer, r schema.Tables) {
 func SchemaTable(w io.Writer, r *schema.Table) {
 	fmt.Fprintf(w, "Schema: %s\nTable: %s\n\n", r.Schema, r.Name)
 
-	table := tablewriter.NewWriter(w)
-	table.SetBorder(false)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAutoWrapText(false)
-	table.SetHeader([]string{"Ord", "Name", "Type", "UDT", "NULL", "Max", "Index", "Ref"})
-	table.SetHeaderLine(true)
+	table := tablewriter.NewTable(w)
+	table.Header([]string{"Ord", "Name", "Type", "UDT", "NULL", "Max", "Index", "Ref"})
 
 	for _, c := range r.Columns {
 		// TODO: select
@@ -38,7 +34,7 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 			ref = c.Ref.RefColumnSchemaName()
 		}
 
-		table.Append([]string{
+		_ = table.Append([]string{
 			fmt.Sprintf("%d", c.Position),
 			c.Name,
 			c.Type,
@@ -50,7 +46,7 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 		})
 	}
 
-	table.Render()
+	_ = table.Render()
 
 	if len(r.Indexes) > 0 {
 		fmt.Fprintf(w, "\nIndexes:\n")
@@ -62,15 +58,11 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 
 // SchemaIndexes prints schema.Indexes
 func SchemaIndexes(w io.Writer, r schema.Indexes) {
-	table := tablewriter.NewWriter(w)
-	table.SetBorder(false)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAutoWrapText(false)
-	table.SetHeader([]string{"Name", "Primary", "Unique", "Columns"})
-	table.SetHeaderLine(true)
+	table := tablewriter.NewTable(w)
+	table.Header([]string{"Name", "Primary", "Unique", "Columns"})
 
 	for _, c := range r {
-		table.Append([]string{
+		_ = table.Append([]string{
 			c.Name,
 			values.Select(c.IsPrimary, "YES", ""),
 			values.Select(c.IsUnique, "YES", ""),
@@ -78,21 +70,17 @@ func SchemaIndexes(w io.Writer, r schema.Indexes) {
 		})
 	}
 
-	table.Render()
+	_ = table.Render()
 	fmt.Fprintln(w)
 }
 
 // SchemaForeingKeys prints schema.ForeingKeys
 func SchemaForeingKeys(w io.Writer, r schema.ForeignKeys) {
-	table := tablewriter.NewWriter(w)
-	table.SetBorder(false)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAutoWrapText(false)
-	table.SetHeader([]string{"Name", "Schema", "Table", "Column", "FK Schema", "FK Table", "FK Column"})
-	table.SetHeaderLine(true)
+	table := tablewriter.NewTable(w)
+	table.Header([]string{"Name", "Schema", "Table", "Column", "FK Schema", "FK Table", "FK Column"})
 
 	for _, c := range r {
-		table.Append([]string{
+		_ = table.Append([]string{
 			c.Name,
 			c.Schema,
 			c.Table,
@@ -103,6 +91,6 @@ func SchemaForeingKeys(w io.Writer, r schema.ForeignKeys) {
 		})
 	}
 
-	table.Render()
+	_ = table.Render()
 	fmt.Fprintln(w)
 }

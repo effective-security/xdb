@@ -20,7 +20,7 @@ func TestObject(t *testing.T) {
 	}{
 		{"yaml", []string{"schema: dbo\nname: test\nisview: false\ncolumns: []\nindexes: []\nprimarykey: null\n"}},
 		{"json", []string{"{\n  \"Schema\": \"dbo\",\n  \"Name\": \"test\",\n  \"IsView\": false,\n  \"Columns\": null,\n  \"Indexes\": null,\n  \"PrimaryKey\": null\n}\n"}},
-		{"", []string{"Schema: dbo\nTable: test\n\n  ORD | NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n------+------+------+-----+------+-----+-------+------\n\n"}},
+		{"", []string{"Schema: dbo\nTable: test\n\n┌─────┬──────┬──────┬─────┬──────┬─────┬───────┬─────┐\n│ ORD │ NAME │ TYPE │ UDT │ NULL │ MAX │ INDEX │ REF │\n└─────┴──────┴──────┴─────┴──────┴─────┴───────┴─────┘\n\n"}},
 	}
 	w := bytes.NewBuffer([]byte{})
 	for _, tc := range tcases {
@@ -37,7 +37,14 @@ func TestObject(t *testing.T) {
 	w.Reset()
 	_ = print.Object(w, "", &ver)
 	assert.Equal(t,
-		"Schema: dbo\nTable: test\n\n  ORD | NAME | TYPE | UDT | NULL | MAX | INDEX | REF  \n------+------+------+-----+------+-----+-------+------\n\n",
+		`Schema: dbo
+Table: test
+
+┌─────┬──────┬──────┬─────┬──────┬─────┬───────┬─────┐
+│ ORD │ NAME │ TYPE │ UDT │ NULL │ MAX │ INDEX │ REF │
+└─────┴──────┴──────┴─────┴──────┴─────┴───────┴─────┘
+
+`,
 		w.String())
 }
 
@@ -89,15 +96,19 @@ func TestPrintSchema(t *testing.T) {
 			`Schema: dbo
 Table: test
 
-  ORD | NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
-------+------+--------+---------+------+-----+-------+------
-  0   | ID   | uint64 | int8    |      |     |       |      
-  0   | Name | string | varchar | YES  | 255 |       |      
+┌─────┬──────┬────────┬─────────┬──────┬─────┬───────┬─────┐
+│ ORD │ NAME │  TYPE  │   UDT   │ NULL │ MAX │ INDEX │ REF │
+├─────┼──────┼────────┼─────────┼──────┼─────┼───────┼─────┤
+│ 0   │ ID   │ uint64 │ int8    │      │     │       │     │
+│ 0   │ Name │ string │ varchar │ YES  │ 255 │       │     │
+└─────┴──────┴────────┴─────────┴──────┴─────┴───────┴─────┘
 
 Indexes:
-  NAME | PRIMARY | UNIQUE |  COLUMNS    
--------+---------+--------+-------------
-  a    | YES     |        | col1, col2  
+┌──────┬─────────┬────────┬────────────┐
+│ NAME │ PRIMARY │ UNIQUE │  COLUMNS   │
+├──────┼─────────┼────────┼────────────┤
+│ a    │ YES     │        │ col1, col2 │
+└──────┴─────────┴────────┴────────────┘
 
 `,
 		)
@@ -107,10 +118,12 @@ Indexes:
 			`Schema: dbo
 Table: test
 
-  ORD | NAME |  TYPE  |   UDT   | NULL | MAX | INDEX | REF  
-------+------+--------+---------+------+-----+-------+------
-  0   | ID   | uint64 | int8    |      |     |       |      
-  0   | Name | string | varchar | YES  | 255 |       |      
+┌─────┬──────┬────────┬─────────┬──────┬─────┬───────┬─────┐
+│ ORD │ NAME │  TYPE  │   UDT   │ NULL │ MAX │ INDEX │ REF │
+├─────┼──────┼────────┼─────────┼──────┼─────┼───────┼─────┤
+│ 0   │ ID   │ uint64 │ int8    │      │     │       │     │
+│ 0   │ Name │ string │ varchar │ YES  │ 255 │       │     │
+└─────┴──────┴────────┴─────────┴──────┴─────┴───────┴─────┘
 
 `,
 		)
@@ -128,10 +141,14 @@ Table: test
 				RefColumn: "col2",
 			},
 		}
-		checkFormat(t, o,
-			"  NAME | SCHEMA | TABLE | COLUMN | FK SCHEMA | FK TABLE | FK COLUMN  \n"+
-				"-------+--------+-------+--------+-----------+----------+------------\n"+
-				"  FK_1 | dbo    | from  | col1   | dbo       | to       | col2       \n\n",
+		checkEqual(t, o,
+			`┌──────┬────────┬───────┬────────┬───────────┬──────────┬───────────┐
+│ NAME │ SCHEMA │ TABLE │ COLUMN │ FK SCHEMA │ FK TABLE │ FK COLUMN │
+├──────┼────────┼───────┼────────┼───────────┼──────────┼───────────┤
+│ FK_1 │ dbo    │ from  │ col1   │ dbo       │ to       │ col2      │
+└──────┴────────┴───────┴────────┴───────────┴──────────┴───────────┘
+
+`,
 		)
 	})
 
@@ -144,9 +161,11 @@ Table: test
 			},
 		}
 		checkEqual(t, o,
-			`  NAME | PRIMARY | UNIQUE |  COLUMNS    
--------+---------+--------+-------------
-  a    | YES     |        | col1, col2  
+			`┌──────┬─────────┬────────┬────────────┐
+│ NAME │ PRIMARY │ UNIQUE │  COLUMNS   │
+├──────┼─────────┼────────┼────────────┤
+│ a    │ YES     │        │ col1, col2 │
+└──────┴─────────┴────────┴────────────┘
 
 `)
 	})

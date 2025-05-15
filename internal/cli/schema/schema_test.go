@@ -56,9 +56,11 @@ func (s *testSuite) TestPrintColumnsCmd() {
 	s.Equal(`Schema: dbo
 Table: test
 
-  ORD | NAME |  TYPE  | UDT  | NULL | MAX | INDEX | REF  
-------+------+--------+------+------+-----+-------+------
-  0   | ID   | uint64 | int8 |      |     |       |      
+┌─────┬──────┬────────┬──────┬──────┬─────┬───────┬─────┐
+│ ORD │ NAME │  TYPE  │ UDT  │ NULL │ MAX │ INDEX │ REF │
+├─────┼──────┼────────┼──────┼──────┼─────┼───────┼─────┤
+│ 0   │ ID   │ uint64 │ int8 │      │     │       │     │
+└─────┴──────┴────────┴──────┴──────┴─────┴───────┴─────┘
 
 `, s.Out.String())
 
@@ -181,9 +183,11 @@ func (s *testSuite) TestPrintFKCmd() {
 
 	err := cmd.Run(s.Ctl)
 	require.NoError(err)
-	s.Equal(`  NAME | SCHEMA | TABLE | COLUMN | FK SCHEMA | FK TABLE | FK COLUMN  
--------+--------+-------+--------+-----------+----------+------------
-  FK_1 | dbo    | from  | col1   | dbo       | to       | col2       
+	s.Equal(`┌──────┬────────┬───────┬────────┬───────────┬──────────┬───────────┐
+│ NAME │ SCHEMA │ TABLE │ COLUMN │ FK SCHEMA │ FK TABLE │ FK COLUMN │
+├──────┼────────┼───────┼────────┼───────────┼──────────┼───────────┤
+│ FK_1 │ dbo    │ from  │ col1   │ dbo       │ to       │ col2      │
+└──────┴────────┴───────┴────────┴───────────┴──────────┴───────────┘
 
 `, s.Out.String())
 

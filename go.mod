@@ -6,7 +6,7 @@ require (
 	dario.cat/mergo v1.0.2
 	github.com/alecthomas/kong v1.11.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.14.63
+	github.com/effective-security/x v0.14.64
 	github.com/effective-security/xlog v0.9.41
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1

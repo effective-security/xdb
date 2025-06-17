@@ -91,7 +91,17 @@ func TestIsNotFoundError(t *testing.T) {
 	// Test ErrorNotFound
 	notFound := xdb.NewErrorNotFound(errors.New("not found"), "users", 123)
 	assert.True(t, xdb.IsNotFoundError(notFound))
-	assert.Equal(t, "record not found: users 123", notFound.Error())
+	assert.Equal(t, "record not found: users: 123", notFound.Error())
+	assert.True(t, xdb.IsNotFoundError(errors.WithMessage(notFound, "failed")))
+	assert.True(t, xdb.IsNotFoundError(errors.Wrap(notFound, "failed")))
+
+	err2 := xdb.NewErrorNotFound(notFound, "users", "email")
+	assert.True(t, xdb.IsNotFoundError(err2))
+	assert.Equal(t, "record not found: users: email", err2.Error())
+
+	err3 := xdb.NewErrorNotFound(notFound, "users", xdb.NewID(123))
+	assert.True(t, xdb.IsNotFoundError(err3))
+	assert.Equal(t, "record not found: users: 123", err3.Error())
 
 	// Test wrapped ErrorNotFound
 	wrappedNotFound := errors.Wrap(notFound, "failed to find user")
@@ -100,7 +110,7 @@ func TestIsNotFoundError(t *testing.T) {
 	// Test CheckNotFoundError
 	err := xdb.CheckNotFoundError(notFound, "users", 123)
 	assert.True(t, xdb.IsNotFoundError(err))
-	assert.Equal(t, "record not found: users 123", err.Error())
+	assert.Equal(t, "record not found: users: 123", err.Error())
 	assert.Equal(t, notFound, err)
 
 	// Test different ErrorNotFound instances

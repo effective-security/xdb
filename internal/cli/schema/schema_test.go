@@ -7,9 +7,9 @@ import (
 	"github.com/effective-security/xdb/internal/cli/clisuite"
 	"github.com/effective-security/xdb/mocks/mockschema"
 	dbschema "github.com/effective-security/xdb/schema"
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/mock/gomock"
 )
 
 type testSuite struct {

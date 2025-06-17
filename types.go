@@ -21,13 +21,13 @@ const (
 )
 
 type ErrorNotFound struct {
-	ID    uint64
+	ID    string
 	Table string
 	Err   error
 }
 
 func (e *ErrorNotFound) Error() string {
-	return fmt.Sprintf("record not found: %s %d", e.Table, e.ID)
+	return fmt.Sprintf("record not found: %s: %s", e.Table, e.ID)
 }
 
 // Is implements the errors.Is interface to properly compare ErrorNotFound instances
@@ -43,15 +43,24 @@ func (e *ErrorNotFound) Unwrap() error {
 	return e.Err
 }
 
-func NewErrorNotFound(err error, table string, id uint64) error {
+func NewErrorNotFound(err error, table string, id any) error {
+	var idStr string
+	switch v := id.(type) {
+	case fmt.Stringer:
+		idStr = v.String()
+	case string:
+		idStr = v
+	default:
+		idStr = fmt.Sprintf("%v", id)
+	}
 	return &ErrorNotFound{
-		ID:    id,
+		ID:    idStr,
 		Table: table,
 		Err:   err,
 	}
 }
 
-func CheckNotFoundError(err error, table string, id uint64) error {
+func CheckNotFoundError(err error, table string, id any) error {
 	if err != nil &&
 		(err == sql.ErrNoRows || errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows in result set")) {
 		return NewErrorNotFound(err, table, id)

@@ -20,6 +20,45 @@ const (
 	MaxLenForShortURL = 256
 )
 
+type ErrorNotFound struct {
+	ID    uint64
+	Table string
+	Err   error
+}
+
+func (e *ErrorNotFound) Error() string {
+	return fmt.Sprintf("record not found: %s %d", e.Table, e.ID)
+}
+
+// Is implements the errors.Is interface to properly compare ErrorNotFound instances
+func (e *ErrorNotFound) Is(target error) bool {
+	t, ok := target.(*ErrorNotFound)
+	if !ok {
+		return false
+	}
+	return e.Table == t.Table && e.ID == t.ID
+}
+
+func (e *ErrorNotFound) Unwrap() error {
+	return e.Err
+}
+
+func NewErrorNotFound(err error, table string, id uint64) error {
+	return &ErrorNotFound{
+		ID:    id,
+		Table: table,
+		Err:   err,
+	}
+}
+
+func CheckNotFoundError(err error, table string, id uint64) error {
+	if err != nil &&
+		(err == sql.ErrNoRows || errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows in result set")) {
+		return NewErrorNotFound(err, table, id)
+	}
+	return err
+}
+
 // Validator provides schema validation interface
 type Validator interface {
 	// Validate returns error if the model is not valid
@@ -567,6 +606,26 @@ func (v Bool) Value() (driver.Value, error) {
 
 // IsNotFoundError returns true, if error is NotFound
 func IsNotFoundError(err error) bool {
-	return err != nil &&
-		(err == sql.ErrNoRows || strings.Contains(err.Error(), "no rows in result set"))
+	if err == nil {
+		return false
+	}
+
+	// Check for direct sql.ErrNoRows
+	if err == sql.ErrNoRows {
+		return true
+	}
+
+	// Check for wrapped sql.ErrNoRows
+	if errors.Is(err, sql.ErrNoRows) {
+		return true
+	}
+
+	// Check for ErrorNotFound type
+	var notFound *ErrorNotFound
+	if errors.As(err, &notFound) {
+		return true
+	}
+
+	// Check for "no rows" message
+	return strings.Contains(err.Error(), "no rows in result set")
 }

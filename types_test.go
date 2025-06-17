@@ -84,8 +84,41 @@ func TestIDString(t *testing.T) {
 }
 
 func TestIsNotFoundError(t *testing.T) {
+	// Test sql.ErrNoRows
 	assert.True(t, xdb.IsNotFoundError(sql.ErrNoRows))
 	assert.True(t, xdb.IsNotFoundError(errors.WithMessage(errors.New("sql: no rows in result set"), "failed")))
+
+	// Test ErrorNotFound
+	notFound := xdb.NewErrorNotFound(errors.New("not found"), "users", 123)
+	assert.True(t, xdb.IsNotFoundError(notFound))
+	assert.Equal(t, "record not found: users 123", notFound.Error())
+
+	// Test wrapped ErrorNotFound
+	wrappedNotFound := errors.Wrap(notFound, "failed to find user")
+	assert.True(t, xdb.IsNotFoundError(wrappedNotFound))
+
+	// Test CheckNotFoundError
+	err := xdb.CheckNotFoundError(notFound, "users", 123)
+	assert.True(t, xdb.IsNotFoundError(err))
+	assert.Equal(t, "record not found: users 123", err.Error())
+	assert.Equal(t, notFound, err)
+
+	// Test different ErrorNotFound instances
+	notFound2 := xdb.NewErrorNotFound(errors.New("not found"), "users", 123)
+	assert.True(t, xdb.IsNotFoundError(notFound2))
+	assert.True(t, errors.Is(notFound, notFound2))
+
+	// Test different table/ID
+	notFound3 := xdb.NewErrorNotFound(errors.New("not found"), "users", 456)
+	assert.True(t, xdb.IsNotFoundError(notFound3))
+	assert.False(t, errors.Is(notFound, notFound3))
+
+	// Test nil error
+	assert.False(t, xdb.IsNotFoundError(nil))
+
+	// Test that errors.Is works through ErrorNotFound wrapping sql.ErrNoRows
+	notFoundSql := xdb.NewErrorNotFound(sql.ErrNoRows, "users", 123)
+	assert.True(t, errors.Is(notFoundSql, sql.ErrNoRows), "errors.Is should work through ErrorNotFound wrapping sql.ErrNoRows")
 }
 
 type validator struct {

@@ -1,19 +1,21 @@
 module github.com/effective-security/xdb
 
-go 1.24.1
+go 1.24.4
+
+toolchain go1.24.6
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/alecthomas/kong v1.12.0
+	github.com/alecthomas/kong v1.12.1
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.14.64
-	github.com/effective-security/xlog v0.9.41
+	github.com/effective-security/x v0.15.69
+	github.com/effective-security/xlog v0.10.44
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-sqlite3 v1.14.28
-	github.com/olekukonko/tablewriter v1.0.8
+	github.com/mattn/go-sqlite3 v1.14.30
+	github.com/olekukonko/tablewriter v1.0.9
 	github.com/pkg/errors v0.9.1
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.10.0
@@ -47,8 +49,8 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/microsoft/go-mssqldb v1.0.0 // indirect
 	github.com/oleiade/reflections v1.0.1 // indirect
-	github.com/olekukonko/errors v0.0.0-20250405072817-4e6d85265da6 // indirect
-	github.com/olekukonko/ll v0.0.8 // indirect
+	github.com/olekukonko/errors v1.1.0 // indirect
+	github.com/olekukonko/ll v0.0.9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect

@@ -18,7 +18,7 @@ require (
 	github.com/olekukonko/tablewriter v1.0.9
 	github.com/pkg/errors v0.9.1
 	github.com/spaolacci/murmur3 v1.1.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	github.com/valyala/bytebufferpool v1.0.0
 	go.uber.org/mock v0.5.2
 	gopkg.in/yaml.v3 v3.0.1

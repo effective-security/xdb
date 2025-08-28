@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/values"
-	"github.com/pkg/errors"
 )
 
 // Max values, common for strings

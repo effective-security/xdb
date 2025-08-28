@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/slices"
 	"github.com/effective-security/xdb"
-	"github.com/pkg/errors"
 )
 
 // Dialect interface

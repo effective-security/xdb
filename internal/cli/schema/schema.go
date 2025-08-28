@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/slices"
 	"github.com/effective-security/x/values"
@@ -18,7 +19,6 @@ import (
 	"github.com/effective-security/xdb/schema"
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
-	"github.com/pkg/errors"
 )
 
 var pluralizeClient = pluralize.NewClient()

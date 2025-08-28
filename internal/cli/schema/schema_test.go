@@ -3,11 +3,11 @@ package schema
 import (
 	"testing"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/xdb/internal/cli/clisuite"
 	"github.com/effective-security/xdb/mocks/mockschema"
 	dbschema "github.com/effective-security/xdb/schema"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )

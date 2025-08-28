@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/xdb/schema"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 

@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/values"
-	"github.com/pkg/errors"
 )
 
 // DefaultPageSize is the default page size

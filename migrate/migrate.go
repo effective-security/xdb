@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/xlog"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/database/sqlserver"
-	"github.com/pkg/errors"
 
 	// register Postgres driver
 	_ "github.com/lib/pq"

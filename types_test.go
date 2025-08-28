@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/xlog"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"

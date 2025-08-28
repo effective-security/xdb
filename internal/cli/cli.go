@@ -7,13 +7,13 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/ctl"
 	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/print"
 	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/xlog"
-	"github.com/pkg/errors"
 )
 
 // Cli provides CLI context to run commands

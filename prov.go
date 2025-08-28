@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/xdb/pkg/flake"
 	"github.com/effective-security/xlog"
-	"github.com/pkg/errors"
 )
 
 var logger = xlog.NewPackageLogger("github.com/effective-security/xdb", "xdb")

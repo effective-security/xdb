@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // ID defines a type to convert between internal uint64 and external string representations of ID

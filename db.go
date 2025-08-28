@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/flake"
 	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/migrate"
-	"github.com/pkg/errors"
 )
 
 //go:generate mockgen -source=db.go -destination=./mocks/mockxdb/xdb_mock.go -package mockxdb

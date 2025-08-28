@@ -39,7 +39,7 @@ import (
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/schema"
 	"github.com/effective-security/x/values"
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
 	{{ end }}

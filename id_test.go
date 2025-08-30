@@ -94,6 +94,12 @@ func TestIDs(t *testing.T) {
 	assert.Equal(t, []uint64{1, 2, 3, 4, 5}, ids3.List())
 }
 
+func TestInt32Array(t *testing.T) {
+	assert.Equal(t, pq.Int32Array{1, 2, 3, 4, 5}, xdb.Int32Array([]xdb.ID32{1, 2, 3, 4, 5}))
+	assert.Equal(t, pq.Int32Array{1, 2, 3, 4, 5}, xdb.Int32Array([]uint32{1, 2, 3, 4, 5}))
+	assert.Equal(t, pq.Int32Array{1, 2, 3, 4, 5}, xdb.Int32Array([]int32{1, 2, 3, 4, 5}))
+}
+
 func TestIDsValue(t *testing.T) {
 	tcases := []struct {
 		in  xdb.IDArray

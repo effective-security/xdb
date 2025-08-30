@@ -417,3 +417,17 @@ func (v *idptr) String() string {
 	}
 	return v.str
 }
+
+// Enum interface for generic enum
+type Enum interface {
+	~int32 | ~uint32
+}
+
+// Int32Array returns pq.Int32Array
+func Int32Array[E Enum](list []E) pq.Int32Array {
+	ids := make(pq.Int32Array, len(list))
+	for i, id := range list {
+		ids[i] = int32(id)
+	}
+	return ids
+}

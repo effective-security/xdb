@@ -223,10 +223,10 @@ func tableStructName(t *schema.Table) string {
 func tableInfoStructName(t *schema.TableInfo) string {
 	name := t.Name
 	if res, ok := tableNamesMap[t.SchemaName]; ok {
-		return res + "Table"
+		return res + "TableInfo"
 	}
 
-	return goName(pluralizeClient.Singular(name)) + "Table"
+	return goName(pluralizeClient.Singular(name)) + "TableInfo"
 }
 
 func columnStructName(c *schema.Column) string {
@@ -259,7 +259,7 @@ type override struct {
 }
 
 func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
-	var headerTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
+	var headerTemplate = template.Must(template.New("header").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
 	modelPkg := values.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
@@ -267,12 +267,13 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 
 	var dialect string
 	imports := a.Imports
-	if provider == "postgres" {
+	switch provider {
+	case "postgres":
 		imports = append(imports, "github.com/lib/pq")
 		dialect = "xsql.Postgres"
-	} else if provider == "sqlserver" {
+	case "sqlserver":
 		dialect = "xsql.SQLServer"
-	} else {
+	default:
 		dialect = "xsql.NoDialect"
 	}
 
@@ -333,9 +334,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	for schemaName, tables := range schemas {
 		sName := strcase.ToGoPascal(schemaName)
 		for _, t := range tables {
-			tName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
+			structName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
 			if a.StructSuffix != "" {
-				tName += strcase.ToGoPascal(a.StructSuffix)
+				structName += strcase.ToGoPascal(a.StructSuffix)
 			}
 
 			tableInfos = append(tableInfos, &schema.TableInfo{
@@ -356,8 +357,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				Package:         modelPkg,
 				Imports:         imports,
 				Dialect:         dialect,
-				Name:            prefix + tName,
-				StructName:      prefix + tName,
+				Name:            prefix + structName,
+				StructName:      prefix + structName,
 				SchemaName:      t.Schema,
 				TableName:       t.Name,
 				TableStructName: tableStructName(t),

@@ -68,7 +68,7 @@ var {{ .StructName }} = struct {
 	{{columnStructName .}} schema.Column // {{.Name}} {{.Type}}
 {{- end }}
 }{
-	Table: &{{.TableStructName}},
+	Table: &{{.TableStructName}}Info,
 
 	{{- range .Columns }}
 	{{ columnStructName .}}: schema.Column{{.StructString}},

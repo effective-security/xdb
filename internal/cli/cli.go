@@ -28,7 +28,7 @@ type Cli struct {
 	stdin io.Reader
 	// Output is the destination for all output from the command, typically set to os.Stdout
 	output io.Writer
-	// ErrOutput is the destinaton for errors.
+	// ErrOutput is the destination for errors.
 	// If not set, errors will be written to os.StdError
 	errOutput io.Writer
 

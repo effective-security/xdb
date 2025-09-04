@@ -103,6 +103,7 @@ func (t *TableInfo) AliasedColumns(prefix string, nullColumns map[string]bool) s
 type Table struct {
 	Schema  string
 	Name    string
+	Type    string
 	IsView  bool
 	Columns Columns
 	Indexes Indexes

@@ -53,6 +53,9 @@ var typeByColumnType = map[string]string{
 	"varchar":  "string",
 	"bpchar":   "string",
 	"text":     "string",
+	"cidr":     "string",
+	"inet":     "string",
+	"ltree":    "string",
 
 	"int8 NULL":     "xdb.Int64",
 	"int4 NULL":     "xdb.Int32",
@@ -84,6 +87,9 @@ var typeByColumnType = map[string]string{
 	"bpchar NULL":   "xdb.NULLString",
 	"varchar NULL":  "xdb.NULLString",
 	"text NULL":     "xdb.NULLString",
+	"cidr NULL":     "xdb.NULLString",
+	"inet NULL":     "xdb.NULLString",
+	"ltree NULL":    "xdb.NULLString",
 
 	"uniqueidentifier":      "xdb.UUID",
 	"uuid":                  "xdb.UUID",

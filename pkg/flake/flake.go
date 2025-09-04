@@ -20,7 +20,7 @@ import (
 
 var logger = xlog.NewPackageLogger("github.com/effective-security/porto/pkg", "flake")
 
-// IDGenerator defines an interface to generate unique ID accross the cluster
+// IDGenerator defines an interface to generate unique ID across the cluster
 type IDGenerator interface {
 	// NextID generates a next unique ID.
 	NextID() uint64

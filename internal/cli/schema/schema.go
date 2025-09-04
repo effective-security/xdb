@@ -335,7 +335,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		for _, t := range tables {
 			tName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
 			if a.StructSuffix != "" {
-				tName += t.Name + strcase.ToGoPascal(a.StructSuffix)
+				tName += strcase.ToGoPascal(a.StructSuffix)
 			}
 
 			tableInfos = append(tableInfos, &schema.TableInfo{

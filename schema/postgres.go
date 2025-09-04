@@ -15,15 +15,17 @@ type postgres struct {
 const postgresTableNamesWithSchema = `
 	SELECT
 		table_schema,
-		table_name
+		table_name,
+		table_type
 	FROM
 		information_schema.tables
 	WHERE
-		table_type = 'BASE TABLE' AND
+		table_type IN ('BASE TABLE', 'FOREIGN') AND
 		table_schema NOT IN ('pg_catalog', 'information_schema')
 	ORDER BY
 		table_schema,
-		table_name
+		table_name,
+		table_type
 `
 
 func (p postgres) QueryTables(ctx context.Context) (*sql.Rows, error) {

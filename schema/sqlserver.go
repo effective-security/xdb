@@ -12,10 +12,12 @@ type sqlserver struct {
 	db xdb.DB
 }
 
+// TODO: test if type_desc is correct
 const mssqlTableNamesWithSchema = `
 	SELECT
 		schema_name(t.schema_id),
-		t.name
+		t.name,
+		t.type_desc
 	FROM
 		sys.tables t
 	INNER JOIN
@@ -30,7 +32,8 @@ const mssqlTableNamesWithSchema = `
 			ep.[name] <> 'microsoft_database_tools_support'))
 	ORDER BY
 		schema_name(t.schema_id),
-		t.name
+		t.name,
+		t.type_desc
 `
 
 func (p sqlserver) QueryTables(ctx context.Context) (*sql.Rows, error) {

@@ -46,7 +46,6 @@ func Object(w io.Writer, format string, value any) error {
 // Print value
 func Print(w io.Writer, value any) {
 	switch t := value.(type) {
-
 	case *schema.Table:
 		SchemaTable(w, t)
 	case schema.Tables:
@@ -55,7 +54,6 @@ func Print(w io.Writer, value any) {
 		SchemaForeingKeys(w, t)
 	case schema.Indexes:
 		SchemaIndexes(w, t)
-
 	default:
 		_ = JSON(w, value)
 	}

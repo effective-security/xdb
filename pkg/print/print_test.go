@@ -18,8 +18,8 @@ func TestObject(t *testing.T) {
 		format string
 		has    []string
 	}{
-		{"yaml", []string{"schema: dbo\nname: test\nisview: false\ncolumns: []\nindexes: []\nprimarykey: null\n"}},
-		{"json", []string{"{\n  \"Schema\": \"dbo\",\n  \"Name\": \"test\",\n  \"IsView\": false,\n  \"Columns\": null,\n  \"Indexes\": null,\n  \"PrimaryKey\": null\n}\n"}},
+		{"yaml", []string{"schema: dbo\nname: test\ntype: \"\"\nisview: false\ncolumns: []\nindexes: []\nprimarykey: null\n"}},
+		{"json", []string{"{\n  \"Schema\": \"dbo\",\n  \"Name\": \"test\",\n  \"Type\": \"\",\n  \"IsView\": false,\n  \"Columns\": null,\n  \"Indexes\": null,\n  \"PrimaryKey\": null\n}\n"}},
 		{"", []string{"Schema: dbo\nTable: test\n\n┌─────┬──────┬──────┬─────┬──────┬─────┬───────┬─────┐\n│ ORD │ NAME │ TYPE │ UDT │ NULL │ MAX │ INDEX │ REF │\n└─────┴──────┴──────┴─────┴──────┴─────┴───────┴─────┘\n\n"}},
 	}
 	w := bytes.NewBuffer([]byte{})

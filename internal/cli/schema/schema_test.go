@@ -31,6 +31,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 		{
 			Name:   "test",
 			Schema: "dbo",
+			Type:   "BASE TABLE",
 			Columns: dbschema.Columns{
 				{
 					Name:     "ID",
@@ -69,9 +70,8 @@ Table: test
 
 	err = cmd.Run(s.Ctl)
 	require.NoError(err)
-	s.Equal(
-		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": false,\n        \"MaxLength\": 0,\n        \"Position\": 0\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n",
-		s.Out.String())
+	s.EqualOut(
+		"[\n  {\n    \"Schema\": \"dbo\",\n    \"Name\": \"test\",\n    \"Type\": \"BASE TABLE\",\n    \"IsView\": false,\n    \"Columns\": [\n      {\n        \"Name\": \"ID\",\n        \"Type\": \"uint64\",\n        \"UdtType\": \"int8\",\n        \"Nullable\": false,\n        \"MaxLength\": 0,\n        \"Position\": 0\n      }\n    ],\n    \"Indexes\": null,\n    \"PrimaryKey\": null\n  }\n]\n")
 
 	err = cmd.Run(s.Ctl)
 	s.EqualError(err, "query failed")

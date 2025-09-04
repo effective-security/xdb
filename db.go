@@ -18,7 +18,7 @@ import (
 
 //go:generate mockgen -source=db.go -destination=./mocks/mockxdb/xdb_mock.go -package mockxdb
 
-// IDGenerator defines an interface to generate unique ID accross the cluster
+// IDGenerator defines an interface to generate unique ID across the cluster
 type IDGenerator interface {
 	// NextID generates a next unique ID.
 	NextID() ID

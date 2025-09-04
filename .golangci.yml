@@ -1,13 +1,61 @@
 linters:
   enable:
     - revive
+    - goimports
+    - gofmt
+    - asasalint
+    - bidichk
+    - copyloopvar
+    - errcheck
+    - misspell
+    #- cyclop
 
+linters-settings:
+  revive:
+    # Maximum number of open files at the same time.
+    # See https://github.com/mgechev/revive#command-line-flags
+    # Defaults to unlimited.
+    max-open-files: 2048
+
+    # When set to false, ignores files with "GENERATED" header, similar to golint.
+    # See https://github.com/mgechev/revive#available-rules for details.
+    # Default: false
+    ignore-generated-header: true
+
+    # Sets the default severity.
+    # See https://github.com/mgechev/revive#configuration
+    # Default: warning
+    severity: warning
+
+    # Enable all available rules.
+    # Default: false
+    enable-all-rules: false
+
+    # Sets the default failure confidence.
+    # This means that linting errors with less than 0.8 confidence will be ignored.
+    # Default: 0.8
+    confidence: 0.1
+
+    rules:
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#empty-lines
+      - name: empty-lines
+        severity: warning
+        disabled: false
+        exclude: [""]
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#error-strings
+      - name: error-strings
 issues:
-  exclude:
-    - S1040 # type assertion to the same type: rawBody already has type io.ReadSeeker (gosimple)
-    - S1030 # should use w.String() instead of string(w.Bytes()) (gosimple)
-    - SA1019 # tc.gtc.OverrideServerName is deprecated: use grpc.WithAuthority instead. Will be supported throughout 1.x. (staticcheck)
-    - SA1019 # "io/ioutil" has been deprecated since Go 1.16: As of Go 1.16, the same functionality is now provided by package io or package os, and those implementations should be preferred in new code. See the specific function documentation for details. (staticcheck)
-    - SA1019 # "io/ioutil" has been deprecated since Go 1.16: As of Go 1.16, the same functionality is now provided by package io or package os, and those implementations should be preferred in new code. See the specific function documentation for details. (staticcheck)
   exclude-files:
-    - ".*_test\\.go$"
+    - internal/templates/files.go
+    - mocks/*
+    - test/*
+  exclude:
+    - SA1019 # FIX: replace EndpointResolver and EndpointResolverWithOptions with EndpointResolverV2 and BaseEndpoint.
+  include:
+    - EXC0012 # revive: Annoying issue about not having a comment. The rare codebase has such comments
+      # - exported (.+) should have comment( \(or a comment on this block\))? or be unexported
+    - EXC0014 # revive: Annoying issue about not having a comment. The rare codebase has such comments
+      # - comment on exported (.+) should be of the form "(.+)..."
+
+run:
+  timeout: 20m

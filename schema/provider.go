@@ -73,7 +73,7 @@ func (r *SQLServerProvider) ListTables(ctx context.Context, schema string, table
 	tt := Tables{}
 	for rows.Next() {
 		t := new(Table)
-		if err := rows.Scan(&t.Schema, &t.Name); err != nil {
+		if err := rows.Scan(&t.Schema, &t.Name, &t.Type); err != nil {
 			return nil, errors.WithMessagef(err, "failed to scan")
 		}
 

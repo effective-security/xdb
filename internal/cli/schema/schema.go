@@ -252,15 +252,36 @@ var templateFuncMap = template.FuncMap{
 }
 
 type override struct {
-	Tables    map[string]string `json:"tables" yaml:"tables"`
-	Fields    map[string]string `json:"fields" yaml:"fields"`
-	Types     map[string]string `json:"types" yaml:"types"`
-	WithCache []string          `json:"with_cached_props" yaml:"with_cached_props"`
+	Tables      map[string]string `json:"tables" yaml:"tables"`
+	Fields      map[string]string `json:"fields" yaml:"fields"`
+	Types       map[string]string `json:"types" yaml:"types"`
+	WithCache   []string          `json:"with_cached_props" yaml:"with_cached_props"`
+	DropColumns []string          `json:"drop_columns" yaml:"drop_columns"`
+}
+
+func filterColumnNames(columns []string, dropColumnsMap map[string]bool) []string {
+	var result []string
+	for _, c := range columns {
+		if !dropColumnsMap[c] {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+func filterColumns(columns schema.Columns, dropColumnsMap map[string]bool) schema.Columns {
+	var result schema.Columns
+	for _, c := range columns {
+		if !dropColumnsMap[c.Name] {
+			result = append(result, c)
+		}
+	}
+	return result
 }
 
 func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
-	var headerTemplate = template.Must(template.New("header").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
-	var rowCodeTemplate = template.Must(template.New("rowCode").Funcs(templateFuncMap).Parse(codeModelTemplateText))
+	var codeHeaderTemplate = template.Must(template.New("header").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
+	var codeModelTemplate = template.Must(template.New("codeModelTemplate").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
 	modelPkg := values.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
 	schemaPkg := values.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
@@ -277,6 +298,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		dialect = "xsql.NoDialect"
 	}
 
+	dropColumnsMap := map[string]bool{}
 	if a.TypesDef != "" {
 		var defs override
 		err := configloader.Unmarshal(a.TypesDef, &defs)
@@ -294,6 +316,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		}
 		for _, v := range defs.WithCache {
 			modelWithCacheMap[v] = true
+		}
+		for _, v := range defs.DropColumns {
+			dropColumnsMap[v] = true
 		}
 	}
 
@@ -321,12 +346,15 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		}()
 		w = f
 	}
-	err = headerTemplate.Execute(buf, &tableDefinition{
+	modelDef := &tableDefinition{
 		DB:      dbName,
 		Package: modelPkg,
 		Imports: imports,
-		Dialect: dialect,
-	})
+	}
+	if modelPkg != schemaPkg {
+		modelDef.Dialect = dialect
+	}
+	err = codeHeaderTemplate.Execute(buf, modelDef)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to generate header")
 	}
@@ -343,7 +371,7 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				Schema:     t.Schema,
 				Name:       t.Name,
 				SchemaName: t.SchemaName,
-				Columns:    t.Columns.Names(),
+				Columns:    filterColumnNames(t.Columns.Names(), dropColumnsMap),
 				Indexes:    t.Indexes.Names(),
 				PrimaryKey: t.PrimaryKeyName(),
 			})
@@ -362,17 +390,20 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				SchemaName:      t.Schema,
 				TableName:       t.Name,
 				TableStructName: tableStructName(t),
-				Columns:         t.Columns,
+				Columns:         filterColumns(t.Columns, dropColumnsMap),
 				Indexes:         t.Indexes,
 				PrimaryKey:      t.PrimaryKey,
 				WithCache:       modelWithCacheMap[t.SchemaName],
+			}
+			if modelPkg != schemaPkg {
+				td.SchemaPackage = schemaPkg + "."
 			}
 
 			if res, ok := tableNamesMap[t.SchemaName]; ok {
 				td.StructName = res
 			}
 
-			err = rowCodeTemplate.Execute(buf, td)
+			err = codeModelTemplate.Execute(buf, td)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to generate model for %s.%s", t.Schema, t.Name)
 			}
@@ -386,8 +417,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	}
 	_, _ = w.Write(code)
 
-	var schemaCodeTemplate = template.Must(template.New("schemaCode").Funcs(templateFuncMap).Parse(codeSchemaTemplateText))
-	var collsCodeTemplate = template.Must(template.New("collsCode").Funcs(templateFuncMap).Parse(codeTableColTemplateText))
+	var schemaHeaderCodeTemplate = template.Must(template.New("schemaHeaderCodeTemplate").Funcs(templateFuncMap).Parse(codeSchemaHeaderTemplateText))
+	var schemaCodeTemplate = template.Must(template.New("schemaCodeTemplate").Funcs(templateFuncMap).Parse(codeTableSchemaTemplateText))
 
 	buf.Reset()
 	w = ctx.Writer()
@@ -411,13 +442,13 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		Tables:  tableInfos,
 		Defs:    tableDefs,
 	}
-	err = schemaCodeTemplate.Execute(buf, td)
+	err = schemaHeaderCodeTemplate.Execute(buf, td)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to generate schema")
 	}
 
 	for _, ctd := range tableDefs {
-		err = collsCodeTemplate.Execute(buf, ctd)
+		err = schemaCodeTemplate.Execute(buf, ctd)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to generate schema")
 		}

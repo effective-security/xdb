@@ -7,6 +7,7 @@ import (
 type tableDefinition struct {
 	DB              string
 	Package         string
+	SchemaPackage   string
 	Imports         []string
 	Name            string
 	Dialect         string
@@ -37,7 +38,7 @@ package {{ .Package }}
 
 import (
 	"github.com/effective-security/xdb"
-	"github.com/effective-security/xdb/schema"
+	xdbschema "github.com/effective-security/xdb/schema"
 	"github.com/effective-security/x/values"
 	"github.com/cockroachdb/errors"
 	{{range .Imports}}{{/*
@@ -45,11 +46,13 @@ import (
 	{{ end }}
 )
 
+{{ if .Dialect }}
 // Dialect provides Dialect for {{ .DB }}
 var Dialect = {{ .Dialect }}
+{{ end }}
 `
 
-var codeTableColTemplateText = `
+var codeTableSchemaTemplateText = `
 
 // {{ .StructName }} provides column definitions for table '{{ .SchemaName }}.{{ .TableName }}'.
 {{- if .PrimaryKey }}
@@ -62,16 +65,16 @@ var codeTableColTemplateText = `
 {{- end }}
 {{- end }}
 var {{ .StructName }} = struct {
-	Table *schema.TableInfo
+	Table *xdbschema.TableInfo
 
 {{- range .Columns }}
-	{{columnStructName .}} schema.Column // {{.Name}} {{.Type}}
+	{{columnStructName .}} xdbschema.Column // {{.Name}} {{.Type}}
 {{- end }}
 }{
 	Table: &{{.TableStructName}}Info,
 
 	{{- range .Columns }}
-	{{ columnStructName .}}: schema.Column{{.StructString}},
+	{{ columnStructName .}}: xdbschema.Column{{.StructString}},
 	{{- end }}
 }
 `
@@ -128,7 +131,7 @@ func(m *{{ .StructName }}) ScanRow(rows xdb.Row) error {
 
 type {{ .StructName }}Slice []*{{ .StructName }}
 type {{ .StructName }}Result struct {
-	Rows        []*{{ .StructName }}
+	Rows        {{ .StructName }}Slice
 	NextOffset  uint32
 	HasNextPage bool
 	Cursor 	string
@@ -147,16 +150,21 @@ func (p *{{ .StructName }}Result) SetResultWithCursor(rows []*{{ .StructName }},
 		p.Cursor = cursor(rows[len(rows)-1])
     }
 }
+
+func (p *{{ .StructName }}Result) GetTableInfo() *xdbschema.TableInfo {
+	return &{{ .SchemaPackage }}{{ .TableStructName }}Info
+}
+
 `
 
-var codeSchemaTemplateText = `// DO NOT EDIT!
+var codeSchemaHeaderTemplateText = `// DO NOT EDIT!
 // This file is MACHINE GENERATED
 // DB: {{ .DB }}
 
 package {{ .Package }}
 
 import (
-	"github.com/effective-security/xdb/schema"
+	xdbschema "github.com/effective-security/xdb/schema"
 	{{range .Imports}}{{/*
 		*/}}"{{ . }}"
 	{{ end }}
@@ -169,7 +177,7 @@ var Dialect = {{ .Dialect }}
 {{ range .Tables }}
 {{- $tableName := tableInfoStructName . }}
 // {{ $tableName }} provides table info for '{{ .Name }}'
-var {{ $tableName }} = schema.TableInfo{
+var {{ $tableName }} = xdbschema.TableInfo{
 	SchemaName : "{{ .SchemaName }}",
 	Schema     : "{{ .Schema }}",
 	Name       : "{{ .Name }}",
@@ -181,7 +189,7 @@ var {{ $tableName }} = schema.TableInfo{
 {{ end }}
 
 // {{ goName .DB }}Tables provides tables map for {{ .DB }}
-var {{ goName .DB }}Tables = map[string]*schema.TableInfo{
+var {{ goName .DB }}Tables = map[string]*xdbschema.TableInfo{
 {{- range .Tables }}
  	"{{ .Name }}": &{{ tableInfoStructName . }},
 {{- end }}

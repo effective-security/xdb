@@ -11,6 +11,10 @@ import (
 
 //go:generate mockgen -source=schema.go -destination=../mocks/mockschema/schema_mock.go -package mockschema
 
+type HasTableInfo interface {
+	GetTableInfo() *TableInfo
+}
+
 // TableInfo defines a table info
 type TableInfo struct {
 	Schema     string

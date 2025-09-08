@@ -13,7 +13,7 @@ require (
 	github.com/effective-security/xlog v0.10.45
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
-	github.com/golang-migrate/migrate/v4 v4.18.3
+	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/olekukonko/tablewriter v1.0.9

@@ -34,7 +34,7 @@ jobs:
           fi
 
       - name: Create Tag
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const {DIST_VERSION} = process.env          

@@ -9,7 +9,7 @@ require (
 	github.com/alecthomas/kong v1.12.1
 	github.com/cockroachdb/errors v1.12.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.15.70
+	github.com/effective-security/x v0.15.71
 	github.com/effective-security/xlog v0.10.45
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1

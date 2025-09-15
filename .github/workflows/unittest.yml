@@ -25,7 +25,6 @@ env:
   PULL_NUMBER: ${{ github.event.pull_request.number }}
 
 jobs:
- 
   detect-noop:
     runs-on: ubuntu-latest
     outputs:
@@ -79,12 +78,12 @@ jobs:
         run: git fetch --prune --unshallow
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
       - name: Prepare
-        run: make vars tools generate start-localstack start-sql covtest
+        run: make vars tools generate start-localstack start-sql
 
       - name: UnitTest
         run: make build covtest
@@ -120,7 +119,7 @@ jobs:
 
       - name: Create Tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.version-changed.outputs.should_skip != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const {DIST_VERSION} = process.env          

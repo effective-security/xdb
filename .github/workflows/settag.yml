@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'New tag name, or skip for default'
+        description: "New tag name, or skip for default"
         required: false
 
 env:
@@ -34,7 +34,7 @@ jobs:
           fi
 
       - name: Create Tag
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const {DIST_VERSION} = process.env          

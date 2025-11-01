@@ -17,6 +17,44 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// MockHasTableInfo is a mock of HasTableInfo interface.
+type MockHasTableInfo struct {
+	ctrl     *gomock.Controller
+	recorder *MockHasTableInfoMockRecorder
+	isgomock struct{}
+}
+
+// MockHasTableInfoMockRecorder is the mock recorder for MockHasTableInfo.
+type MockHasTableInfoMockRecorder struct {
+	mock *MockHasTableInfo
+}
+
+// NewMockHasTableInfo creates a new mock instance.
+func NewMockHasTableInfo(ctrl *gomock.Controller) *MockHasTableInfo {
+	mock := &MockHasTableInfo{ctrl: ctrl}
+	mock.recorder = &MockHasTableInfoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockHasTableInfo) EXPECT() *MockHasTableInfoMockRecorder {
+	return m.recorder
+}
+
+// GetTableInfo mocks base method.
+func (m *MockHasTableInfo) GetTableInfo() *schema.TableInfo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTableInfo")
+	ret0, _ := ret[0].(*schema.TableInfo)
+	return ret0
+}
+
+// GetTableInfo indicates an expected call of GetTableInfo.
+func (mr *MockHasTableInfoMockRecorder) GetTableInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTableInfo", reflect.TypeOf((*MockHasTableInfo)(nil).GetTableInfo))
+}
+
 // MockProvider is a mock of Provider interface.
 type MockProvider struct {
 	ctrl     *gomock.Controller

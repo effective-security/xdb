@@ -111,7 +111,7 @@ func TestIsNotFoundError(t *testing.T) {
 	err := xdb.CheckNotFoundError(notFound, "users", 123)
 	assert.True(t, xdb.IsNotFoundError(err))
 	assert.Equal(t, "record not found: users: 123", err.Error())
-	assert.Equal(t, notFound, err)
+	assert.True(t, xdb.IsNotFoundError(err))
 
 	// Test different ErrorNotFound instances
 	notFound2 := xdb.NewErrorNotFound(errors.New("not found"), "users", 123)

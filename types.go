@@ -63,9 +63,9 @@ func NewErrorNotFound(err error, table string, id any) error {
 func CheckNotFoundError(err error, table string, id any) error {
 	if err != nil &&
 		(err == sql.ErrNoRows || errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows in result set")) {
-		return NewErrorNotFound(err, table, id)
+		return errors.WithStack(NewErrorNotFound(err, table, id))
 	}
-	return err
+	return errors.WithStack(err)
 }
 
 // Validator provides schema validation interface

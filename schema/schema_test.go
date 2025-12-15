@@ -88,19 +88,19 @@ func TestListSQLServer(t *testing.T) {
 	require.Equal(t, "sqlserver", provider.Name())
 	p := NewProvider(provider.DB(), provider.Name())
 
-	tt, err := p.ListTables(context.Background(), "dbo", []string{"Fake"}, true)
+	tt, err := p.ListTables(context.Background(), []string{"dbo"}, []string{"Fake"}, true)
 	require.NoError(t, err)
 	assert.Empty(t, tt)
 
-	fk, err := p.ListForeignKeys(context.Background(), "dbo", []string{"orgmember"})
+	fk, err := p.ListForeignKeys(context.Background(), []string{"dbo"}, []string{"orgmember"})
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(fk))
 
-	tt, err = p.ListTables(context.Background(), "dbo", []string{"org"}, true)
+	tt, err = p.ListTables(context.Background(), []string{"dbo"}, []string{"org"}, true)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(tt))
 
-	tt, err = p.ListTables(context.Background(), "dbo", []string{"orgmember"}, true)
+	tt, err = p.ListTables(context.Background(), []string{"dbo"}, []string{"orgmember"}, true)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(tt))
 
@@ -117,7 +117,7 @@ func TestListSQLServer(t *testing.T) {
 	require.NotNil(t, tr.PrimaryKey)
 	assert.Equal(t, "id", tr.PrimaryKeyName())
 
-	tt, err = p.ListViews(context.Background(), "dbo", nil)
+	tt, err = p.ListViews(context.Background(), []string{"dbo"}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(tt))
 }
@@ -141,19 +141,19 @@ func TestListPostgres(t *testing.T) {
 	require.Equal(t, "postgres", provider.Name())
 	p := NewProvider(provider.DB(), provider.Name())
 
-	tt, err := p.ListTables(context.Background(), "public", []string{"Fake"}, true)
+	tt, err := p.ListTables(context.Background(), []string{"public"}, []string{"Fake"}, true)
 	require.NoError(t, err)
 	assert.Empty(t, tt)
 
-	fk, err := p.ListForeignKeys(context.Background(), "public", []string{"orgmember"})
+	fk, err := p.ListForeignKeys(context.Background(), []string{"public"}, []string{"orgmember"})
 	require.NoError(t, err)
 	assert.NotEmpty(t, fk)
 
-	tt, err = p.ListTables(context.Background(), "public", []string{"org"}, true)
+	tt, err = p.ListTables(context.Background(), []string{"public"}, []string{"org"}, true)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(tt))
 
-	tt, err = p.ListTables(context.Background(), "public", []string{"orgmember"}, true)
+	tt, err = p.ListTables(context.Background(), []string{"public"}, []string{"orgmember"}, true)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(tt))
 
@@ -170,7 +170,7 @@ func TestListPostgres(t *testing.T) {
 	require.NotNil(t, tr.PrimaryKey)
 	assert.Equal(t, "id", tr.PrimaryKeyName())
 
-	tt, err = p.ListViews(context.Background(), "public", nil)
+	tt, err = p.ListViews(context.Background(), []string{"public"}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(tt))
 }

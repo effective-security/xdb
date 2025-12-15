@@ -64,7 +64,7 @@ func (r *SQLServerProvider) Name() string {
 // ListTables returns a list of tables in database.
 // schema and tables are optional parameters to filter,
 // if not provided, then all items are returned
-func (r *SQLServerProvider) ListTables(ctx context.Context, schema string, tables []string, withDependencies bool) (Tables, error) {
+func (r *SQLServerProvider) ListTables(ctx context.Context, schemas []string, tables []string, withDependencies bool) (Tables, error) {
 	rows, err := r.dialect.QueryTables(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to query tables")
@@ -77,7 +77,7 @@ func (r *SQLServerProvider) ListTables(ctx context.Context, schema string, table
 			return nil, errors.WithMessagef(err, "failed to scan")
 		}
 
-		if schema != "" && !strings.EqualFold(t.Schema, schema) {
+		if len(schemas) > 0 && !slices.ContainsStringEqualFold(schemas, t.Schema) {
 			continue
 		}
 
@@ -136,7 +136,7 @@ func (r *SQLServerProvider) ListTables(ctx context.Context, schema string, table
 // ListViews returns a list of views in database.
 // schemaName and tableNames are optional parameters to filter,
 // if not provided, then all items are returned
-func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables []string) (Tables, error) {
+func (r *SQLServerProvider) ListViews(ctx context.Context, schemas []string, tables []string) (Tables, error) {
 	rows, err := r.dialect.QueryViews(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to query tables")
@@ -154,7 +154,7 @@ func (r *SQLServerProvider) ListViews(ctx context.Context, schema string, tables
 		if err := rows.Scan(&schemaName, &tableName, &c.Name, &c.Type, &c.UdtType, &nullable, &maxLen, &ordinal); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if schema != "" && !strings.EqualFold(schema, schemaName) {
+		if len(schemas) > 0 && !slices.ContainsStringEqualFold(schemas, schemaName) {
 			continue
 		}
 
@@ -278,7 +278,7 @@ func (r *SQLServerProvider) readIndexesSchema(ctx context.Context, schema, table
 // ListForeignKeys returns a list of FK in database.
 // schema and tables are optional parameters to filter on source tables,
 // if not provided, then all items are returned
-func (r *SQLServerProvider) ListForeignKeys(ctx context.Context, schema string, tables []string) (ForeignKeys, error) {
+func (r *SQLServerProvider) ListForeignKeys(ctx context.Context, schemas []string, tables []string) (ForeignKeys, error) {
 	rows, err := r.dialect.QueryForeignKeys(ctx)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to query foreign keys")
@@ -299,7 +299,7 @@ func (r *SQLServerProvider) ListForeignKeys(ctx context.Context, schema string, 
 			return nil, errors.WithMessagef(err, "failed to scan foreign keys")
 		}
 
-		if schema != "" && !strings.EqualFold(k.Schema, schema) {
+		if len(schemas) > 0 && !slices.ContainsStringEqualFold(schemas, k.Schema) {
 			continue
 		}
 		if len(tables) > 0 && !slices.ContainsStringEqualFold(tables, k.Table) {
@@ -323,7 +323,7 @@ func (r *SQLServerProvider) ListForeignKeys(ctx context.Context, schema string, 
 
 // discover will DFS on the graph and update internal cache with all dependencies
 func (r *SQLServerProvider) discover(ctx context.Context) (Tables, error) {
-	_, err := r.ListForeignKeys(ctx, "", nil)
+	_, err := r.ListForeignKeys(ctx, nil, nil)
 	if err != nil {
 		return nil, err
 	}

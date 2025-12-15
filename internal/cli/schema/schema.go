@@ -35,7 +35,7 @@ type Cmd struct {
 // PrintColumnsCmd prints database schema
 type PrintColumnsCmd struct {
 	DB           string   `help:"database name" required:""`
-	Schema       string   `help:"optional schema name to filter"`
+	Schema       []string `help:"optional schema name to filter"`
 	Table        []string `help:"optional, list of tables, default: all tables"`
 	Dependencies bool     `help:"optional, to discover all dependencies"`
 	Views        bool     `help:"optional, to include views"`
@@ -69,7 +69,7 @@ func (a *PrintColumnsCmd) Run(ctx *cli.Cli) error {
 // PrintTablesCmd prints database tables with dependencies
 type PrintTablesCmd struct {
 	DB     string   `help:"database name" required:""`
-	Schema string   `help:"optional schema name to filter"`
+	Schema []string `help:"optional schema name to filter"`
 	Table  []string `help:"optional, list of tables, default: all tables"`
 	Views  bool     `help:"optional, to include views"`
 }
@@ -108,7 +108,7 @@ func (a *PrintTablesCmd) Run(ctx *cli.Cli) error {
 // PrintViewsCmd prints database tables with dependencies
 type PrintViewsCmd struct {
 	DB     string   `help:"database name" required:""`
-	Schema string   `help:"optional schema name to filter"`
+	Schema []string `help:"optional schema name to filter"`
 	View   []string `help:"optional, list of views, default: all views"`
 }
 
@@ -137,7 +137,7 @@ func (a *PrintViewsCmd) Run(ctx *cli.Cli) error {
 // PrintFKCmd prints database FK
 type PrintFKCmd struct {
 	DB     string   `help:"database name" required:""`
-	Schema string   `help:"optional schema name to filter"`
+	Schema []string `help:"optional schema name to filter"`
 	Table  []string `help:"optional, list of tables, default: all tables"`
 }
 
@@ -157,7 +157,7 @@ func (a *PrintFKCmd) Run(ctx *cli.Cli) error {
 // GenerateCmd generates database schema
 type GenerateCmd struct {
 	DB           string   `help:"database name" required:""`
-	Schema       string   `help:"optional schema name to filter"`
+	Schema       []string `help:"optional schema name to filter"`
 	Table        []string `help:"optional, list of tables, default: all tables"`
 	View         []string `help:"optional, list of views"`
 	Dependencies bool     `help:"optional, to discover all dependencies"`
@@ -331,35 +331,39 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	var tableInfos []*schema.TableInfo
 	var tableDefs []*tableDefinition
 
-	w := ctx.Writer()
-	buf := &bytes.Buffer{}
-
-	if a.OutModel != "" {
-		_ = os.MkdirAll(a.OutModel, 0777)
-		fn := filepath.Join(a.OutModel, "model.gen.go")
-		f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			_ = f.Close()
-		}()
-		w = f
-	}
-	modelDef := &tableDefinition{
-		DB:      dbName,
-		Package: modelPkg,
-		Imports: imports,
-	}
-	if modelPkg != schemaPkg {
-		modelDef.Dialect = dialect
-	}
-	err = codeHeaderTemplate.Execute(buf, modelDef)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to generate header")
-	}
-
 	for schemaName, tables := range schemas {
+		w := ctx.Writer()
+		buf := &bytes.Buffer{}
+
+		if a.OutModel != "" {
+			_ = os.MkdirAll(a.OutModel, 0777)
+			fn := "model.gen.go"
+			if len(schemas) > 1 {
+				fn = schemaName + "_model.gen.go"
+			}
+			fn = filepath.Join(a.OutModel, fn)
+			f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = f.Close()
+			}()
+			w = f
+		}
+		modelDef := &tableDefinition{
+			DB:      dbName,
+			Package: modelPkg,
+			Imports: imports,
+		}
+		if modelPkg != schemaPkg {
+			modelDef.Dialect = dialect
+		}
+		err = codeHeaderTemplate.Execute(buf, modelDef)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to generate header")
+		}
+
 		sName := strcase.ToGoPascal(schemaName)
 		for _, t := range tables {
 			structName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
@@ -409,55 +413,58 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 			}
 			tableDefs = append(tableDefs, td)
 		}
-	}
 
-	code, err := format.Source(buf.Bytes())
-	if err != nil {
-		return errors.WithMessagef(err, "failed to format")
-	}
-	_, _ = w.Write(code)
-
-	var schemaHeaderCodeTemplate = template.Must(template.New("schemaHeaderCodeTemplate").Funcs(templateFuncMap).Parse(codeSchemaHeaderTemplateText))
-	var schemaCodeTemplate = template.Must(template.New("schemaCodeTemplate").Funcs(templateFuncMap).Parse(codeTableSchemaTemplateText))
-
-	buf.Reset()
-	w = ctx.Writer()
-	if a.OutSchema != "" {
-		_ = os.MkdirAll(a.OutSchema, 0777)
-		fn := filepath.Join(a.OutSchema, "schema.gen.go")
-		f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		code, err := format.Source(buf.Bytes())
 		if err != nil {
-			return err
+			return errors.WithMessagef(err, "failed to format")
 		}
-		defer func() {
-			_ = f.Close()
-		}()
-		w = f
-	}
-	td := schemaDefinition{
-		DB:      dbName,
-		Package: schemaPkg,
-		Imports: a.Imports,
-		Dialect: dialect,
-		Tables:  tableInfos,
-		Defs:    tableDefs,
-	}
-	err = schemaHeaderCodeTemplate.Execute(buf, td)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to generate schema")
-	}
+		_, _ = w.Write(code)
 
-	for _, ctd := range tableDefs {
-		err = schemaCodeTemplate.Execute(buf, ctd)
+		var schemaHeaderCodeTemplate = template.Must(template.New("schemaHeaderCodeTemplate").Funcs(templateFuncMap).Parse(codeSchemaHeaderTemplateText))
+		var schemaCodeTemplate = template.Must(template.New("schemaCodeTemplate").Funcs(templateFuncMap).Parse(codeTableSchemaTemplateText))
+
+		buf.Reset()
+		w = ctx.Writer()
+		if a.OutSchema != "" {
+			_ = os.MkdirAll(a.OutSchema, 0777)
+			fn := "schema.gen.go"
+			if len(schemas) > 1 {
+				fn = schemaName + "_schema.gen.go"
+			}
+			fn = filepath.Join(a.OutSchema, fn)
+			f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_ = f.Close()
+			}()
+			w = f
+		}
+		td := schemaDefinition{
+			DB:      dbName,
+			Package: schemaPkg,
+			Imports: a.Imports,
+			Dialect: dialect,
+			Tables:  tableInfos,
+			Defs:    tableDefs,
+		}
+		err = schemaHeaderCodeTemplate.Execute(buf, td)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to generate schema")
 		}
-	}
-	code, err = format.Source(buf.Bytes())
-	if err != nil {
-		return errors.WithMessagef(err, "failed to format")
-	}
-	_, _ = w.Write(code)
 
+		for _, ctd := range tableDefs {
+			err = schemaCodeTemplate.Execute(buf, ctd)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to generate schema")
+			}
+		}
+		code, err = format.Source(buf.Bytes())
+		if err != nil {
+			return errors.WithMessagef(err, "failed to format")
+		}
+		_, _ = w.Write(code)
+	}
 	return nil
 }

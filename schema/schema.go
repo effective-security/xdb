@@ -281,13 +281,13 @@ type Provider interface {
 	// ListTables returns a list of tables in database.
 	// schemaName and tableNames are optional parameters to filter,
 	// if not provided, then all items are returned
-	ListTables(ctx context.Context, schemaName string, tableNames []string, withDependencies bool) (Tables, error)
+	ListTables(ctx context.Context, schemaNames []string, tableNames []string, withDependencies bool) (Tables, error)
 	// ListViews returns a list of views in database.
 	// schemaName and tableNames are optional parameters to filter,
 	// if not provided, then all items are returned
-	ListViews(ctx context.Context, schemaName string, tableNames []string) (Tables, error)
+	ListViews(ctx context.Context, schemaNames []string, tableNames []string) (Tables, error)
 	// ListForeignKeys returns a list of FK in database.
 	// schemaName and tableNames are optional parameters to filter on source tables,
 	// if not provided, then all items are returned
-	ListForeignKeys(ctx context.Context, schemaName string, tableNames []string) (ForeignKeys, error)
+	ListForeignKeys(ctx context.Context, schemaNames []string, tableNames []string) (ForeignKeys, error)
 }

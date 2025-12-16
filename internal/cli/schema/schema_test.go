@@ -48,7 +48,7 @@ func (s *testSuite) TestPrintColumnsCmd() {
 
 	cmd := PrintColumnsCmd{
 		DB:     "TestDb2",
-		Schema: "dbo",
+		Schema: []string{"dbo"},
 		Table:  []string{"Transaction"},
 	}
 
@@ -103,7 +103,7 @@ func (s *testSuite) TestPrintTablesCmd() {
 
 	cmd := PrintTablesCmd{
 		DB:     "TestDb2",
-		Schema: "dbo",
+		Schema: []string{"dbo"},
 		Table:  []string{"Transaction"},
 	}
 
@@ -141,7 +141,7 @@ func (s *testSuite) TestPrintViewsCmd() {
 
 	cmd := PrintViewsCmd{
 		DB:     "TestDb2",
-		Schema: "dbo",
+		Schema: []string{"dbo"},
 		View:   []string{"Transaction"},
 	}
 
@@ -177,7 +177,7 @@ func (s *testSuite) TestPrintFKCmd() {
 
 	cmd := PrintFKCmd{
 		DB:     "TestDb2",
-		Schema: "dbo",
+		Schema: []string{"dbo"},
 		Table:  []string{"Transaction"},
 	}
 
@@ -212,7 +212,7 @@ func (s *testSuite) TestGenerate() {
 	cmd := GenerateCmd{
 		PkgModel:  "model",
 		PkgSchema: "schema",
-		Schema:    "dbo",
+		Schema:    []string{"dbo"},
 		DB:        "testdb",
 		Table:     []string{"Transaction"},
 	}

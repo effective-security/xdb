@@ -7,8 +7,8 @@ require (
 	github.com/alecthomas/kong v1.13.0
 	github.com/cockroachdb/errors v1.12.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.15.80
-	github.com/effective-security/xlog v0.10.48
+	github.com/effective-security/x v0.15.82
+	github.com/effective-security/xlog v0.10.49
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
@@ -58,7 +58,7 @@ require (
 	go.uber.org/config v1.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
+	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 // indirect
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect

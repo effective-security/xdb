@@ -12,7 +12,7 @@ require (
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
-	github.com/lib/pq v1.10.9
+	github.com/lib/pq v1.11.1
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/olekukonko/tablewriter v1.1.2
 	github.com/spaolacci/murmur3 v1.1.0

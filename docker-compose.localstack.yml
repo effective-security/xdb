@@ -8,7 +8,7 @@ networks:
 
 services:
   postgres:
-    image: effectivesecurity/postgres15:sha-0bbf105
+    image: effectivesecurity/postgres15:sha-d151f03
     platform: linux/amd64
     networks:
       private:

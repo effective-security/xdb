@@ -84,6 +84,21 @@ func (v ID) String() string {
 	return v.id.String()
 }
 
+// UnderscoreString returns string with underscore prefix.
+// This is useful for logs and metrics, where JS can't handle 64-bit numbers.
+func (v ID) UnderscoreString() string {
+	s := v.id.String()
+	if s == "" {
+		return ""
+	}
+	return "_" + s
+}
+
+// QuotedString returns string
+func (v ID) QuotedString() string {
+	return v.id.QuotedString()
+}
+
 // Invalid returns if ID is invalid
 func (v ID) Invalid() bool {
 	return v.id.val() == 0
@@ -416,6 +431,14 @@ func (v *idptr) String() string {
 		v.str = IDString(v.id)
 	}
 	return v.str
+}
+
+// QuotedString returns string
+func (v *idptr) QuotedString() string {
+	if v == nil {
+		return ""
+	}
+	return "\"" + v.String() + "\""
 }
 
 // Enum interface for generic enum

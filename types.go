@@ -108,6 +108,14 @@ func String(val *string) string {
 	return *val
 }
 
+// QuotedString returns string
+func QuotedString(val *string) string {
+	if val == nil {
+		return ""
+	}
+	return "\"" + *val + "\""
+}
+
 // ParseUint returns id from the string
 func ParseUint(id string) (uint64, error) {
 	i64, err := strconv.ParseUint(id, 10, 64)
@@ -120,6 +128,11 @@ func ParseUint(id string) (uint64, error) {
 // IDString returns string id
 func IDString(id uint64) string {
 	return strconv.FormatUint(id, 10)
+}
+
+// QuotedIDString returns string id
+func QuotedIDString(id uint64) string {
+	return "\"" + strconv.FormatUint(id, 10) + "\""
 }
 
 // Strings de/encodes the string slice to/from a SQL string.
@@ -351,6 +364,11 @@ func (v *Int64) UnmarshalJSON(data []byte) error {
 // String returns string
 func (v Int64) String() string {
 	return strconv.FormatInt(int64(v), 10)
+}
+
+// QuotedString returns string
+func (v Int64) QuotedString() string {
+	return "\"" + strconv.FormatInt(int64(v), 10) + "\""
 }
 
 // Int64 returns int64

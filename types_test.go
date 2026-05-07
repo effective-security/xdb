@@ -47,6 +47,13 @@ func TestString(t *testing.T) {
 	s := "1234"
 	v = xdb.String(&s)
 	assert.Equal(t, s, v)
+
+	v = xdb.QuotedString(nil)
+	assert.Empty(t, v)
+
+	s = "1234"
+	v = xdb.QuotedString(&s)
+	assert.Equal(t, `"`+s+`"`, v)
 }
 
 func TestParseID(t *testing.T) {
@@ -81,6 +88,13 @@ func TestParseID(t *testing.T) {
 func TestIDString(t *testing.T) {
 	assert.Equal(t, "0", xdb.IDString(0))
 	assert.Equal(t, "999", xdb.IDString(999))
+	assert.Equal(t, "\"1234567\"", xdb.QuotedIDString(1234567))
+	assert.Equal(t, "\"0\"", xdb.QuotedIDString(0))
+
+	id := xdb.NewID(1234567)
+	assert.Equal(t, "\"1234567\"", id.QuotedString())
+	assert.Equal(t, "1234567", id.String())
+	assert.Equal(t, "_1234567", id.UnderscoreString())
 }
 
 func TestIsNotFoundError(t *testing.T) {

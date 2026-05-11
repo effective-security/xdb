@@ -8,7 +8,7 @@ require (
 	github.com/cockroachdb/errors v1.13.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/effective-security/x v0.16.89
-	github.com/effective-security/xlog v0.10.52
+	github.com/effective-security/xlog v0.10.53
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
@@ -35,7 +35,7 @@ require (
 	github.com/cockroachdb/redact v1.1.8 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/getsentry/sentry-go v0.46.1 // indirect
+	github.com/getsentry/sentry-go v0.46.2 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect

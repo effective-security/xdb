@@ -233,6 +233,16 @@ func TestMetadata(t *testing.T) {
 	assert.Equal(t, 1, len(mm))
 	mm.Merge(m1)
 	assert.Equal(t, 2, len(mm))
+
+	assert.Equal(t, 2, len(m1.Keys()))
+	assert.Equal(t, []string{"one", "three"}, m1.OrderedKeys())
+	m1.Range(func(k string, v string) bool {
+		return true
+	})
+	m1.RangeOrdered(func(k string, v string) bool {
+		return true
+	})
+	assert.Equal(t, []string{"one", "two", "three", "four"}, m1.OrderedPairs())
 }
 
 func TestKVSet(t *testing.T) {

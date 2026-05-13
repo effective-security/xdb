@@ -72,6 +72,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/effective-security/x v0.16.90 h1:gQBi8x0iu4nb0F8n8AO0rSiOtBjBRqNsdm8kgwOWqOE=
 github.com/effective-security/x v0.16.90/go.mod h1:Q3Gqt98XrwZnNRapA1zlhfRuzLJAu5oimzp5DzQVlvs=
+github.com/effective-security/x v0.16.91 h1:poLrICqyvaXy66yb5CJw/2oDnHbveZR+qKQMalHCwgg=
+github.com/effective-security/x v0.16.91/go.mod h1:Q3Gqt98XrwZnNRapA1zlhfRuzLJAu5oimzp5DzQVlvs=
 github.com/effective-security/xlog v0.10.53 h1:VvzCkPqa0/CTzWl7y4Exznk00QD/JSF2X/HLNJARtrc=
 github.com/effective-security/xlog v0.10.53/go.mod h1:5OJUl++O7F5LcZStQQI0Yl92UcRP1Kf9eZ5l2btrSo4=
 github.com/ettle/strcase v0.2.0 h1:fGNiVF21fHXpX1niBgk0aROov1LagYsOwV/xqKDKR/Q=

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/effective-security/x/maps"
 	"github.com/effective-security/x/values"
 )
 
@@ -166,6 +167,32 @@ func (n Strings) Value() (driver.Value, error) {
 
 // Metadata de/encodes the string map to/from a SQL string.
 type Metadata map[string]string
+
+func (n Metadata) Keys() []string {
+	return maps.Keys(n)
+}
+
+func (n Metadata) OrderedKeys() []string {
+	return maps.OrderedKeys(n)
+}
+
+func (n Metadata) Range(f func(k string, v string) bool) {
+	maps.Range(n, f)
+}
+
+func (n Metadata) RangeOrdered(f func(k string, v string) bool) {
+	maps.OrderedRange(n, f)
+}
+
+// OrderedPairs returns a slice of key-value pairs in the order of keys.
+func (n Metadata) OrderedPairs() []string {
+	res := make([]string, 0, len(n)*2)
+	n.RangeOrdered(func(k string, v string) bool {
+		res = append(res, k, v)
+		return true
+	})
+	return res
+}
 
 // Merge merges metadata
 func (n *Metadata) Merge(m Metadata) *Metadata {

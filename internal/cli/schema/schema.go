@@ -414,9 +414,10 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 			tableDefs = append(tableDefs, td)
 		}
 
-		code, err := format.Source(buf.Bytes())
+		data := buf.Bytes()
+		code, err := format.Source(data)
 		if err != nil {
-			return errors.WithMessagef(err, "failed to format")
+			return errors.WithMessagef(err, "failed to format models: %s", string(data))
 		}
 		_, _ = w.Write(code)
 
@@ -460,9 +461,10 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 				return errors.WithMessagef(err, "failed to generate schema")
 			}
 		}
-		code, err = format.Source(buf.Bytes())
+		data = buf.Bytes()
+		code, err = format.Source(data)
 		if err != nil {
-			return errors.WithMessagef(err, "failed to format")
+			return errors.WithMessagef(err, "failed to format schema: %s", string(data))
 		}
 		_, _ = w.Write(code)
 	}

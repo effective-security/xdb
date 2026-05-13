@@ -169,23 +169,38 @@ func (n Strings) Value() (driver.Value, error) {
 type Metadata map[string]string
 
 func (n Metadata) Keys() []string {
+	if n == nil {
+		return nil
+	}
 	return maps.Keys(n)
 }
 
 func (n Metadata) OrderedKeys() []string {
+	if n == nil {
+		return nil
+	}
 	return maps.OrderedKeys(n)
 }
 
 func (n Metadata) Range(f func(k string, v string) bool) {
+	if n == nil {
+		return
+	}
 	maps.Range(n, f)
 }
 
 func (n Metadata) RangeOrdered(f func(k string, v string) bool) {
+	if n == nil {
+		return
+	}
 	maps.OrderedRange(n, f)
 }
 
 // OrderedPairs returns a slice of key-value pairs in the order of keys.
 func (n Metadata) OrderedPairs() []string {
+	if n == nil {
+		return nil
+	}
 	res := make([]string, 0, len(n)*2)
 	n.RangeOrdered(func(k string, v string) bool {
 		res = append(res, k, v)
@@ -199,8 +214,9 @@ func (n *Metadata) Merge(m Metadata) *Metadata {
 	if *n == nil {
 		*n = Metadata{}
 	}
+	tm := *n
 	for k, v := range m {
-		(*n)[k] = v
+		tm[k] = v
 	}
 	return n
 }

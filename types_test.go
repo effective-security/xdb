@@ -243,6 +243,21 @@ func TestMetadata(t *testing.T) {
 		return true
 	})
 	assert.Equal(t, []string{"one", "two", "three", "four"}, m1.OrderedPairs())
+
+	var v xdb.Metadata
+	assert.Nil(t, v.Keys())
+	assert.Nil(t, v.OrderedKeys())
+	assert.Nil(t, v.OrderedPairs())
+	assert.NotPanics(t, func() {
+		v.Range(func(k string, v string) bool {
+			return true
+		})
+	})
+	assert.NotPanics(t, func() {
+		v.RangeOrdered(func(k string, v string) bool {
+			return true
+		})
+	})
 }
 
 func TestKVSet(t *testing.T) {

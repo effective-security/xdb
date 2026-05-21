@@ -2,8 +2,8 @@
 //
 // A Flake ID is composed of
 //
-//	39 bits for time in units of 10 msec
-//	 8 bits for a sequence number
+//	41 bits for time in units of 10 msec
+//	 6 bits for a sequence number
 //	16 bits for a machine id
 package flake
 
@@ -48,6 +48,8 @@ const (
 	MaskMachineID   = uint64(1<<BitLenMachineID - 1)
 
 	FlakeTimeUnit = int64(1 * time.Millisecond)
+
+	MaxValue = uint64(9223372036854775807)
 )
 
 // DefaultStartTime provides default start time for the Flake

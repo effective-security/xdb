@@ -368,7 +368,7 @@ func TestDbTimeEncode(t *testing.T) {
 	xct := xdb.Time(nb)
 
 	assert.Equal(t, `"2022-04-01T16:11:15Z"`, xlog.EscapedString(xct))
-	assert.Equal(t, `""`, xlog.EscapedString(xdb.Time{}))
+	assert.Equal(t, ``, xlog.EscapedString(xdb.Time{}))
 
 	b, err := json.Marshal(xct)
 	require.NoError(t, err)

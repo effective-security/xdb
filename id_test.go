@@ -180,8 +180,8 @@ func TestIDLog(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "", s.String())
 	assert.Equal(t, "", id.String())
-	assert.Equal(t, `""`, xlog.EscapedString(&id))
-	assert.Equal(t, `""`, xlog.EscapedString(id))
+	assert.Equal(t, ``, xlog.EscapedString(&id))
+	assert.Equal(t, ``, xlog.EscapedString(id))
 
 	b, err := json.Marshal(id)
 	require.NoError(t, err)

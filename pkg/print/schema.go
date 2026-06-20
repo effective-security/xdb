@@ -18,7 +18,7 @@ func SchemaTables(w io.Writer, r schema.Tables) {
 
 // SchemaTable prints schema.Table
 func SchemaTable(w io.Writer, r *schema.Table) {
-	fmt.Fprintf(w, "Schema: %s\nTable: %s\n\n", r.Schema, r.Name)
+	_, _ = fmt.Fprintf(w, "Schema: %s\nTable: %s\n\n", r.Schema, r.Name)
 
 	table := tablewriter.NewTable(w)
 	table.Header([]string{"Ord", "Name", "Type", "UDT", "NULL", "Max", "Index", "Ref"})
@@ -49,10 +49,10 @@ func SchemaTable(w io.Writer, r *schema.Table) {
 	_ = table.Render()
 
 	if len(r.Indexes) > 0 {
-		fmt.Fprintf(w, "\nIndexes:\n")
+		_, _ = fmt.Fprintf(w, "\nIndexes:\n")
 		SchemaIndexes(w, r.Indexes)
 	} else {
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 	}
 }
 
@@ -71,7 +71,7 @@ func SchemaIndexes(w io.Writer, r schema.Indexes) {
 	}
 
 	_ = table.Render()
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 // SchemaForeingKeys prints schema.ForeingKeys
@@ -92,5 +92,5 @@ func SchemaForeingKeys(w io.Writer, r schema.ForeignKeys) {
 	}
 
 	_ = table.Render()
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }

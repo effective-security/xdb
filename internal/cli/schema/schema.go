@@ -99,7 +99,7 @@ func (a *PrintTablesCmd) Run(ctx *cli.Cli) error {
 		return ctx.Print(res)
 	}
 	for _, t := range res {
-		fmt.Fprintf(w, "%s.%s\n", t.Schema, t.Name)
+		_, _ = fmt.Fprintf(w, "%s.%s\n", t.Schema, t.Name)
 	}
 
 	return nil
@@ -128,7 +128,7 @@ func (a *PrintViewsCmd) Run(ctx *cli.Cli) error {
 		return ctx.Print(res)
 	}
 	for _, t := range res {
-		fmt.Fprintf(w, "%s.%s\n", t.Schema, t.Name)
+		_, _ = fmt.Fprintf(w, "%s.%s\n", t.Schema, t.Name)
 	}
 
 	return nil

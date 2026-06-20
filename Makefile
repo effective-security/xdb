@@ -40,7 +40,7 @@ tools:
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 	go install github.com/effective-security/cov-report/cmd/cov-report@latest
 	go install github.com/mattn/goveralls@v0.0.12
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	go install go.uber.org/mock/mockgen@latest
 
 build:

@@ -7,13 +7,13 @@ require (
 	github.com/alecthomas/kong v1.15.0
 	github.com/cockroachdb/errors v1.14.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.16.93
+	github.com/effective-security/x v0.16.94
 	github.com/effective-security/xlog v0.11.55
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/lib/pq v1.12.3
-	github.com/mattn/go-sqlite3 v1.14.44
+	github.com/mattn/go-sqlite3 v1.14.47
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.11.1

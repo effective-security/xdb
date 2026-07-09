@@ -12,18 +12,21 @@ updates:
     groups:
       aws:
         patterns:
-          - aws-sdk-go-v2*
+          - github.com/aws/*
       es:
         patterns:
-          - effective-security*
+          - github.com/effective-security*
       go:
         patterns:
           - golang.org*
       google:
         patterns:
           - google.golang.org*
-  # Enable version updates for Actions
   - package-ecosystem: "github-actions"
-    directory: "/" # Location of package manifests
+    directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        patterns:
+          - "*"

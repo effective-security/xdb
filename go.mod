@@ -8,7 +8,7 @@ require (
 	github.com/cockroachdb/errors v1.14.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/effective-security/x v0.16.95
-	github.com/effective-security/xlog v0.11.55
+	github.com/effective-security/xlog v0.11.57
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.19.1

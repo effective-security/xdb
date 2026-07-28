@@ -57,7 +57,7 @@ func eventCallBack(ev pq.ListenerEventType, err error) {
 	if err != nil {
 		logger.KV(xlog.ERROR,
 			"event", typ,
-			"error", err.Error())
+			"err", err.Error())
 	} else {
 		logger.KV(xlog.DEBUG, "event", typ)
 	}
@@ -101,10 +101,10 @@ func (l *listener) Listen(ctx context.Context, topic string, callback func(n *No
 					"channel", topic)
 				err = l.listener.Unlisten(topic)
 				if err != nil {
-					logger.KV(xlog.ERROR,
+					logger.KV(xlog.WARNING,
 						"reason", "unlisten",
 						"channel", topic,
-						"error", err.Error())
+						"err", err.Error())
 				}
 				return
 			case n := <-l.listener.Notify:
@@ -117,7 +117,7 @@ func (l *listener) Listen(ctx context.Context, topic string, callback func(n *No
 					if err != nil {
 						logger.KV(xlog.ERROR,
 							"reason", "ping",
-							"error", err.Error())
+							"err", err.Error())
 					}
 				}()
 				// Check if there's more work available, just in case it takes

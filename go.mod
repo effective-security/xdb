@@ -4,10 +4,10 @@ go 1.26.1
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/alecthomas/kong v1.16.0
+	github.com/alecthomas/kong v1.16.1
 	github.com/cockroachdb/errors v1.14.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v0.16.100
+	github.com/effective-security/x v0.16.102
 	github.com/effective-security/xlog v0.11.59
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
@@ -49,21 +49,22 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/microsoft/go-mssqldb v1.10.0 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/oleiade/reflections v1.1.0 // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.3.0 // indirect
 	github.com/olekukonko/ll v0.1.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/rogpeppe/go-internal v1.15.0 // indirect
+	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.uber.org/config v1.4.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 // indirect
+	golang.org/x/exp v0.0.0-20260811152304-ee035b5b010f // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/text v0.41.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

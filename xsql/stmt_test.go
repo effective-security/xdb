@@ -10,6 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestPackageUpdateDelete(t *testing.T) {
+	xsql.SetDialect(xsql.NoDialect)
+	q := xsql.Update("users").Set("name", "Ada").Where("id = ?", 1)
+	require.Equal(t, "UPDATE users \nSET name=? \nWHERE id = ?", q.String())
+	require.Equal(t, []any{"Ada", 1}, q.Args())
+	q.Close()
+
+	q = xsql.DeleteFrom("users").Where("id = ?", 1)
+	require.Equal(t, "DELETE FROM users \nWHERE id = ?", q.String())
+	require.Equal(t, []any{1}, q.Args())
+	q.Close()
+}
+
 func TestNewBuilder(t *testing.T) {
 	xsql.SetDialect(xsql.NoDialect)
 	q := xsql.New("SELECT *").From("table")
@@ -278,6 +291,19 @@ func TestUnion(t *testing.T) {
 			Where("status = ?", "wip"))
 	defer q.Close()
 	require.Equal(t, "SELECT id, status \nFROM tasks \nWHERE status = ? \nUNION SELECT id, status \nFROM tasks \nWHERE status = ?", q.String())
+}
+
+func TestInvalidateAndName(t *testing.T) {
+	q := xsql.From("items").Select("id").SetName("items_by_id")
+	defer q.Close()
+	require.Equal(t, "items_by_id", q.Name())
+	first := q.String()
+	require.Equal(t, "SELECT id \nFROM items", first)
+	q.Where("id = ?", 1)
+	require.Equal(t, "SELECT id \nFROM items \nWHERE id = ?", q.String())
+	cached, ok := xsql.NoDialect.GetCachedQuery("items_by_id")
+	require.True(t, ok)
+	require.Equal(t, q.String(), cached)
 }
 
 func TestLimit(t *testing.T) {

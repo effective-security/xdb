@@ -18,40 +18,31 @@ type Executor interface {
 // For every row of a returned dataset it calls a handler function.
 // If scan targets were set via To method calls, Query method
 // executes rows.Scan right before calling a handler function.
-func (q *Stmt) Query(ctx context.Context, db Executor, handler func(rows *sql.Rows)) error {
-	// Fetch rows
+func (q *Stmt) Query(ctx context.Context, db Executor, handler func(rows *sql.Rows)) (err error) {
 	rows, err := db.QueryContext(ctx, q.String(), q.args...)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
-	// Iterate through rows of returned dataset
 	for rows.Next() {
 		if len(q.dest) > 0 {
-			err = rows.Scan(q.dest...)
-			if err != nil {
-				break
+			if err = rows.Scan(q.dest...); err != nil {
+				return err
 			}
 		}
-		// Call a callback function
 		if handler != nil {
 			handler(rows)
 		}
 	}
-	// Check for errors during rows "Close".
-	// This may be more important if multiple statements are executed
-	// in a single batch and rows were written as well as read.
-	if closeErr := rows.Close(); closeErr != nil {
-		return closeErr
-	}
-
-	// Check for row scan error.
-	if err != nil {
+	if err = rows.Err(); err != nil {
 		return err
 	}
-
-	// Check for errors during row iteration.
-	return rows.Err()
+	return err
 }
 
 // QueryAndClose executes the statement and releases all the resources that

@@ -9,7 +9,7 @@ import (
 )
 
 func TestSQLCache(t *testing.T) {
-	dialect := defaultDialect.Load().(*Dialect)
+	dialect := newDialect("default", true)
 
 	buf := getBuffer()
 	buf.WriteString("test")
@@ -45,12 +45,16 @@ func TestSQLCache(t *testing.T) {
 	assert.Equal(t, exp, q)
 	assert.Equal(t, "test3", name)
 
-	count := 0
-	dialect.cache.Range(func(key, value any) bool {
-		count++
-		return true
-	})
-	assert.Equal(t, 3, count)
+	dialect.cacheMu.Lock()
+	count := len(dialect.cache)
+	dialect.cacheMu.Unlock()
+	// two explicit puts + GetOrCreateQuery stores both the name and the buffer key
+	assert.Equal(t, 4, count)
+
+	// GetOrCreateQuery must close the builder so a later statement can reuse the pool slot.
+	qReuse := dialect.From("other").Select("id")
+	assert.Equal(t, "SELECT id \nFROM other", qReuse.String())
+	qReuse.Close()
 }
 
 func TestReusePool(t *testing.T) {

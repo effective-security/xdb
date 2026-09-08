@@ -7,13 +7,28 @@ import (
 	"sync/atomic"
 )
 
+// defaultMaxCachedQueries limits how many rendered SQL strings a Dialect
+// keeps in memory. Named queries (SetName / GetOrCreateQuery) share this
+// budget with automatically cached unnamed statements.
+const defaultMaxCachedQueries = 4096
+
 // SQLDialect is an interface for SQL statement builders.
+//
+// A Dialect value published by this package (NoDialect, Postgres, SQLServer)
+// is safe for concurrent use: multiple goroutines may call its constructor
+// methods at the same time. The Builder instances they return are not.
 type SQLDialect interface {
 	// Provider returns the name of the SQL dialect.
 	Provider() string
 
-	// UseNewLines specifies an option to add new lines for each clause
+	// UseNewLines sets the default newline policy for statements created
+	// from this dialect instance. It mutates the receiver; prefer
+	// WithNewLines when the dialect is shared across goroutines.
 	UseNewLines(op bool)
+
+	// WithNewLines returns a dialect that shares the receiver's query cache
+	// but uses op as the newline policy. The original dialect is not mutated.
+	WithNewLines(op bool) SQLDialect
 
 	// GetCachedQuery returns a cached query by name.
 	GetCachedQuery(name string) (string, bool)
@@ -22,19 +37,21 @@ type SQLDialect interface {
 	PutCachedQuery(name, query string)
 
 	// GetOrCreateQuery returns a cached query by name or creates a new one.
-	// The function will close the Builder
+	// The function closes the Builder returned by create.
 	GetOrCreateQuery(name string, create func(name string) Builder) (query string, key string)
+
+	// ClearCache drops all cached SQL strings for this dialect.
+	ClearCache()
 
 	// DeleteFrom starts a DELETE statement.
 	DeleteFrom(tableName string) Builder
 
-	/*
-		From starts a SELECT statement.
-	*/
+	// From starts a SELECT statement.
 	From(expr string, args ...any) Builder
 
 	// InsertInto starts an INSERT statement.
 	InsertInto(tableName string) Builder
+
 	/*
 		New starts an SQL statement with an arbitrary verb.
 
@@ -61,61 +78,85 @@ type SQLDialect interface {
 	With(queryName string, query Builder) Builder
 }
 
-// Dialect defines the method SQL statement is to be built.
+// Dialect defines how an SQL statement is built and caches rendered SQL.
 //
-// NoDialect is a default statement builder mode.
-// No SQL fragments will be altered.
-// PostgreSQL mode can be set for a statement:
+// NoDialect is the default statement builder mode: SQL fragments are not
+// rewritten. Postgres mode replaces ? placeholders with $1, $2, ...
 //
-//	q := xsql.PostgreSQL.From("table").Select("field")
-//		...
+//	q := xsql.Postgres.From("table").Select("field")
+//	// ...
 //	q.Close()
 //
-// or as default mode:
+// or as the process default:
 //
-//	    xsql.SetDialect(xsql.PostgreSQL)
-//		   ...
-//	    q := xsql.From("table").Select("field")
-//	    q.Close()
+//	xsql.SetDialect(xsql.Postgres)
+//	q := xsql.From("table").Select("field")
+//	q.Close()
 //
-// When PostgreSQL mode is activated, ? placeholders are
-// replaced with numbered positional arguments like $1, $2...
+// Shared Dialect values are safe for concurrent constructors. Toggle
+// newlines with WithNewLines rather than UseNewLines when the instance
+// is used from more than one goroutine.
 type Dialect struct {
 	provider    string
-	cache       sync.Map
-	useNewLines bool
+	cacheMu     *sync.Mutex
+	cache       map[string]string
+	maxCache    int64
+	useNewLines atomic.Bool
+}
+
+func newDialect(provider string, useNewLines bool) *Dialect {
+	d := &Dialect{
+		provider: provider,
+		cacheMu:  new(sync.Mutex),
+		cache:    make(map[string]string),
+		maxCache: defaultMaxCachedQueries,
+	}
+	d.useNewLines.Store(useNewLines)
+	return d
 }
 
 var (
 	// NoDialect is a default statement builder mode.
-	NoDialect = SQLDialect(&Dialect{provider: "default", useNewLines: true})
-	// Postgres mode is to be used to automatically replace ? placeholders with $1, $2...
-	Postgres = SQLDialect(&Dialect{provider: "postgres", useNewLines: true})
-
-	SQLServer = SQLDialect(&Dialect{provider: "sqlserver", useNewLines: true})
+	NoDialect = SQLDialect(newDialect("default", true))
+	// Postgres mode automatically replaces ? placeholders with $1, $2...
+	Postgres = SQLDialect(newDialect("postgres", true))
+	// SQLServer is a statement builder for SQL Server. Placeholders stay as ?.
+	SQLServer = SQLDialect(newDialect("sqlserver", true))
 )
 
-var defaultDialect atomic.Value // *SQLDialect
+var defaultDialect atomic.Value // SQLDialect
 
 func init() {
-	// Initialize to a blackhole sink to avoid errors
 	defaultDialect.Store(NoDialect)
 }
 
-/*
-SetDialect selects a Dialect to be used by default.
-
-Dialect can be one of xsql.NoDialect or xsql.PostgreSQL
-
-	xsql.SetDialect(xsql.PostgreSQL)
-*/
+// SetDialect selects a Dialect to be used by default.
+//
+// Dialect can be one of xsql.NoDialect, xsql.Postgres or xsql.SQLServer.
+//
+//	xsql.SetDialect(xsql.Postgres)
+//
+// SetDialect is safe to call concurrently with statement constructors.
 func SetDialect(newDefaultDialect SQLDialect) {
 	defaultDialect.Store(newDefaultDialect)
 }
 
 // UseNewLines specifies an option to add new lines for each clause
 func (b *Dialect) UseNewLines(op bool) {
-	b.useNewLines = op
+	b.useNewLines.Store(op)
+}
+
+// WithNewLines returns a dialect that shares this instance's query cache
+// but uses op as the newline policy for newly created statements.
+func (b *Dialect) WithNewLines(op bool) SQLDialect {
+	d := &Dialect{
+		provider: b.provider,
+		cacheMu:  b.cacheMu,
+		cache:    b.cache,
+		maxCache: b.maxCache,
+	}
+	d.useNewLines.Store(op)
+	return d
 }
 
 // Provider returns the name of the SQL dialect.
@@ -181,41 +222,29 @@ func (b *Dialect) DeleteFrom(tableName string) Builder {
 	return q.DeleteFrom(tableName)
 }
 
-// writePg function copies s into buf and replaces ? placeholders with $1, $2...
-func writePg(argNo int, s []byte, buf *strings.Builder) (int, error) {
-	var err error
+// writePg copies s into buf and replaces ? placeholders with $1, $2...
+// A question mark escaped as \? is written as a literal ?.
+func writePg(argNo int, s []byte, buf *strings.Builder) int {
 	start := 0
-	// Iterate by runes
-	for pos, r := range s {
-		if start > pos {
-			continue
-		}
-		switch r {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
 		case '\\':
-			if pos < len(s)-1 && s[pos+1] == '?' {
-				_, err = buf.Write(s[start:pos])
-				if err == nil {
-					err = buf.WriteByte('?')
-				}
-				start = pos + 2
+			if i+1 < len(s) && s[i+1] == '?' {
+				buf.Write(s[start:i])
+				buf.WriteByte('?')
+				i++
+				start = i + 1
 			}
 		case '?':
-			_, err = buf.Write(s[start:pos])
-			start = pos + 1
-			if err == nil {
-				err = buf.WriteByte('$')
-				if err == nil {
-					buf.WriteString(strconv.Itoa(argNo))
-					argNo++
-				}
-			}
-		}
-		if err != nil {
-			break
+			buf.Write(s[start:i])
+			buf.WriteByte('$')
+			buf.WriteString(strconv.Itoa(argNo))
+			argNo++
+			start = i + 1
 		}
 	}
-	if err == nil && start < len(s) {
-		_, err = buf.Write(s[start:])
+	if start < len(s) {
+		buf.Write(s[start:])
 	}
-	return argNo, err
+	return argNo
 }

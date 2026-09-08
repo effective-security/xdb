@@ -33,17 +33,14 @@ func Example() {
 		productSales float64
 	)
 
-	xsql.NoDialect.UseNewLines(false)
-	xsql.Postgres.UseNewLines(false)
-	xsql.SetDialect(xsql.Postgres)
-
-	err := xsql.From("orders").
+	pg := xsql.Postgres.WithNewLines(false)
+	err := pg.From("orders").
 		With("regional_sales",
-			xsql.From("orders").
+			pg.From("orders").
 				Select("region, SUM(amount) AS total_sales").
 				GroupBy("region")).
 		With("top_regions",
-			xsql.From("regional_sales").
+			pg.From("regional_sales").
 				Select("region").
 				Where("total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)")).
 		// Map query fields to variables
@@ -183,23 +180,103 @@ func ExampleStmt_Returning() {
 }
 
 func ExamplePostgres() {
-	d := xsql.Postgres
-	d.UseNewLines(false)
-	q := d.From("table").Select("field").Where("id = ?", 42)
+	q := xsql.Postgres.WithNewLines(false).From("table").Select("field").Where("id = ?", 42)
 	fmt.Println(q.String())
 	q.Close()
 	// Output:
 	// SELECT field FROM table WHERE id = $1
 }
 
+func ExampleStmt_OnConflict() {
+	q := xsql.Postgres.WithNewLines(false).
+		InsertInto("users").
+		Set("email", "a@b.c").
+		Set("name", "Ada").
+		OnConflict("(email) DO UPDATE SET name = EXCLUDED.name").
+		Returning("id")
+	fmt.Println(q.String())
+	fmt.Println(q.Args())
+	q.Close()
+	// Output:
+	// INSERT INTO users ( email, name ) VALUES ( $1, $2 ) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name RETURNING id
+	// [a@b.c Ada]
+}
+
+func ExampleStmt_ForUpdate() {
+	q := xsql.Postgres.WithNewLines(false).
+		Select("id, balance").
+		From("accounts").
+		Where("id = ?", 42).
+		ForUpdate("NOWAIT")
+	fmt.Println(q.String())
+	fmt.Println(q.Args())
+	q.Close()
+	// Output:
+	// SELECT id, balance FROM accounts WHERE id = $1 FOR UPDATE NOWAIT
+	// [42]
+}
+
+func ExampleStmt_NotIn() {
+	q := xsql.UseNewLines(false).From("tasks").
+		Select("id, status").
+		Where("status").NotIn("done", "canceled")
+	fmt.Println(q.String())
+	fmt.Println(q.Args())
+	q.Close()
+	// Output:
+	// SELECT id, status FROM tasks WHERE status NOT IN (?,?)
+	// [done canceled]
+}
+
+func ExampleStmt_NewRow() {
+	q := xsql.Postgres.WithNewLines(false).InsertInto("users")
+	q.NewRow().Set("email", "first@ex.com").Set("name", "First")
+	q.NewRow().Set("email", "second@ex.com").Set("name", "Second")
+	fmt.Println(q.String())
+	fmt.Println(q.Args())
+	q.Close()
+	// Output:
+	// INSERT INTO users ( email, name ) VALUES ( $1, $2 ), ( $3, $4 )
+	// [first@ex.com First second@ex.com Second]
+}
+
+func ExampleStmt_Clone() {
+	base := xsql.UseNewLines(false).From("users").Select("id, name").Where("active = ?", true)
+	q := base.Clone().Where("id = ?", 7).Limit(1)
+	fmt.Println(q.String())
+	fmt.Println(q.Args())
+	fmt.Println(base.String())
+	q.Close()
+	base.Close()
+	// Output:
+	// SELECT id, name FROM users WHERE active = ? AND id = ? LIMIT ?
+	// [true 7 1]
+	// SELECT id, name FROM users WHERE active = ?
+}
+
+func ExampleStmt_Join() {
+	q := xsql.Postgres.WithNewLines(false).
+		From("orders o").
+		Select("o.id, u.email").
+		Join("users u", "u.id = o.user_id").
+		Where("o.total > ?", 100)
+	fmt.Println(q.String())
+	fmt.Println(q.Args())
+	q.Close()
+	// Output:
+	// SELECT o.id, u.email FROM orders o JOIN users u ON (u.id = o.user_id) WHERE o.total > $1
+	// [100]
+}
+
 func ExampleStmt_With() {
-	q := xsql.UseNewLines(false).From("orders").
+	nl := xsql.UseNewLines(false)
+	q := nl.From("orders").
 		With("regional_sales",
-			xsql.From("orders").
+			nl.From("orders").
 				Select("region, SUM(amount) AS total_sales").
 				GroupBy("region")).
 		With("top_regions",
-			xsql.From("regional_sales").
+			nl.From("regional_sales").
 				Select("region").
 				Where("total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)")).
 		Select("region").
@@ -215,11 +292,12 @@ func ExampleStmt_With() {
 }
 
 func ExampleStmt_From() {
-	q := xsql.UseNewLines(false).Select("*").
+	nl := xsql.UseNewLines(false)
+	q := nl.Select("*").
 		From("").
 		SubQuery(
 			"(", ") counted_news",
-			xsql.From("news").
+			nl.From("news").
 				Select("id, section, header, score").
 				Select("row_number() OVER (PARTITION BY section ORDER BY score DESC) AS rating_in_section").
 				OrderBy("section, rating_in_section")).
@@ -231,10 +309,11 @@ func ExampleStmt_From() {
 }
 
 func ExampleStmt_SubQuery() {
-	q := xsql.UseNewLines(false).From("orders o").
+	nl := xsql.UseNewLines(false)
+	q := nl.From("orders o").
 		Select("date, region").
 		SubQuery("(", ") AS prev_order_date",
-			xsql.From("orders po").
+			nl.From("orders po").
 				Select("date").
 				Where("region = o.region").
 				Where("id < o.id").
@@ -315,13 +394,14 @@ func ExampleStmt_In() {
 }
 
 func ExampleStmt_Union() {
-	q := xsql.UseNewLines(false).From("tasks").
+	nl := xsql.UseNewLines(false)
+	q := nl.From("tasks").
 		Select("id, status").
 		Where("status = ?", "new").
-		Union(true, xsql.From("tasks").
+		Union(true, nl.From("tasks").
 			Select("id, status").
 			Where("status = ?", "pending")).
-		Union(true, xsql.From("tasks").
+		Union(true, nl.From("tasks").
 			Select("id, status").
 			Where("status = ?", "wip")).
 		OrderBy("id")

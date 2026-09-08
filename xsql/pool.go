@@ -22,7 +22,8 @@ func (b *Dialect) getStmt() *Stmt {
 	stmt.buf = getBuffer()
 	stmt.name = ""
 	stmt.sql = ""
-	stmt.useNewLines = b.useNewLines
+	stmt.pos = 0
+	stmt.useNewLines = b.useNewLines.Load()
 	return stmt
 }
 
@@ -45,6 +46,8 @@ func reuseStmt(q *Stmt) {
 	q.buf = nil
 	q.sql = ""
 	q.name = ""
+	q.pos = 0
+	q.dialect = nil
 
 	stmtPool.Put(q)
 }

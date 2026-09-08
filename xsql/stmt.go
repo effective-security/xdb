@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/effective-security/x/values"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -44,6 +43,7 @@ type Builder interface {
 	Clause(expr string, args ...any) Builder
 
 	// Clone creates a copy of the statement.
+	// The copy does not inherit the cache name; call SetName if needed.
 	Clone() Builder
 
 	/*
@@ -51,6 +51,7 @@ type Builder interface {
 		back to pool for reuse by other Builder instances.
 
 		Builder instance should not be used after Close method call.
+		A Builder is not safe for concurrent use.
 	*/
 	Close()
 
@@ -110,6 +111,23 @@ type Builder interface {
 	*/
 	FullJoin(table string, on string) Builder
 
+	// CrossJoin adds a CROSS JOIN clause to SELECT statement
+	CrossJoin(table string) Builder
+
+	/*
+		ForUpdate appends FOR UPDATE to a SELECT statement.
+
+		Optional tokens are appended as-is, for example "NOWAIT" or "SKIP LOCKED".
+	*/
+	ForUpdate(opts ...string) Builder
+
+	/*
+		ForShare appends FOR SHARE to a SELECT statement.
+
+		Optional tokens are appended as-is, for example "NOWAIT" or "OF t".
+	*/
+	ForShare(opts ...string) Builder
+
 	// GroupBy adds the GROUP BY clause to SELECT statement
 	GroupBy(expr string) Builder
 
@@ -117,6 +135,7 @@ type Builder interface {
 	Having(expr string, args ...any) Builder
 
 	In(args ...any) Builder
+	NotIn(args ...any) Builder
 	InsertInto(tableName string) Builder
 
 	/*
@@ -149,8 +168,18 @@ type Builder interface {
 	*/
 	NewRow() Row
 
-	// Offset adds a limit on number of returned rows
+	// Offset adds an offset on number of skipped rows
 	Offset(offset any) Builder
+
+	/*
+		OnConflict appends an ON CONFLICT clause (PostgreSQL upsert).
+
+		target is appended after ON CONFLICT, for example "(email) DO NOTHING"
+		or "(email) DO UPDATE SET name = EXCLUDED.name". An empty target
+		produces a bare ON CONFLICT, typically followed by Clause("DO NOTHING").
+	*/
+	OnConflict(target string, args ...any) Builder
+
 	OrderBy(expr ...string) Builder
 
 	// Paginate provides an easy way to set both offset and limit
@@ -352,11 +381,13 @@ func New(verb string, args ...any) Builder {
 	return defaultDialect.Load().(SQLDialect).New(verb, args...)
 }
 
-// UseNewLines specifies an option to add new lines for each clause
+// UseNewLines returns the default dialect with the given newline policy.
+// The process-wide default dialect is not mutated; statements created from
+// the returned value use op. Call this before adding clauses:
+//
+//	q := xsql.UseNewLines(false).Select("id").From("table")
 func UseNewLines(op bool) SQLDialect {
-	d := defaultDialect.Load().(SQLDialect)
-	d.UseNewLines(op)
-	return d
+	return defaultDialect.Load().(SQLDialect).WithNewLines(op)
 }
 
 /*
@@ -455,6 +486,9 @@ type stmtChunks []stmtChunk
 /*
 Stmt provides a set of helper methods for SQL statement building and execution.
 
+A Stmt is not safe for concurrent use. Share a Dialect across goroutines
+and give each goroutine its own Stmt (or Clone a template per request).
+
 Use one of the following methods to create a SQL statement builder instance:
 
 	xsql.From("table")
@@ -486,7 +520,9 @@ type Stmt struct {
 	useNewLines bool
 }
 
-// UseNewLines specifies an option to add new lines for each clause
+// UseNewLines specifies an option to add new lines for each clause.
+// It only affects clauses added after this call. Set it on the dialect
+// (WithNewLines) before constructing the statement when possible.
 func (q *Stmt) UseNewLines(op bool) Builder {
 	q.useNewLines = op
 	return q
@@ -710,10 +746,36 @@ func (q *Stmt) Where(expr string, args ...any) Builder {
 In adds IN expression to the current filter.
 
 In method must be called after a Where method call.
+
+An empty argument list is rendered as `IN (SELECT NULL WHERE 1=0)`
+so the filter matches no rows, stays valid SQL (engines reject
+IN ()), and does not change the meaning of neighboring AND/OR terms.
 */
 func (q *Stmt) In(args ...any) Builder {
+	return q.inList("IN", emptyInExpr, args)
+}
+
+/*
+NotIn adds NOT IN expression to the current filter.
+
+NotIn method must be called after a Where method call.
+
+An empty argument list is rendered as `NOT IN (SELECT NULL WHERE 1=0)`
+so the filter matches all values of that column, stays valid SQL
+(engines reject NOT IN ()), and does not introduce an ungrouped OR.
+*/
+func (q *Stmt) NotIn(args ...any) Builder {
+	return q.inList("NOT IN", emptyNotInExpr, args)
+}
+
+func (q *Stmt) inList(op, emptyExpr string, args []any) Builder {
+	if len(args) == 0 {
+		q.addChunk(posWhere, "", emptyExpr, nil, " ")
+		return q
+	}
 	buf := getBuffer()
-	_, _ = buf.WriteString("IN (")
+	_, _ = buf.WriteString(op)
+	_, _ = buf.WriteString(" (")
 	l := len(args) - 1
 	for i := range args {
 		if i < l {
@@ -731,7 +793,7 @@ func (q *Stmt) In(args ...any) Builder {
 }
 
 /*
-Join adds an INNERT JOIN clause to SELECT statement
+Join adds an INNER JOIN clause to SELECT statement
 */
 func (q *Stmt) Join(table, on string) Builder {
 	q.join("JOIN ", table, on)
@@ -762,6 +824,64 @@ func (q *Stmt) FullJoin(table, on string) Builder {
 	return q
 }
 
+// CrossJoin adds a CROSS JOIN clause to SELECT statement
+func (q *Stmt) CrossJoin(table string) Builder {
+	q.addChunk(posFrom, "", "CROSS JOIN "+table, nil, " ")
+	return q
+}
+
+/*
+ForUpdate appends FOR UPDATE to a SELECT statement.
+
+Optional tokens are appended as-is:
+
+	q.ForUpdate("NOWAIT")
+	q.ForUpdate("OF t", "SKIP LOCKED")
+*/
+func (q *Stmt) ForUpdate(opts ...string) Builder {
+	return q.lockClause("FOR UPDATE", opts)
+}
+
+/*
+ForShare appends FOR SHARE to a SELECT statement.
+
+Optional tokens are appended as-is:
+
+	q.ForShare("NOWAIT")
+*/
+func (q *Stmt) ForShare(opts ...string) Builder {
+	return q.lockClause("FOR SHARE", opts)
+}
+
+func (q *Stmt) lockClause(lock string, opts []string) Builder {
+	if len(opts) > 0 {
+		lock = lock + " " + strings.Join(opts, " ")
+	}
+	q.addChunk(posLock, lock, "", nil, " ")
+	return q
+}
+
+/*
+OnConflict appends an ON CONFLICT clause (PostgreSQL upsert).
+
+	q.InsertInto("users").
+		Set("email", email).
+		Set("name", name).
+		OnConflict("(email) DO UPDATE SET name = EXCLUDED.name")
+
+	q.InsertInto("users").
+		Set("email", email).
+		OnConflict("DO NOTHING")
+*/
+func (q *Stmt) OnConflict(target string, args ...any) Builder {
+	clause := "ON CONFLICT"
+	if target != "" {
+		clause = "ON CONFLICT " + target
+	}
+	q.addChunk(posOnConflict, clause, "", args, " ")
+	return q
+}
+
 // OrderBy adds the ORDER BY clause to SELECT statement
 func (q *Stmt) OrderBy(expr ...string) Builder {
 	q.addChunk(posOrderBy, "ORDER BY", strings.Join(expr, ", "), nil, ", ")
@@ -786,7 +906,7 @@ func (q *Stmt) Limit(limit any) Builder {
 	return q
 }
 
-// Offset adds a limit on number of returned rows
+// Offset adds an offset on number of skipped rows
 func (q *Stmt) Offset(offset any) Builder {
 	q.addChunk(posOffset, "OFFSET ?", "", []any{offset}, "")
 	return q
@@ -909,14 +1029,13 @@ func (q *Stmt) Clause(expr string, args ...any) Builder {
 // String method builds and returns an SQL statement.
 func (q *Stmt) String() string {
 	if q.sql == "" {
-		// Calculate the buffer hash and check for available queries
-		// NOTE: can't use bufToString here as it returns Raw pointer
-		bufStrKey := values.StringsCoalesce(q.name, q.buf.String())
-		sql, ok := q.dialect.GetCachedQuery(bufStrKey)
-		if ok {
+		// Key the rebuild cache by the raw buffer so a later clause on a
+		// named statement cannot return a stale cached string.
+		// NOTE: can't use bufToString here as it returns a raw pointer.
+		bufKey := q.buf.String()
+		if sql, ok := q.dialect.GetCachedQuery(bufKey); ok {
 			q.sql = sql
 		} else {
-			// Build a query
 			var argNo = 1
 			buf := strings.Builder{}
 
@@ -927,17 +1046,18 @@ func (q *Stmt) String() string {
 					buf.Write(space)
 				}
 				s := q.buf.B[chunk.bufLow:chunk.bufHigh]
-				if chunk.argLen > 0 && q.dialect.Provider() == "postgres" {
-					argNo, _ = writePg(argNo, s, &buf)
+				if q.dialect.Provider() == "postgres" {
+					argNo = writePg(argNo, s, &buf)
 				} else {
 					buf.Write(s)
 				}
 				pos = chunk.pos
 			}
-			bstr := buf.String()
-			q.sql = strings.Trim(bstr, "\n\r\t ")
-			// Save it for reuse
-			q.dialect.PutCachedQuery(bufStrKey, q.sql)
+			q.sql = strings.Trim(buf.String(), "\n\r\t ")
+			q.dialect.PutCachedQuery(bufKey, q.sql)
+		}
+		if q.name != "" {
+			q.dialect.PutCachedQuery(q.name, q.sql)
 		}
 	}
 	return q.sql
@@ -995,6 +1115,11 @@ func (q *Stmt) Close() {
 }
 
 // Clone creates a copy of the statement.
+// The copy is independent: later clauses added to either instance
+// do not affect the other. Newline policy, rendered SQL, and scan
+// targets are copied. The cache name is not: an extended clone must
+// not overwrite the source statement's named-cache entry. Call SetName
+// on the clone if it should be cached under its own key.
 func (q *Stmt) Clone() Builder {
 	stmt := q.dialect.(*Dialect).getStmt()
 	if cap(stmt.chunks) < len(q.chunks) {
@@ -1007,6 +1132,8 @@ func (q *Stmt) Clone() Builder {
 	stmt.dest = insertAt(stmt.dest, q.dest, 0)
 	_, _ = stmt.buf.Write(q.buf.B)
 	stmt.sql = q.sql
+	stmt.useNewLines = q.useNewLines
+	stmt.pos = q.pos
 
 	return stmt
 }
@@ -1016,23 +1143,17 @@ func (q *Stmt) Clone() Builder {
 // Reflect-based Bind is slightly slower than `Select("field").To(&record.field)`
 // but provides an easier way to retrieve data.
 //
+// Fields tagged `db:"-"` are skipped, including anonymous embedded
+// structs. Column names may be followed by comma-separated options
+// (`db:"id,int8,primary"`); only the first token is used as the column name.
+//
+// Field mappings are cached per struct type.
+//
 // Note: this method does no type checks and returns no errors.
 func (q *Stmt) Bind(data any) Builder {
-	typ := reflect.TypeOf(data).Elem()
 	val := reflect.ValueOf(data).Elem()
-
-	for i := 0; i < val.NumField(); i++ {
-		field := val.Field(i)
-		t := typ.Field(i)
-		if field.Kind() == reflect.Struct && t.Anonymous {
-			q.Bind(field.Addr().Interface())
-		} else {
-			dbFieldName := t.Tag.Get("db")
-			if dbFieldName != "" {
-				tokens := strings.Split(dbFieldName, ",")
-				q.Select(tokens[0]).To(field.Addr().Interface())
-			}
-		}
+	for _, f := range bindFields(val.Type()) {
+		q.Select(f.name).To(val.FieldByIndex(f.index).Addr().Interface())
 	}
 	return q
 }
@@ -1251,6 +1372,12 @@ var (
 	placeholder      = []byte{'?'}
 	placeholderComma = []byte{'?', ','}
 	joinOn           = []byte{' ', 'O', 'N', ' ', '('}
+
+	// emptyInExpr / emptyNotInExpr complete `Where("col").In()` / `NotIn()`
+	// when the value list is empty. A subquery membership test is always
+	// valid SQL and does not change AND/OR binding of neighboring filters.
+	emptyInExpr    = "IN (SELECT NULL WHERE 1=0)"
+	emptyNotInExpr = "NOT IN (SELECT NULL WHERE 1=0)"
 )
 
 type chunkPos int
@@ -1262,6 +1389,7 @@ const (
 	posInsert
 	posInsertFields
 	posValues
+	posOnConflict
 	posDelete
 	posUpdate
 	posSet
@@ -1275,6 +1403,7 @@ const (
 	posOrderBy
 	posLimit
 	posOffset
+	posLock
 	posReturning
 	posEnd
 )

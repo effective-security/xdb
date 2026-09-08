@@ -24,9 +24,25 @@ What `xsql` doesn't?
 
 ## Is It Fast?
 
-It is. See benchmarks: https://github.com/leporo/golang-sql-builder-benchmark
+It is.
 
-In order to maximize performance and minimize memory footprint, `xsql` reuses memory allocated for query building. The heavier load is, the faster `xsql` works.
+In order to maximize performance and minimize memory footprint, `xsql` reuses memory allocated for query building. Always `Close()` a statement (or use `QueryAndClose` / `ExecAndClose`) so buffers return to the pool. Rendered SQL is cached per dialect, with a bounded cache to keep memory in check. Use `SetName` or `GetOrCreateQuery` for hot queries.
+
+`Bind` caches field mappings per struct type. Prefer `Select("col").To(&field)` when you need the last bit of speed.
+
+## Concurrency
+
+Dialect values (`xsql.Postgres`, `xsql.NoDialect`, `xsql.SQLServer`) are safe for concurrent use. A `Builder` / `Stmt` is not. Create a new statement per goroutine, or `Clone` a template:
+
+```go
+template := xsql.Postgres.From("users").Select("id, name")
+defer template.Close()
+
+q := template.Clone().Where("id = ?", id)
+defer q.Close()
+```
+
+`UseNewLines(false)` returns a dialect view and does not change the process default. Prefer `xsql.Postgres.WithNewLines(false)` over mutating a shared dialect with `UseNewLines`.
 
 ## Usage
 
@@ -40,7 +56,7 @@ var (
     productSales float64
 )
 
-xsql.SetDialect(xsql.PostgreSQL)
+xsql.SetDialect(xsql.Postgres)
 
 err := xsql.From("orders").
     With("regional_sales",
@@ -119,9 +135,9 @@ if err != nil {
 Some SQL fragments, like a list of fields to be selected or filtering condition may appear over and over. It can be annoying to repeat them or combine an SQL statement from chunks. Use `xsql.Stmt` to construct a basic query and extend it for a case:
 
 ```go
-func (o *Offer) Select() *xsql.Stmt {
+func (o *Offer) Select() xsql.Builder {
     return xsql.From("products").
-        .Bind(o)
+        Bind(o).
         // Ignore records, marked as deleted
         Where("is_deleted = false")
 }
@@ -211,7 +227,7 @@ err := xsql.From("offers o").
     // Bind a column from joined table to variable
     Select("p.name").To(&productName).
     // Print top 10 offers
-    OrderBy("price DEST").
+    OrderBy("price DESC").
     Limit(10).
     QueryAndClose(ctx, db, func(row *sql.Rows){
         fmt.Printf("%d\t%s\t$%.2f\n", offerId, productName, price)
@@ -299,7 +315,7 @@ Use `Union` method to combine results of two queries:
 	q := xsql.From("tasks").
 		Select("id, status").
 		Where("status = ?", "new").
-		Union(true, xsql.PostgreSQL.From("tasks").
+		Union(true, xsql.Postgres.From("tasks").
 			Select("id, status").
             Where("status = ?", "wip"))
     // ...
@@ -313,11 +329,11 @@ Use `Union` method to combine results of two queries:
 ```go
 var userId int64
 
-err := xsql.InsertInto("users").
+err := xsql.Postgres.InsertInto("users").
     Set("email", "new@email.com").
     Set("address", "320 Some Avenue, Somewhereville, GA, US").
+    OnConflict("(email) DO UPDATE SET address = EXCLUDED.address").
     Returning("id").To(&userId).
-    Clause("ON CONFLICT (email) DO UPDATE SET address = users.address").
     QueryRowAndClose(ctx, db)
 ```
 
@@ -363,6 +379,23 @@ _, err := xsql.Update("users").
 
 ```go
 _, err := xsql.DeleteFrom("products").
-    Where("id = ?", 42)
+    Where("id = ?", 42).
     ExecAndClose(ctx, db)
 ```
+
+### PostgreSQL helpers
+
+```go
+q := xsql.Postgres.From("tasks").
+    Select("id").
+    Where("status").NotIn("done", "canceled").
+    ForUpdate("SKIP LOCKED")
+
+q = xsql.Postgres.InsertInto("users").
+    Set("email", email).
+    Set("name", name).
+    OnConflict("(email) DO UPDATE SET name = EXCLUDED.name").
+    Returning("id")
+```
+
+On the Postgres dialect, every `?` in a fragment is numbered (`$1`, `$2`, ...), including fragments that have no bound arguments. Write `\?` for a literal `?` (JSON operators, `?|`, and similar).

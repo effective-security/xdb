@@ -6,6 +6,16 @@ Extensions around standard sql package
 
     go get github.com/effective-security/xdb
 
+## Documentation
+
+- [Query builder guide](Documentation/design/QUERYBUILDER.md): CRUD with the
+  generated schema, `QueryParams`, pagination and transactions.
+- [Schema generator](Documentation/design/SCHEMA_GENERATOR.md): `xdbcli`
+  commands, `typesmap.yaml` and the generated code.
+- [xsql](xsql/README.md): SQL statement builder reference.
+- [Code map](Documentation/codemap.md) and [AGENTS.md](AGENTS.md): package
+  map and contribution rules.
+
 ## Schema generator
 
 ```sh

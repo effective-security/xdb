@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 
@@ -132,7 +133,7 @@ func toGoType(c *schema.Column) string {
 		return typeName
 	}
 
-	typ := values.StringsCoalesce(c.UdtType, c.Type)
+	typ := cmp.Or(c.UdtType, c.Type)
 	typs := []string{typ}
 
 	if isID(c) {

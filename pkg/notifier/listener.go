@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"io"
@@ -64,8 +65,8 @@ func eventCallBack(ev pq.ListenerEventType, err error) {
 }
 
 func NewListener(p xdb.Provider, minReconnectInterval time.Duration, maxReconnectInterval time.Duration) Listener {
-	minReconnectInterval = values.NumbersCoalesce(minReconnectInterval, DefaultMinReconnectInterval)
-	maxReconnectInterval = values.NumbersCoalesce(maxReconnectInterval, DefaultMaxReconnectInterval)
+	minReconnectInterval = cmp.Or(minReconnectInterval, DefaultMinReconnectInterval)
+	maxReconnectInterval = cmp.Or(maxReconnectInterval, DefaultMaxReconnectInterval)
 
 	lp := pq.NewListener(p.ConnectionString(), minReconnectInterval, maxReconnectInterval, eventCallBack)
 

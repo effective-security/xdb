@@ -1,6 +1,7 @@
 package xdb
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/flake"
-	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/migrate"
 )
 
@@ -226,7 +226,7 @@ func ParseConnectionString(dataSource string) (*Source, error) {
 		Driver:   u.Scheme,
 		Host:     u.Host,
 		User:     u.User.Username(),
-		Database: values.StringsCoalesce(q.Get("dbname"), q.Get("database")),
+		Database: cmp.Or(q.Get("dbname"), q.Get("database")),
 		Params:   make(map[string]string),
 	}
 	if pwd, ok := u.User.Password(); ok {

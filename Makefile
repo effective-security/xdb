@@ -25,6 +25,7 @@ export XDB_PG_DATASOURCE="postgres://${XDB_PG_USER}:${XDB_PG_PASSWORD}@${XDB_PG_
 default: help
 
 all: clean tools generate start-localstack start-sql build covtest
+recover: clean tools generate start-localstack start-sql build
 
 #
 # clean produced files
@@ -37,9 +38,9 @@ clean:
 
 tools:
 	echo "*** building tools"
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 	go install github.com/effective-security/cov-report/cmd/cov-report@latest
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	go install go.uber.org/mock/mockgen@latest
 
 build:

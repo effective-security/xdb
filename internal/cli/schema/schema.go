@@ -3,6 +3,7 @@ package schema
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"go/format"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/slices"
-	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/internal/cli"
 	"github.com/effective-security/xdb/schema"
 	"github.com/ettle/strcase"
@@ -283,8 +283,8 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 	var codeHeaderTemplate = template.Must(template.New("header").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var codeModelTemplate = template.Must(template.New("codeModelTemplate").Funcs(templateFuncMap).Parse(codeModelTemplateText))
 
-	modelPkg := values.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
-	schemaPkg := values.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
+	modelPkg := cmp.Or(a.PkgModel, packageName(a.OutModel))
+	schemaPkg := cmp.Or(a.PkgSchema, packageName(a.OutSchema))
 
 	var dialect string
 	imports := a.Imports

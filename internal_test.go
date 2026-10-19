@@ -19,9 +19,10 @@ func TestID(t *testing.T) {
 	id2 := NewID(123412341)
 	assert.Empty(t, id2.id.str)
 	assert.Equal(t, "123412341", id2.String())
-	assert.Equal(t, "123412341", id2.id.str)
 	assert.Equal(t, "123412341", id2.String())
 
+	// String() has no side effects: equality of IDs with the same value
+	// does not depend on whether String() has been called on either.
 	id3 := NewID(123412341)
 	assert.NotEqual(t, id2, id3)
 	assert.Equal(t, id2.String(), id3.String())

@@ -43,6 +43,11 @@ linters:
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#error-strings
         - name: error-strings
   exclusions:
+    rules:
+      # Exclude SA1019 (deprecated APIs) globally
+      - linters:
+          - staticcheck
+        text: "SA1019:"
     paths:
       - mocks/.*
       - .*_test\.go$

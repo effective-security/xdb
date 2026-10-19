@@ -1,12 +1,12 @@
 package xdb
 
 import (
+	"cmp"
 	"database/sql"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/effective-security/x/values"
 	"github.com/spaolacci/murmur3"
 )
 
@@ -179,7 +179,7 @@ func (b *QueryParamsBuilder) checkPage() {
 // SetPage sets the limit for pagination, and adds it to the list of arguments.
 func (b *QueryParamsBuilder) SetPage(limit, offset uint32) *QueryParamsBuilder {
 	b.checkPage()
-	b.limit = values.NumbersCoalesce(limit, DefaultPageSize)
+	b.limit = cmp.Or(limit, DefaultPageSize)
 	b.offset = offset
 	b.args = append(b.args, b.limit, b.offset)
 	return b
@@ -194,7 +194,7 @@ func (b *QueryParamsBuilder) Page() (limit uint32, offset uint32) {
 func (b *QueryParamsBuilder) SetCursor(limit uint32, pos uint32, cursor any) *QueryParamsBuilder {
 	b.Set(pos, cursor)
 	b.cursor = cursor
-	b.limit = values.NumbersCoalesce(limit, DefaultPageSize)
+	b.limit = cmp.Or(limit, DefaultPageSize)
 	b.args = append(b.args, b.limit)
 	return b
 }

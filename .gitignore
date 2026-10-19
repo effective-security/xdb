@@ -6,6 +6,7 @@ bin/
 .tmp/
 .docker/
 .DS_Store
+.codebase-memory
 
 debug
 debug.test

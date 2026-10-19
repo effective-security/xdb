@@ -3,6 +3,7 @@ package xdb_test
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/effective-security/xdb"
@@ -210,7 +211,59 @@ func TestIDLog(t *testing.T) {
 	var c2 idTest
 	err = json.Unmarshal([]byte(exp), &c2)
 	require.NoError(t, err)
-	assert.NotEqual(t, c1, c2)
 	assert.Equal(t, c1.ID.String(), c2.ID.String())
 	assert.Equal(t, c1, c2)
+}
+
+// sharedTestID mimics a package-level fixture shared by many tests,
+// which is one of the places the race detector flagged ID.String().
+var sharedTestID = xdb.MustID("123456789")
+
+// TestIDStringRace checks that String() and the helpers built on it can be
+// called concurrently on copies of the same ID. ID is a value type over a
+// shared pointer, so copies held in struct fields, slices, cached rows or
+// package-level variables all alias the same backing data.
+// Run with `go test -race` to exercise the check.
+func TestIDStringRace(t *testing.T) {
+	const workers = 32
+
+	run := func(t *testing.T, get func() xdb.ID, exp string) {
+		t.Helper()
+		var start, done sync.WaitGroup
+		start.Add(1)
+		done.Add(workers)
+		for i := 0; i < workers; i++ {
+			go func() {
+				defer done.Done()
+				start.Wait()
+				id := get()
+				assert.Equal(t, exp, id.String())
+				assert.Equal(t, `"`+exp+`"`, id.QuotedString())
+				assert.Equal(t, "_"+exp, id.UnderscoreString())
+				assert.Equal(t, exp, xdb.IDArray{id}.String())
+			}()
+		}
+		start.Done()
+		done.Wait()
+	}
+
+	t.Run("copies of NewID", func(t *testing.T) {
+		id := xdb.NewID(123456789)
+		run(t, func() xdb.ID { return id }, "123456789")
+	})
+
+	t.Run("copies of parsed ID", func(t *testing.T) {
+		id := xdb.MustID("987654321")
+		run(t, func() xdb.ID { return id }, "987654321")
+	})
+
+	t.Run("package-level ID", func(t *testing.T) {
+		run(t, func() xdb.ID { return sharedTestID }, "123456789")
+	})
+
+	t.Run("cached rows", func(t *testing.T) {
+		rows := []idTest{{ID: xdb.NewID(555), OrgID: xdb.NewID(777)}}
+		run(t, func() xdb.ID { return rows[0].ID }, "555")
+		run(t, func() xdb.ID { return rows[0].OrgID }, "777")
+	})
 }

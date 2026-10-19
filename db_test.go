@@ -10,6 +10,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xdb/pkg/flake"
+	"github.com/effective-security/xdb/xsql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -329,4 +330,76 @@ FETCH NEXT @take ROWS ONLY`
 		assert.EqualError(t, provider.Rollback(), "no transaction started")
 		assert.NoError(t, ptx.Close())
 	})
+}
+
+func TestPGTxOptions(t *testing.T) {
+	ctx := context.Background()
+	p, err := xdb.NewProvider(XDB_PG_DATASOURCE, "testdb", nil, nil)
+	require.NoError(t, err)
+	defer p.Close()
+
+	tx, err := p.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	require.NoError(t, err)
+	defer tx.Close()
+
+	_, err = tx.ExecContext(ctx, "CREATE TEMP TABLE ro_check (id bigint)")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read-only transaction")
+}
+
+// TestPGKeyset pages a timestamptz listing whose rows differ by microseconds
+// with the Postgres dialect, inside a transaction that is rolled back.
+func TestPGKeyset(t *testing.T) {
+	ctx := context.Background()
+	p, err := xdb.NewProvider(XDB_PG_DATASOURCE, "testdb", nil, nil)
+	require.NoError(t, err)
+	defer p.Close()
+
+	tx, err := p.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer tx.Close()
+
+	_, err = tx.ExecContext(ctx, "CREATE TEMP TABLE events (id bigint PRIMARY KEY, created_at timestamptz NOT NULL, title text NOT NULL)")
+	require.NoError(t, err)
+	// ids 1..10, every three share a created_at, consecutive ones 1µs apart
+	_, err = tx.ExecContext(ctx, `INSERT INTO events (id, created_at, title)
+		SELECT i, '2026-10-19 12:00:00+00'::timestamptz + ((i-1)/3) * interval '1 microsecond', 'event'
+		FROM generate_series(1, 10) AS i`)
+	require.NoError(t, err)
+
+	query := func(p xdb.QueryParams) string {
+		q, _ := xsql.Postgres.GetOrCreateQuery("TestPGKeyset"+p.Name(), func(name string) xsql.Builder {
+			q := xsql.Postgres.From("events").
+				Select("id, created_at, title").
+				OrderBy("created_at DESC, id DESC")
+			if _, cursor := p.Cursor(); cursor != nil {
+				q.Where("(created_at, id) < (?, ?)", nil, nil).Limit(nil)
+			} else {
+				q.Limit(nil).Offset(nil)
+			}
+			return q
+		})
+		return q
+	}
+
+	var seen []xdb.ID
+	cursor := ""
+	for page := 0; ; page++ {
+		require.Less(t, page, 10, "the listing ends")
+
+		req := &listEventsRequest{Limit: 4}
+		require.NoError(t, req.setCursor(cursor))
+		qp := req.QueryParams()
+
+		var rs eventResult
+		require.NoError(t, xdb.ExecuteQueryWithCursor(ctx, tx, eventCursor, &rs, query(qp), qp))
+		for _, e := range rs.Rows {
+			seen = append(seen, e.ID)
+		}
+		if !rs.HasNextPage {
+			break
+		}
+		cursor = rs.Cursor
+	}
+	assert.Equal(t, []xdb.ID{10, 9, 8, 7, 6, 5, 4, 3, 2, 1}, seen)
 }

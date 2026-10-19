@@ -25,6 +25,7 @@ export XDB_PG_DATASOURCE="postgres://${XDB_PG_USER}:${XDB_PG_PASSWORD}@${XDB_PG_
 default: help
 
 all: clean tools generate start-localstack start-sql build covtest
+recover: clean tools generate start-localstack start-sql build
 
 #
 # clean produced files
@@ -37,14 +38,15 @@ clean:
 
 tools:
 	echo "*** building tools"
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 	go install github.com/effective-security/cov-report/cmd/cov-report@latest
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	go install go.uber.org/mock/mockgen@latest
+	go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
 
 build:
 	echo "*** building xdbcli $(GIT_VERSION)"
-	go build ${BUILD_FLAGS} -o ./bin/xdbcli ./cmd/xdbcli
+	go build ${BUILD_FLAGS} -ldflags "-X main.version=$(GIT_VERSION)" -o ./bin/xdbcli ./cmd/xdbcli
 
 start-localstack:
 	echo "*** starting localstack"
@@ -82,3 +84,21 @@ gen-sql-schema:
 		--out-schema ./testdata/e2e/sqlserver/schema
 	# fix generated code
 	goimports -w ./testdata/e2e
+
+
+docs:
+	echo "*** generating Docs"
+	rm -rf Documentation/api
+	mkdir -p Documentation/api
+	for pkg in $$(go list ./... | grep -v '/cmd/' | grep -v '/testdata/' | grep -v '/mocks/' | grep -v 'internal/cli'); do \
+		out=Documentation/api/$$(echo $$pkg | sed 's#^${REPO_NAME}$$#xdb#; s#${REPO_NAME}/##; s#/#_#g').md; \
+		gomarkdoc --output $$out --repository.default-branch main $$pkg || exit 1; \
+	done
+	echo "API reference written to Documentation/api"
+	echo "\`\`\`bash" > ./Documentation/cli/xdbcli.md
+	bin/xdbcli --help >> ./Documentation/cli/xdbcli.md
+	for cmd in generate columns tables views foreign-keys; do \
+		echo "" >> ./Documentation/cli/xdbcli.md; \
+		XDB_DATASOURCE=none bin/xdbcli schema $$cmd --help >> ./Documentation/cli/xdbcli.md; \
+	done
+	echo "\`\`\`" >> ./Documentation/cli/xdbcli.md

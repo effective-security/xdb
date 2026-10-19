@@ -3,18 +3,23 @@ package schema
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
+	"go/ast"
 	"go/format"
+	"go/parser"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
+	stdslices "slices"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
 	"github.com/effective-security/x/slices"
-	"github.com/effective-security/x/values"
 	"github.com/effective-security/xdb/internal/cli"
 	"github.com/effective-security/xdb/schema"
 	"github.com/ettle/strcase"
@@ -279,18 +284,46 @@ func filterColumns(columns schema.Columns, dropColumnsMap map[string]bool) schem
 	return result
 }
 
+// goImport is a package the generated code imports, by the name the code
+// uses and its path
+type goImport struct {
+	name string
+	path string
+}
+
+// imports of the generated code
+var (
+	importErrors    = goImport{name: "errors", path: "github.com/cockroachdb/errors"}
+	importPq        = goImport{name: "pq", path: "github.com/lib/pq"}
+	importValues    = goImport{name: "values", path: "github.com/effective-security/x/values"}
+	importXdb       = goImport{name: "xdb", path: "github.com/effective-security/xdb"}
+	importXdbSchema = goImport{name: "xdbschema", path: "github.com/effective-security/xdb/schema"}
+	importXsql      = goImport{name: "xsql", path: "github.com/effective-security/xdb/xsql"}
+)
+
+// spec returns the import spec, with the name only when it differs from the
+// default name of the path.
+func (i goImport) spec() string {
+	if i.name == defaultPackageName(i.path) {
+		return strconv.Quote(i.path)
+	}
+	return i.name + " " + strconv.Quote(i.path)
+}
+
+// generate writes one model file and one schema file for all the tables,
+// in the order of res, whatever schemas they belong to.
 func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema.Tables) error {
 	var codeHeaderTemplate = template.Must(template.New("header").Funcs(templateFuncMap).Parse(codeHeaderTemplateText))
 	var codeModelTemplate = template.Must(template.New("codeModelTemplate").Funcs(templateFuncMap).Parse(codeModelTemplateText))
+	var schemaHeaderCodeTemplate = template.Must(template.New("schemaHeaderCodeTemplate").Funcs(templateFuncMap).Parse(codeSchemaHeaderTemplateText))
+	var schemaCodeTemplate = template.Must(template.New("schemaCodeTemplate").Funcs(templateFuncMap).Parse(codeTableSchemaTemplateText))
 
-	modelPkg := values.StringsCoalesce(a.PkgModel, packageName(a.OutModel))
-	schemaPkg := values.StringsCoalesce(a.PkgSchema, packageName(a.OutSchema))
+	modelPkg := cmp.Or(a.PkgModel, packageName(a.OutModel))
+	schemaPkg := cmp.Or(a.PkgSchema, packageName(a.OutSchema))
 
 	var dialect string
-	imports := a.Imports
 	switch provider {
 	case "postgres":
-		imports = append(imports, "github.com/lib/pq")
 		dialect = "xsql.Postgres"
 	case "sqlserver":
 		dialect = "xsql.SQLServer"
@@ -305,15 +338,9 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		if err != nil {
 			return errors.WithMessagef(err, "failed to load types definition")
 		}
-		for k, v := range defs.Types {
-			typesMap[k] = v
-		}
-		for k, v := range defs.Fields {
-			fieldNamesMap[k] = v
-		}
-		for k, v := range defs.Tables {
-			tableNamesMap[k] = v
-		}
+		maps.Copy(typesMap, defs.Types)
+		maps.Copy(fieldNamesMap, defs.Fields)
+		maps.Copy(tableNamesMap, defs.Tables)
 		for _, v := range defs.WithCache {
 			modelWithCacheMap[v] = true
 		}
@@ -322,151 +349,251 @@ func (a *GenerateCmd) generate(ctx *cli.Cli, provider, dbName string, res schema
 		}
 	}
 
-	schemas := map[string]schema.Tables{}
-	for _, t := range res {
-		schemas[t.Schema] = append(schemas[t.Schema], t)
+	// nothing matched the filters: write no files, which would not compile
+	if len(res) == 0 {
+		return nil
 	}
 
-	var err error
 	var tableInfos []*schema.TableInfo
 	var tableDefs []*tableDefinition
+	// packages that the column types refer to, such as pb in []*pb.Role
+	usedPackages := map[string]bool{}
+	usesCache := false
 
-	for schemaName, tables := range schemas {
-		w := ctx.Writer()
-		buf := &bytes.Buffer{}
-
-		if a.OutModel != "" {
-			_ = os.MkdirAll(a.OutModel, 0777)
-			fn := "model.gen.go"
-			if len(schemas) > 1 {
-				fn = schemaName + "_model.gen.go"
-			}
-			fn = filepath.Join(a.OutModel, fn)
-			f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = f.Close()
-			}()
-			w = f
+	for _, t := range res {
+		structName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
+		if a.StructSuffix != "" {
+			structName += strcase.ToGoPascal(a.StructSuffix)
 		}
-		modelDef := &tableDefinition{
-			DB:      dbName,
-			Package: modelPkg,
-			Imports: imports,
+
+		tableInfos = append(tableInfos, &schema.TableInfo{
+			Schema:     t.Schema,
+			Name:       t.Name,
+			SchemaName: t.SchemaName,
+			Columns:    filterColumnNames(t.Columns.Names(), dropColumnsMap),
+			Indexes:    t.Indexes.Names(),
+			PrimaryKey: t.PrimaryKeyName(),
+		})
+		prefix := ""
+		if a.UseSchema && !slices.ContainsStringEqualFold([]string{"dbo", "public"}, t.Schema) {
+			prefix = strcase.ToGoPascal(t.Schema)
+		}
+
+		td := &tableDefinition{
+			DB:              dbName,
+			Package:         modelPkg,
+			Dialect:         dialect,
+			Name:            prefix + structName,
+			StructName:      prefix + structName,
+			SchemaName:      t.Schema,
+			TableName:       t.Name,
+			TableStructName: tableStructName(t),
+			Columns:         filterColumns(t.Columns, dropColumnsMap),
+			Indexes:         t.Indexes,
+			PrimaryKey:      t.PrimaryKey,
+			WithCache:       modelWithCacheMap[t.SchemaName],
 		}
 		if modelPkg != schemaPkg {
-			modelDef.Dialect = dialect
+			td.SchemaPackage = schemaPkg + "."
 		}
-		err = codeHeaderTemplate.Execute(buf, modelDef)
+		if name, ok := tableNamesMap[t.SchemaName]; ok {
+			td.StructName = name
+		}
+		for _, c := range td.Columns {
+			for _, pkg := range typePackages(toGoType(c)) {
+				usedPackages[pkg] = true
+			}
+		}
+		usesCache = usesCache || td.WithCache
+		tableDefs = append(tableDefs, td)
+	}
+
+	// model file
+	modelImports := []goImport{importErrors, importXdb, importXdbSchema}
+	modelDef := &tableDefinition{
+		DB:      dbName,
+		Package: modelPkg,
+	}
+	if modelPkg != schemaPkg {
+		modelDef.Dialect = dialect
+		modelImports = append(modelImports, importXsql)
+		if p := importPath(a.OutSchema); p != "" {
+			modelImports = append(modelImports, goImport{name: schemaPkg, path: p})
+		}
+	}
+	// an --imports package takes the place of a known one of the same name
+	named := map[string]bool{}
+	for _, imp := range a.Imports {
+		ui := userImport(imp)
+		if usedPackages[ui.name] {
+			modelImports = append(modelImports, ui)
+			named[ui.name] = true
+		}
+	}
+	if usedPackages["pq"] && !named["pq"] {
+		modelImports = append(modelImports, importPq)
+	}
+	if (usesCache || usedPackages["values"]) && !named["values"] {
+		modelImports = append(modelImports, importValues)
+	}
+	modelDef.Imports = importSpecs(modelImports)
+
+	buf := &bytes.Buffer{}
+	err := codeHeaderTemplate.Execute(buf, modelDef)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to generate header")
+	}
+	for _, td := range tableDefs {
+		err = codeModelTemplate.Execute(buf, td)
 		if err != nil {
-			return errors.WithMessagef(err, "failed to generate header")
+			return errors.WithMessagef(err, "failed to generate model for %s.%s", td.SchemaName, td.TableName)
 		}
+	}
+	err = a.writeCode(ctx, a.OutModel, "model.gen.go", buf.Bytes())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to write models")
+	}
 
-		sName := strcase.ToGoPascal(schemaName)
-		for _, t := range tables {
-			structName := strcase.ToGoPascal(pluralizeClient.Singular(t.Name))
-			if a.StructSuffix != "" {
-				structName += strcase.ToGoPascal(a.StructSuffix)
-			}
-
-			tableInfos = append(tableInfos, &schema.TableInfo{
-				Schema:     t.Schema,
-				Name:       t.Name,
-				SchemaName: t.SchemaName,
-				Columns:    filterColumnNames(t.Columns.Names(), dropColumnsMap),
-				Indexes:    t.Indexes.Names(),
-				PrimaryKey: t.PrimaryKeyName(),
-			})
-			prefix := ""
-			if a.UseSchema && !slices.ContainsStringEqualFold([]string{"dbo", "public"}, schemaName) {
-				prefix = sName
-			}
-
-			td := &tableDefinition{
-				DB:              dbName,
-				Package:         modelPkg,
-				Imports:         imports,
-				Dialect:         dialect,
-				Name:            prefix + structName,
-				StructName:      prefix + structName,
-				SchemaName:      t.Schema,
-				TableName:       t.Name,
-				TableStructName: tableStructName(t),
-				Columns:         filterColumns(t.Columns, dropColumnsMap),
-				Indexes:         t.Indexes,
-				PrimaryKey:      t.PrimaryKey,
-				WithCache:       modelWithCacheMap[t.SchemaName],
-			}
-			if modelPkg != schemaPkg {
-				td.SchemaPackage = schemaPkg + "."
-			}
-
-			if res, ok := tableNamesMap[t.SchemaName]; ok {
-				td.StructName = res
-			}
-
-			err = codeModelTemplate.Execute(buf, td)
-			if err != nil {
-				return errors.WithMessagef(err, "failed to generate model for %s.%s", t.Schema, t.Name)
-			}
-			tableDefs = append(tableDefs, td)
-		}
-
-		data := buf.Bytes()
-		code, err := format.Source(data)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to format models: %s", string(data))
-		}
-		_, _ = w.Write(code)
-
-		var schemaHeaderCodeTemplate = template.Must(template.New("schemaHeaderCodeTemplate").Funcs(templateFuncMap).Parse(codeSchemaHeaderTemplateText))
-		var schemaCodeTemplate = template.Must(template.New("schemaCodeTemplate").Funcs(templateFuncMap).Parse(codeTableSchemaTemplateText))
-
-		buf.Reset()
-		w = ctx.Writer()
-		if a.OutSchema != "" {
-			_ = os.MkdirAll(a.OutSchema, 0777)
-			fn := "schema.gen.go"
-			if len(schemas) > 1 {
-				fn = schemaName + "_schema.gen.go"
-			}
-			fn = filepath.Join(a.OutSchema, fn)
-			f, err := os.OpenFile(fn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = f.Close()
-			}()
-			w = f
-		}
-		td := schemaDefinition{
-			DB:      dbName,
-			Package: schemaPkg,
-			Imports: a.Imports,
-			Dialect: dialect,
-			Tables:  tableInfos,
-			Defs:    tableDefs,
-		}
-		err = schemaHeaderCodeTemplate.Execute(buf, td)
+	// schema file
+	buf.Reset()
+	sd := schemaDefinition{
+		DB:      dbName,
+		Package: schemaPkg,
+		Imports: importSpecs([]goImport{importXdbSchema, importXsql}),
+		Dialect: dialect,
+		Tables:  tableInfos,
+		Defs:    tableDefs,
+	}
+	err = schemaHeaderCodeTemplate.Execute(buf, sd)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to generate schema")
+	}
+	for _, ctd := range tableDefs {
+		err = schemaCodeTemplate.Execute(buf, ctd)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to generate schema")
 		}
-
-		for _, ctd := range tableDefs {
-			err = schemaCodeTemplate.Execute(buf, ctd)
-			if err != nil {
-				return errors.WithMessagef(err, "failed to generate schema")
-			}
-		}
-		data = buf.Bytes()
-		code, err = format.Source(data)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to format schema: %s", string(data))
-		}
-		_, _ = w.Write(code)
+	}
+	err = a.writeCode(ctx, a.OutSchema, "schema.gen.go", buf.Bytes())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to write schema")
 	}
 	return nil
+}
+
+// writeCode formats the generated code and writes it to dir/fileName,
+// or to the command output when dir is empty.
+func (a *GenerateCmd) writeCode(ctx *cli.Cli, dir, fileName string, data []byte) error {
+	code, err := format.Source(data)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to format code: %s", string(data))
+	}
+	if dir == "" {
+		_, err = ctx.Writer().Write(code)
+		return errors.WithStack(err)
+	}
+	if err = os.MkdirAll(dir, 0777); err != nil {
+		return errors.WithStack(err)
+	}
+	return errors.WithStack(os.WriteFile(filepath.Join(dir, fileName), code, 0666))
+}
+
+// userImport returns the package of an --imports value: a path, whose
+// default name is the package name, or "name path".
+func userImport(imp string) goImport {
+	if name, p, ok := strings.Cut(strings.TrimSpace(imp), " "); ok {
+		return goImport{name: name, path: strings.Trim(strings.TrimSpace(p), `"`)}
+	}
+	return goImport{name: defaultPackageName(imp), path: imp}
+}
+
+// defaultPackageName returns the package name of an import path by
+// convention: its last element, without a version suffix (lib/v2, yaml.v3).
+func defaultPackageName(importPath string) string {
+	name := path.Base(importPath)
+	if strings.HasPrefix(name, "v") && path.Dir(importPath) != "." {
+		if _, err := strconv.Atoi(name[1:]); err == nil {
+			name = path.Base(path.Dir(importPath))
+		}
+	}
+	name, _, _ = strings.Cut(name, ".")
+	return name
+}
+
+// typePackages returns the names of the packages that a Go type expression
+// refers to: pb for pb.Role_Enum, *pb.Message, []pb.Enum or
+// map[string]pb.Value. A type that does not parse refers to none.
+func typePackages(typ string) []string {
+	expr, err := parser.ParseExpr(typ)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	ast.Inspect(expr, func(n ast.Node) bool {
+		sel, ok := n.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		if id, ok := sel.X.(*ast.Ident); ok {
+			names = append(names, id.Name)
+		}
+		return false
+	})
+	return names
+}
+
+// importSpecs returns the import specs sorted by path, without duplicates:
+// a package imported twice under one name is one import, under two names
+// two.
+func importSpecs(imports []goImport) []string {
+	stdslices.SortFunc(imports, func(a, b goImport) int {
+		return cmp.Or(strings.Compare(a.path, b.path), strings.Compare(a.name, b.name))
+	})
+	imports = stdslices.Compact(imports)
+	specs := make([]string, len(imports))
+	for i, imp := range imports {
+		specs[i] = imp.spec()
+	}
+	return specs
+}
+
+// importPath returns the import path of the package in dir, from the module
+// of the nearest go.mod above it, or "" when dir is empty or not in a module.
+func importPath(dir string) string {
+	if dir == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	for d := abs; ; {
+		if data, err := os.ReadFile(filepath.Join(d, "go.mod")); err == nil {
+			mod := modulePath(data)
+			rel, err := filepath.Rel(d, abs)
+			if mod == "" || err != nil {
+				return ""
+			}
+			if rel == "." {
+				return mod
+			}
+			return mod + "/" + filepath.ToSlash(rel)
+		}
+		parent := filepath.Dir(d)
+		if parent == d {
+			return ""
+		}
+		d = parent
+	}
+}
+
+// modulePath returns the module path declared in a go.mod file.
+func modulePath(gomod []byte) string {
+	for line := range strings.Lines(string(gomod)) {
+		f := strings.Fields(line)
+		if len(f) >= 2 && f[0] == "module" {
+			return strings.Trim(f[1], "\"`")
+		}
+	}
+	return ""
 }

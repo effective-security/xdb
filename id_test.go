@@ -1,13 +1,17 @@
 package xdb_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/effective-security/xdb"
 	"github.com/effective-security/xlog"
 	"github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -51,7 +55,7 @@ func TestID(t *testing.T) {
 		assert.Equal(t, tc.val.String(), val2.String())
 	}
 
-	dr, err := xdb.ID{}.Value()
+	dr, err := xdb.ID(0).Value()
 	require.Nil(t, dr)
 	require.NoError(t, err)
 }
@@ -210,7 +214,192 @@ func TestIDLog(t *testing.T) {
 	var c2 idTest
 	err = json.Unmarshal([]byte(exp), &c2)
 	require.NoError(t, err)
-	assert.NotEqual(t, c1, c2)
 	assert.Equal(t, c1.ID.String(), c2.ID.String())
 	assert.Equal(t, c1, c2)
+}
+
+// sharedTestID mimics a package-level fixture shared by many tests,
+// which is one of the places the race detector flagged ID.String().
+var sharedTestID = xdb.MustID("123456789")
+
+// TestIDStringRace checks that String() and the helpers built on it can be
+// called concurrently on copies of the same ID. ID is a value type over a
+// shared pointer, so copies held in struct fields, slices, cached rows or
+// package-level variables all alias the same backing data.
+// Run with `go test -race` to exercise the check.
+func TestIDStringRace(t *testing.T) {
+	const workers = 32
+
+	run := func(t *testing.T, get func() xdb.ID, exp string) {
+		t.Helper()
+		var start, done sync.WaitGroup
+		start.Add(1)
+		done.Add(workers)
+		for i := 0; i < workers; i++ {
+			go func() {
+				defer done.Done()
+				start.Wait()
+				id := get()
+				assert.Equal(t, exp, id.String())
+				assert.Equal(t, `"`+exp+`"`, id.QuotedString())
+				assert.Equal(t, "_"+exp, id.UnderscoreString())
+				assert.Equal(t, exp, xdb.IDArray{id}.String())
+			}()
+		}
+		start.Done()
+		done.Wait()
+	}
+
+	t.Run("copies of NewID", func(t *testing.T) {
+		id := xdb.NewID(123456789)
+		run(t, func() xdb.ID { return id }, "123456789")
+	})
+
+	t.Run("copies of parsed ID", func(t *testing.T) {
+		id := xdb.MustID("987654321")
+		run(t, func() xdb.ID { return id }, "987654321")
+	})
+
+	t.Run("package-level ID", func(t *testing.T) {
+		run(t, func() xdb.ID { return sharedTestID }, "123456789")
+	})
+
+	t.Run("cached rows", func(t *testing.T) {
+		rows := []idTest{{ID: xdb.NewID(555), OrgID: xdb.NewID(777)}}
+		run(t, func() xdb.ID { return rows[0].ID }, "555")
+		run(t, func() xdb.ID { return rows[0].OrgID }, "777")
+	})
+}
+
+func TestIDValueSemantics(t *testing.T) {
+	// mutating a copy does not change the original
+	a := xdb.NewID(1)
+	b := a
+	require.NoError(t, b.Set("2"))
+	assert.Equal(t, uint64(1), a.UInt64())
+	assert.Equal(t, uint64(2), b.UInt64())
+
+	b = a
+	b.Reset()
+	assert.Equal(t, "1", a.String())
+	assert.True(t, b.IsZero())
+	assert.Empty(t, b.String())
+	assert.Empty(t, b.QuotedString())
+	assert.Empty(t, b.UnderscoreString())
+	assert.Equal(t, xdb.ID(0), b)
+
+	// IDs are comparable by value, and can be used as map keys
+	assert.True(t, xdb.NewID(7) == xdb.MustID("7"))
+	assert.True(t, xdb.NewID(0) == 0)
+	m := map[xdb.ID]string{xdb.NewID(7): "seven"}
+	assert.Equal(t, "seven", m[xdb.MustID("7")])
+	assert.True(t, xdb.NewID(7) < xdb.NewID(8))
+
+	// %d formats the number, while %s and %v use String(), which is empty for 0
+	assert.Equal(t, "7 7 7", fmt.Sprintf("%d %s %v", xdb.NewID(7), xdb.NewID(7), xdb.NewID(7)))
+	assert.Equal(t, "0  ", fmt.Sprintf("%d %s %v", xdb.ID(0), xdb.ID(0), xdb.ID(0)))
+
+	// string representation is canonical, regardless of the input
+	var j xdb.ID
+	require.NoError(t, j.UnmarshalJSON([]byte(`"0123"`)))
+	assert.Equal(t, "123", j.String())
+	assert.Equal(t, xdb.NewID(123), j)
+}
+
+// TestIDCopyMutationRace checks that mutating copies of an ID (Set, Reset,
+// Scan, UnmarshalJSON) neither changes the original nor races with readers of it.
+// Run with `go test -race` to exercise the check.
+func TestIDCopyMutationRace(t *testing.T) {
+	const workers = 32
+
+	shared := xdb.MustID("123456789")
+	var start, done sync.WaitGroup
+	start.Add(1)
+	done.Add(workers * 2)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer done.Done()
+			start.Wait()
+			assert.Equal(t, "123456789", shared.String())
+			assert.Equal(t, uint64(123456789), shared.UInt64())
+		}()
+		go func() {
+			defer done.Done()
+			start.Wait()
+			id := shared
+			assert.NoError(t, id.Set(xdb.IDString(uint64(i+1))))
+			assert.Equal(t, uint64(i+1), id.UInt64())
+			assert.NoError(t, id.Scan(int64(i+1000)))
+			assert.NoError(t, id.UnmarshalJSON([]byte(`"42"`)))
+			id.Reset()
+			assert.True(t, id.IsZero())
+		}()
+	}
+	start.Done()
+	done.Wait()
+	assert.Equal(t, xdb.NewID(123456789), shared)
+}
+
+// TestIDSQL checks that database/sql uses ID's Value() and Scan(),
+// instead of treating it as plain uint64: zero ID is stored as NULL.
+func TestIDSQL(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, err = db.Exec("CREATE TABLE ids (n INTEGER, id BIGINT NULL)")
+	require.NoError(t, err)
+	_, err = db.Exec("INSERT INTO ids (n, id) VALUES (1, ?), (2, ?)", xdb.ID(0), xdb.NewID(1234567890123456789))
+	require.NoError(t, err)
+
+	var nulls int
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM ids WHERE id IS NULL").Scan(&nulls))
+	assert.Equal(t, 1, nulls)
+
+	var id xdb.ID
+	require.NoError(t, db.QueryRow("SELECT id FROM ids WHERE n = 1").Scan(&id))
+	assert.True(t, id.IsZero())
+	require.NoError(t, db.QueryRow("SELECT id FROM ids WHERE n = 2").Scan(&id))
+	assert.Equal(t, xdb.NewID(1234567890123456789), id)
+}
+
+func TestIDMerge(t *testing.T) {
+	dst := idTest{ID: xdb.NewID(1), OrgID: xdb.NewID(2)}
+	src := idTest{OrgID: xdb.NewID(3)}
+	require.NoError(t, xdb.Merge(&dst, &src))
+	// zero ID in src does not override dst
+	assert.Equal(t, xdb.NewID(1), dst.ID)
+	assert.Equal(t, xdb.NewID(3), dst.OrgID)
+}
+
+func BenchmarkID(b *testing.B) {
+	// snowflake-sized ID, 19 digits
+	const val = uint64(1_234_567_890_123_456_789)
+
+	b.Run("String", func(b *testing.B) {
+		id := xdb.NewID(val)
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = id.String()
+		}
+	})
+
+	b.Run("IDArray.Scan", func(b *testing.B) {
+		var sb strings.Builder
+		sb.WriteString("{")
+		for i := 0; i < 100; i++ {
+			if i > 0 {
+				sb.WriteString(",")
+			}
+			sb.WriteString(xdb.IDString(val + uint64(i)))
+		}
+		sb.WriteString("}")
+		raw := sb.String()
+
+		b.ReportAllocs()
+		for b.Loop() {
+			var ids xdb.IDArray
+			_ = ids.Scan(raw)
+		}
+	})
 }

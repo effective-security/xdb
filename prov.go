@@ -21,6 +21,8 @@ type SQLProvider struct {
 	idGen   flake.IDGenerator
 	tx      Tx
 	ticker  *time.Ticker
+	// done stops the keep-alive goroutine
+	done chan struct{}
 }
 
 // New creates a Provider instance
@@ -54,22 +56,28 @@ func (p *SQLProvider) Name() string {
 	return p.name
 }
 
+// keepAlive pings the connection every period until Close.
 func (p *SQLProvider) keepAlive(period time.Duration) {
 	p.ticker = time.NewTicker(period)
-	ch := p.ticker.C
+	p.done = make(chan struct{})
+	go keepAlive(p.conn, period, p.ticker.C, p.done)
+}
 
-	// Go function
-	go func() {
-		// Using for loop
-		for range ch {
-			err := p.conn.Ping()
+func keepAlive(conn *sql.DB, period time.Duration, tick <-chan time.Time, done <-chan struct{}) {
+	for {
+		select {
+		case <-done:
+			logger.KV(xlog.TRACE, "status", "stopped")
+			return
+		case <-tick:
+			ctx, cancel := context.WithTimeout(context.Background(), period)
+			err := conn.PingContext(ctx)
+			cancel()
 			if err != nil {
 				logger.KV(xlog.ERROR, "reason", "ping", "err", err.Error())
-				continue
 			}
 		}
-		logger.KV(xlog.TRACE, "status", "stopped")
-	}()
+	}
 }
 
 // BeginTx starts a transaction.
@@ -82,11 +90,11 @@ func (p *SQLProvider) keepAlive(period time.Duration) {
 // The provided TxOptions is optional and may be nil if defaults should be used.
 // If a non-default isolation level is used that the driver doesn't support,
 // an error will be returned.
-func (p *SQLProvider) BeginTx(ctx context.Context, _ *sql.TxOptions) (Provider, error) {
+func (p *SQLProvider) BeginTx(ctx context.Context, opts *sql.TxOptions) (Provider, error) {
 	if p.tx != nil {
 		return nil, errors.New("transaction already started")
 	}
-	tx, err := p.conn.BeginTx(ctx, nil)
+	tx, err := p.conn.BeginTx(ctx, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -105,7 +113,9 @@ func (p *SQLProvider) BeginTx(ctx context.Context, _ *sql.TxOptions) (Provider, 
 func (p *SQLProvider) Close() (err error) {
 	if p.ticker != nil {
 		p.ticker.Stop()
+		close(p.done)
 		p.ticker = nil
+		p.done = nil
 	}
 	if p.conn == nil {
 		return nil

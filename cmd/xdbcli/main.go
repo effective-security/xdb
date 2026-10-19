@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"runtime/debug"
 
 	"github.com/alecthomas/kong"
 	"github.com/effective-security/x/ctl"
@@ -10,8 +11,20 @@ import (
 	"github.com/effective-security/xdb/internal/cli/schema"
 )
 
-// version is set by the build script
-const version = "v0.2.9"
+// version is set by the build script: -ldflags "-X main.version=..."
+var version string
+
+// buildVersion returns the version set at build time, or the module version
+// of a `go install ...@version` build.
+func buildVersion() string {
+	if version != "" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return "devel"
+}
 
 type app struct {
 	cli.Cli
@@ -24,9 +37,10 @@ func main() {
 }
 
 func realMain(args []string, out io.Writer, errout io.Writer, exit func(int)) {
+	ver := buildVersion()
 	cl := app{
 		Cli: cli.Cli{
-			Version: ctl.VersionFlag(version),
+			Version: ctl.VersionFlag(ver),
 		},
 	}
 	defer cl.Close()
@@ -45,7 +59,7 @@ func realMain(args []string, out io.Writer, errout io.Writer, exit func(int)) {
 			Compact: true,
 		}),
 		kong.Vars{
-			"version": version,
+			"version": ver,
 		})
 	if err != nil {
 		panic(err)

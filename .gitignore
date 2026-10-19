@@ -6,8 +6,13 @@ bin/
 .tmp/
 .docker/
 .DS_Store
+.codebase-memory
 
 debug
 debug.test
 .vscode/launch.json
 testdata/e2e/
+
+INTENT.md
+CLAUDE.md
+FINDINGS.md

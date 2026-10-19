@@ -14,7 +14,7 @@ and were run against PostgreSQL. Rendered SQL is shown in comments.
 ```text
 internal/db/
   db.go         interfaces: <Name>ReadonlyDb (reads), <Name>Db (mutations)
-  schema/       schema.gen.go (TableInfo, column defs), typesmap.yaml, schema.go (init warm-up)
+  schema/       schema.gen.go (TableInfo, column defs), typesmap.yaml
   model/        model.gen.go (row structs, ScanRow, <Model>Result) + handwritten Validate/conversions
   pgsql/        Provider: one method per operation, runs SQL from query/
   pgsql/query/  SQL functions, request structs with QueryParams(), shared scope/pagination helpers
@@ -30,17 +30,8 @@ The generated code a query uses:
 | `model.User` | row struct; `ScanRow` scans `AllColumns()` in order |
 | `model.UserResult` | `Rows`, `HasNextPage`, `NextOffset`, `Cursor`: the target of `Execute*` |
 
-`TableInfo.AllColumns` caches its string without a lock. Warm it while the
-process is single-threaded, next to the generated file:
-
-```go
-// schema/schema.go
-func init() {
-	for _, t := range TestdbTables {
-		_ = t.AllColumns()
-	}
-}
-```
+Generated `TableInfo` values are never written after initialization and are
+safe to share between goroutines; they need no `init` warm-up.
 
 ## Provider and transactions
 
@@ -65,8 +56,8 @@ defer tx.Close() // rolls back unless committed
 return tx.Commit()
 ```
 
-Transactions do not nest, and `BeginTx` currently ignores `TxOptions`.
-A service provider that wraps `xdb.Provider` returns its own type from
+Transactions do not nest. `BeginTx` passes its `TxOptions` (isolation level,
+read-only) to the driver. A service provider that wraps `xdb.Provider` returns its own type from
 `BeginTx`; call the transaction's methods (`tx.(*Provider).AddMember`), not
 the receiver's.
 
@@ -108,9 +99,9 @@ arguments, in one `xdb.QueryParamsBuilder`:
 | `AddArgs(v...)` | no | `v...` | arguments every variant has (the `WHERE id` of an UPDATE) |
 | `SetEnum(pos, v)` | yes (value) | no | a value that selects different SQL (a scope) |
 | `SetFlags(f...)` | yes | no | other variants; replaces, so add with `SetFlags(append(b.GetFlags(), f)...)` |
-| `SetNullColums(cols)` | yes (hash) | no | `IS NULL` filters; the slice is kept and sorted, pass a fresh one |
+| `SetNullColums(cols)` | yes (hash) | no | `IS NULL` filters; the builder keeps a sorted copy |
 | `SetPage(limit, offset)` | `_o` when offset > 0 | limit, offset | offset pagination; must be last |
-| `SetCursor(limit, pos, v)` | yes, `_c` | `v`, limit | keyset pagination; must be last |
+| `SetCursor(limit, pos, key...)` | yes (bit `pos`), `_c` | `key...`, limit | keyset pagination, see [below](#cursor-keyset-pagination); without key values it is `SetPage(limit, 0)`; must be last |
 
 The arguments must follow the **rendered** placeholder order, not the call
 order of the builder: SET values, then WHERE values in `Where` call order
@@ -166,6 +157,7 @@ the last argument.
 | Call | Returns |
 | --- | --- |
 | `xdb.QueryRow[model.User](ctx, db, sql, args...)` | `*model.User`; `sql.ErrNoRows` when no row |
+| `xdb.QueryRows[model.User](ctx, db, sql, args...)` | `iter.Seq2[*model.User, error]`: rows one at a time, for large or streamed results |
 | `xdb.ExecuteQuery(ctx, db, &rs, sql, qp)` | all rows, no next page |
 | `xdb.ExecuteQueryWithPagination(ctx, db, &rs, sql, qp)` | page, `HasNextPage`, `NextOffset` |
 | `xdb.ExecuteQueryWithCursor(ctx, db, encode, &rs, sql, qp)` | page, `HasNextPage`, `Cursor = encode(lastRow)` |
@@ -176,6 +168,30 @@ the last argument.
 argument, or plain arguments (for the paging helpers the last ones are the
 limit and offset, or the limit); `QueryRow` and `ExecContext` take
 `qp.Args()...`.
+
+The paging helpers bind `limit+1` in place of the limit argument and drop
+the extra row: `HasNextPage` is true only when another row exists, so a
+listing that ends on a full page reports no next page, and `NextOffset` or
+`Cursor` stay empty. The arguments of the caller and of the `QueryParams`
+keep the limit. Because the extra row is the last one of the result, the
+page's LIMIT must apply to the final, ordered result; do not page inside a
+subquery or CTE that the outer query reorders. A zero limit (no `SetPage`)
+reports no next page.
+
+These are package functions that take an `xdb.DB`, not methods: Go 1.27
+allows type parameters on methods of concrete types only, never on
+interface methods, and `xdb.DB`, `xdb.Provider` and the services' wrappers
+are interfaces. `QueryRows` stops at the first error and closes the rows
+when the loop ends:
+
+```go
+for u, err := range xdb.QueryRows[model.User](ctx, p, q) {
+	if err != nil {
+		return err
+	}
+	// ...
+}
+```
 
 A missing row becomes a typed not-found error:
 
@@ -218,16 +234,15 @@ Use `OnConflict`, not `Clause`: `OnConflict` renders before RETURNING,
 `Clause` after the last clause added. `SetExpr` writes a literal value
 (`Now()`, a constant) without an argument.
 
-### List with optional filters and offset or cursor pages
+### List with optional filters and offset pages
 
 ```go
-// ListMembersRequest lists memberships, by offset or by an ID cursor.
+// ListMembersRequest lists memberships, newest first.
 type ListMembersRequest struct {
-	OrgID    uint64
-	Role     string
-	Limit    uint32
-	Offset   uint32
-	BeforeID uint64 // cursor: the last ID of the previous page
+	OrgID  uint64
+	Role   string
+	Limit  uint32
+	Offset uint32
 }
 
 // QueryParams records the filters in WHERE order, then the page.
@@ -239,57 +254,163 @@ func (r *ListMembersRequest) QueryParams() xdb.QueryParams {
 	if r.Role != "" {
 		b.Set(schema.Member.Role.Position, r.Role)
 	}
-	if r.BeforeID != 0 {
-		b.SetCursor(r.Limit, schema.Member.ID.Position, r.BeforeID)
-	} else {
-		b.SetPage(r.Limit, r.Offset)
-	}
+	b.SetPage(r.Limit, r.Offset)
 	return b
 }
 
-// ListMembers returns the SQL of ListMembersRequest, newest first.
+// ListMembers returns the SQL of ListMembersRequest.
 func ListMembers(args ...any) (string, string) {
 	p := xdb.GetQueryParams(args...)
 	return xsql.Postgres.GetOrCreateQuery(p.Name(), func(name string) xsql.Builder {
-		q := schema.MemberTableInfo.Select().OrderBy(schema.Member.ID.Name + " DESC")
+		q := schema.MemberTableInfo.Select().
+			OrderBy(schema.Member.ID.Name + " DESC").
+			Limit(nil).
+			Offset(nil)
 		if p.IsSet(schema.Member.OrgID.Position) {
 			q.Where(schema.Member.OrgID.Name+" = ?", nil)
 		}
 		if p.IsSet(schema.Member.Role.Position) {
 			q.Where(schema.Member.Role.Name+" = ?", nil)
 		}
+		return q
+	})
+}
+// ListMembers_x4: ... WHERE org_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3   [org, limit, offset]
+
+qp := req.QueryParams()
+q, _ := query.ListMembers(qp)
+var page model.MemberResult
+err := xdb.ExecuteQueryWithPagination(ctx, p, &page, q, qp)
+// next request: Offset = page.NextOffset while page.HasNextPage
+```
+
+The `Where` calls in the SQL function must follow the `Set` calls of the
+request, because both orders are the argument order. Page by offset only
+over a small or stable set; otherwise page by cursor.
+
+### Cursor (keyset) pagination
+
+An offset page reads and discards every row before it, and shifts when rows
+are inserted or deleted meanwhile. A keyset page starts after the sort key
+of the last row of the previous page: every page costs one index range
+scan, and concurrent writes neither repeat nor skip rows.
+
+Rules:
+
+1. **The sort key is unique and NOT NULL**: end the ORDER BY with the
+   primary key as the tie-breaker (`created_at DESC, id DESC`). A nullable
+   column needs the same `COALESCE` in the ORDER BY and the predicate.
+2. **The predicate compares the whole key**: with every column in one
+   direction, a row comparison: `(created_at, id) < (?, ?)` for DESC, `>`
+   for ASC. With mixed directions expand it, binding the shared values
+   again: `ORDER BY priority ASC, created_at DESC, id DESC` is
+   `(priority > ? OR (priority = ? AND (created_at, id) < (?, ?)))` with
+   `SetCursor(limit, pos, prio, prio, at, id)`.
+3. **An index matches the ORDER BY** after the equality filters:
+   `CREATE INDEX ... ON event (org_id, created_at DESC, id DESC)`.
+4. **The cursor holds the whole key at full precision**:
+   `xdb.NewCursor(last.CreatedAt, last.ID)`. PostgreSQL stores
+   microseconds; a cursor built from `CreatedAt.String()` (milliseconds)
+   skips the rows in between.
+5. **The cursor is opaque and holds no filters**: the API client sends the
+   same filters with it. Its key is not signed; it only moves the start of
+   the listing, inside the filters the server applies. A cursor that does
+   not scan into the key is an invalid argument.
+
+| Step | Code |
+| --- | --- |
+| API request → request | `req.SetCursor(in.Cursor)`: `xdb.ParseCursor`, then `Scan` into the typed key fields |
+| request → QueryParams | filters, then `b.SetCursor(r.Limit, pos, r.AfterCreatedAt, r.AfterID)`; the first page has no key |
+| QueryParams → SQL | with a cursor `Where("(created_at, id) < (?, ?)", nil, nil).Limit(nil)`, else `Limit(nil).Offset(nil)` |
+| run | `xdb.ExecuteQueryWithCursor(ctx, db, query.EventCursor, &rs, q, qp)` |
+| result → API response | `NextCursor: rs.Cursor`, empty on the last page |
+
+```go
+// ListEventsRequest lists events newest first: ORDER BY created_at DESC, id DESC.
+type ListEventsRequest struct {
+	OrgID uint64
+	Limit uint32
+	// AfterCreatedAt and AfterID are the sort key of the last row of the
+	// previous page, zero for the first page
+	AfterCreatedAt xdb.Time
+	AfterID        xdb.ID
+}
+
+// SetCursor decodes the cursor of the previous page; an empty one starts at
+// the first page.
+func (r *ListEventsRequest) SetCursor(cursor string) error {
+	c, err := xdb.ParseCursor(cursor)
+	if err != nil || c.IsZero() {
+		return err
+	}
+	return c.Scan(&r.AfterCreatedAt, &r.AfterID)
+}
+
+// EventCursor returns the cursor of the page after the row.
+func EventCursor(last *model.Event) string {
+	// a Time and an ID always encode; NewCursor fails only for a key type
+	// whose MarshalText fails
+	c, _ := xdb.NewCursor(last.CreatedAt, last.ID)
+	return c.String()
+}
+
+// QueryParams records the filters, then the cursor key and the limit.
+func (r *ListEventsRequest) QueryParams() xdb.QueryParams {
+	b := xdb.NewQueryParams("ListEvents")
+	if r.OrgID != 0 {
+		b.Set(schema.Event.OrgID.Position, r.OrgID)
+	}
+	if r.AfterID != 0 {
+		b.SetCursor(r.Limit, schema.Event.CreatedAt.Position, r.AfterCreatedAt, r.AfterID)
+	} else {
+		b.SetCursor(r.Limit, schema.Event.CreatedAt.Position) // first page: SetPage(limit, 0)
+	}
+	return b
+}
+
+// ListEvents returns the SQL of ListEventsRequest.
+func ListEvents(args ...any) (string, string) {
+	p := xdb.GetQueryParams(args...)
+	return xsql.Postgres.GetOrCreateQuery(p.Name(), func(name string) xsql.Builder {
+		q := schema.EventTableInfo.Select().
+			OrderBy(schema.Event.CreatedAt.Name + " DESC, " + schema.Event.ID.Name + " DESC")
+		if p.IsSet(schema.Event.OrgID.Position) {
+			q.Where(schema.Event.OrgID.Name+" = ?", nil)
+		}
 		if _, cursor := p.Cursor(); cursor != nil {
-			q.Where(schema.Member.ID.Name+" < ?", nil).Limit(nil)
+			q.Where("(created_at, id) < (?, ?)", nil, nil).Limit(nil)
 		} else {
 			q.Limit(nil).Offset(nil)
 		}
 		return q
 	})
 }
-// ListMembers_x4:   ... WHERE org_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3   [org, limit, offset]
-// ListMembers_x6_c: ... WHERE org_id = $1 AND id < $2 ORDER BY id DESC LIMIT $3 [org, lastID, limit]
+// first page: ... WHERE org_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3     [org, limit, 0]
+// next pages: ... WHERE org_id = $1 AND (created_at, id) < ($2, $3) ORDER BY ... LIMIT $4  [org, at, id, limit]
 ```
 
 ```go
+// provider
 qp := req.QueryParams()
-q, _ := query.ListMembers(qp)
+q, _ := query.ListEvents(qp)
+var rs model.EventResult
+err := xdb.ExecuteQueryWithCursor(ctx, p, query.EventCursor, &rs, q, qp)
 
-var page model.MemberResult
-err := xdb.ExecuteQueryWithPagination(ctx, p, &page, q, qp)
-// next request: Offset = page.NextOffset while page.HasNextPage
-
-encode := func(last *model.Member) string { return last.ID.String() }
-err = xdb.ExecuteQueryWithCursor(ctx, p, encode, &page, q, qp)
-// next request: the cursor decoded from page.Cursor
+// service
+req := &query.ListEventsRequest{OrgID: orgID, Limit: in.Limit}
+if err := req.SetCursor(in.Cursor); err != nil {
+	return nil, invalidArgument("invalid cursor") // the service's own error mapping
+}
+// ... list, then: NextCursor: rs.Cursor
 ```
 
-The `Where` calls in the SQL function must follow the `Set` calls of the
-request, because both orders are the argument order. Page by offset only
-over a stable set: when the caller deletes or updates the rows it lists,
-page by the last ID instead. A full page reports `HasNextPage`, so the page
-after an exact multiple of the limit is empty. `xdb.EncodeCursor` and
-`DecodeCursor` turn a `values.MapAny` into an opaque string; write an ID
-into a cursor as a string, since JSON numbers do not hold 64 bits.
+`pos` marks the cursor variant in the query name: use a position no filter
+of the request sets. An unfiltered query also passes its limit through
+`QueryParams`: the helpers do not take a lone positional argument for the
+limit, since it can be a filter value. The first page and an offset page share their SQL.
+`query_test.go` (sqlite) and `db_test.go` (`TestPGKeyset`, PostgreSQL) run
+this flow over rows 1µs apart. `xdb.EncodeCursor` and `DecodeCursor`, which
+take a `values.MapAny`, are deprecated in favor of `NewCursor`/`ParseCursor`.
 
 ### Filters without arguments: IS NULL
 
@@ -364,6 +485,10 @@ for a join that cannot fill them.
   `ExecuteQuery` is cut at the limit and reports no next page.
 - **Column positions above 63** do not fit the `QueryParams` bit mask and
   panic in `Set`; use small constants for such variants.
-- **QueryParams are per request**: `Name()` is computed once, after which
-  added parameters do not change it; do not share a builder between
-  goroutines or reuse it after `Name()`.
+- **QueryParams are per request**: build one per call; a builder is not
+  safe to share between goroutines.
+- **Cursor precision**: encode the key with `xdb.NewCursor`, never with
+  `Time.String()`, which drops the microseconds PostgreSQL stores.
+- **Paged LIMIT in a subquery**: the paging helpers fetch one extra row and
+  drop the last row of the result; a LIMIT inside a subquery that the outer
+  query reorders would drop another row instead, which no page shows.

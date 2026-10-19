@@ -26,9 +26,9 @@ const (
 ```
 
 <a name="Listener"></a>
-## type [Listener](<https://github.com/effective-security/xdb/blob/main/pkg/notifier/listener.go#L37-L40>)
+## type [Listener](<https://github.com/effective-security/xdb/blob/main/pkg/notifier/listener.go#L36-L39>)
 
-Listener interface connects to the database and allows callers to listen to a particular topic by issuing a LISTEN command. WaitForNotification blocks until receiving a notification or until the supplied context expires. The default implementation is tightly coupled to pgx \(following River's implementation\), but callers may implement their own listeners for any backend they'd like.
+Listener connects to PostgreSQL and listens to a channel with LISTEN. Listen calls the callback for every notification, with its JSON payload parsed, until the context is done. The default implementation, from NewListener, uses lib/pq; callers may implement Listener for another backend.
 
 ```go
 type Listener interface {
@@ -38,7 +38,7 @@ type Listener interface {
 ```
 
 <a name="NewListener"></a>
-### func [NewListener](<https://github.com/effective-security/xdb/blob/main/pkg/notifier/listener.go#L67>)
+### func [NewListener](<https://github.com/effective-security/xdb/blob/main/pkg/notifier/listener.go#L66>)
 
 ```go
 func NewListener(p xdb.Provider, minReconnectInterval time.Duration, maxReconnectInterval time.Duration) Listener

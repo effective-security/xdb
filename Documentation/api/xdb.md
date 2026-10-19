@@ -11,7 +11,8 @@ Package xdb provides the building blocks of SQL services on database/sql.
 - Provider: a connection opened by NewProvider, which can run the migrations first, with transactions \(BeginTx\) and snowflake IDs \(NextID\).
 - Value types whose zero value is SQL NULL: ID, ID32, Int64, Int32, Float, Bool, NULLString, UUID, Time, Metadata, KVSet and Strings.
 - QueryParams: the variant name and positional arguments of a query whose SQL is built once with xsql and cached under that name.
-- QueryRow, ExecuteQuery, ExecuteQueryWithPagination and ExecuteQueryWithCursor: run SQL into the models that xdbcli generates.
+- QueryRow, QueryRows, ExecuteQuery, ExecuteQueryWithPagination and ExecuteQueryWithCursor: run SQL into the models that xdbcli generates.
+- Cursor: the opaque token of keyset pagination, built with NewCursor from the sort key of the last row and read back with ParseCursor.
 
 In a service, with the generated model and schema packages and a query package of SQL functions:
 
@@ -53,6 +54,7 @@ Documentation/design/QUERYBUILDER.md describes the query patterns and Documentat
 - [func PageParam\(p any\) uint32](<#PageParam>)
 - [func ParseUint\(id string\) \(uint64, error\)](<#ParseUint>)
 - [func QueryRow\[T any, TPointer RowPointer\[T\]\]\(ctx context.Context, sql DB, query string, args ...any\) \(TPointer, error\)](<#QueryRow>)
+- [func QueryRows\[T any, TPointer RowPointer\[T\]\]\(ctx context.Context, sql DB, query string, args ...any\) iter.Seq2\[TPointer, error\]](<#QueryRows>)
 - [func QuotedIDString\(id uint64\) string](<#QuotedIDString>)
 - [func QuotedString\(val \*string\) string](<#QuotedString>)
 - [func String\(val \*string\) string](<#String>)
@@ -65,6 +67,13 @@ Documentation/design/QUERYBUILDER.md describes the query patterns and Documentat
   - [func \(v Bool\) String\(\) string](<#Bool.String>)
   - [func \(v \*Bool\) UnmarshalJSON\(data \[\]byte\) error](<#Bool.UnmarshalJSON>)
   - [func \(v Bool\) Value\(\) \(driver.Value, error\)](<#Bool.Value>)
+- [type Cursor](<#Cursor>)
+  - [func NewCursor\(key ...any\) \(Cursor, error\)](<#NewCursor>)
+  - [func ParseCursor\(s string\) \(Cursor, error\)](<#ParseCursor>)
+  - [func \(c Cursor\) IsZero\(\) bool](<#Cursor.IsZero>)
+  - [func \(c Cursor\) Len\(\) int](<#Cursor.Len>)
+  - [func \(c Cursor\) Scan\(dest ...any\) error](<#Cursor.Scan>)
+  - [func \(c Cursor\) String\(\) string](<#Cursor.String>)
 - [type DB](<#DB>)
 - [type Enum](<#Enum>)
 - [type ErrorNotFound](<#ErrorNotFound>)
@@ -173,7 +182,7 @@ Documentation/design/QUERYBUILDER.md describes the query patterns and Documentat
   - [func \(b \*QueryParamsBuilder\) Page\(\) \(limit uint32, offset uint32\)](<#QueryParamsBuilder.Page>)
   - [func \(b \*QueryParamsBuilder\) Reset\(\)](<#QueryParamsBuilder.Reset>)
   - [func \(b \*QueryParamsBuilder\) Set\(pos uint32, v any\) \*QueryParamsBuilder](<#QueryParamsBuilder.Set>)
-  - [func \(b \*QueryParamsBuilder\) SetCursor\(limit uint32, pos uint32, cursor any\) \*QueryParamsBuilder](<#QueryParamsBuilder.SetCursor>)
+  - [func \(b \*QueryParamsBuilder\) SetCursor\(limit uint32, pos uint32, key ...any\) \*QueryParamsBuilder](<#QueryParamsBuilder.SetCursor>)
   - [func \(b \*QueryParamsBuilder\) SetEnum\(pos uint32, v int32\) \*QueryParamsBuilder](<#QueryParamsBuilder.SetEnum>)
   - [func \(b \*QueryParamsBuilder\) SetFlags\(v ...int32\) \*QueryParamsBuilder](<#QueryParamsBuilder.SetFlags>)
   - [func \(b \*QueryParamsBuilder\) SetNullColums\(nullColumns \[\]string\) \*QueryParamsBuilder](<#QueryParamsBuilder.SetNullColums>)
@@ -186,7 +195,7 @@ Documentation/design/QUERYBUILDER.md describes the query patterns and Documentat
 - [type Rows](<#Rows>)
 - [type SQLProvider](<#SQLProvider>)
   - [func New\(name string, db \*sql.DB, idGen flake.IDGenerator\) \(\*SQLProvider, error\)](<#New>)
-  - [func \(p \*SQLProvider\) BeginTx\(ctx context.Context, \_ \*sql.TxOptions\) \(Provider, error\)](<#SQLProvider.BeginTx>)
+  - [func \(p \*SQLProvider\) BeginTx\(ctx context.Context, opts \*sql.TxOptions\) \(Provider, error\)](<#SQLProvider.BeginTx>)
   - [func \(p \*SQLProvider\) Close\(\) \(err error\)](<#SQLProvider.Close>)
   - [func \(p \*SQLProvider\) Commit\(\) error](<#SQLProvider.Commit>)
   - [func \(p \*SQLProvider\) ConnectionString\(\) string](<#SQLProvider.ConnectionString>)
@@ -279,7 +288,7 @@ func CheckNotFoundError(err error, table string, id any) error
 
 
 <a name="DecodeCursor"></a>
-## func [DecodeCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L157>)
+## func [DecodeCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L295>)
 
 ```go
 func DecodeCursor(cursor string) (values.MapAny, error)
@@ -287,8 +296,10 @@ func DecodeCursor(cursor string) (values.MapAny, error)
 
 DecodeCursor decodes the cursor into a map
 
+Deprecated: use ParseCursor and Cursor.Scan.
+
 <a name="EncodeCursor"></a>
-## func [EncodeCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L152>)
+## func [EncodeCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L288>)
 
 ```go
 func EncodeCursor(val values.MapAny) string
@@ -296,8 +307,10 @@ func EncodeCursor(val values.MapAny) string
 
 EncodeCursor encodes the offset or value into a cursor
 
+Deprecated: use NewCursor with the sort key of the last row, which keeps the key values' types and precision.
+
 <a name="ExecuteListQuery"></a>
-## func [ExecuteListQuery](<https://github.com/effective-security/xdb/blob/main/query.go#L33>)
+## func [ExecuteListQuery](<https://github.com/effective-security/xdb/blob/main/query.go#L76>)
 
 ```go
 func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) ([]TPointer, error)
@@ -306,7 +319,7 @@ func ExecuteListQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB
 ExecuteListQuery runs a query and returns a list of models
 
 <a name="ExecuteQuery"></a>
-## func [ExecuteQuery](<https://github.com/effective-security/xdb/blob/main/query.go#L135>)
+## func [ExecuteQuery](<https://github.com/effective-security/xdb/blob/main/query.go#L219>)
 
 ```go
 func ExecuteQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, res Result[T, TPointer], query string, args ...any) error
@@ -315,22 +328,22 @@ func ExecuteQuery[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, re
 ExecuteQuery runs a query and populates the result with a list of models. args can be a QueryParams or a list of arguments
 
 <a name="ExecuteQueryWithCursor"></a>
-## func [ExecuteQueryWithCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L104>)
+## func [ExecuteQueryWithCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L141>)
 
 ```go
 func ExecuteQueryWithCursor[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, cursor SetCursor[T, TPointer], res ResultWithCursor[T, TPointer], query string, args ...any) error
 ```
 
-ExecuteQueryWithCursor runs a query and populates the result with a list of models and the next cursor, if there are more rows to fetch. args can be a QueryParams or a list of arguments followed by the limit and offset.
+ExecuteQueryWithCursor runs a query and populates the result with a list of models and the next cursor, if there are more rows to fetch. args can be a QueryParams or a list of arguments followed by the limit, with at least one argument before it; a query whose only argument is the limit passes QueryParams, such as NewQueryParams\(name\).SetCursor\(limit, pos\). The query runs with limit\+1 bound in place of the limit, and the extra row, which is not returned, tells whether a next page exists; the LIMIT must therefore apply to the final, ordered result. A zero limit reports no next page.
 
 <a name="ExecuteQueryWithPagination"></a>
-## func [ExecuteQueryWithPagination](<https://github.com/effective-security/xdb/blob/main/query.go#L70>)
+## func [ExecuteQueryWithPagination](<https://github.com/effective-security/xdb/blob/main/query.go#L119>)
 
 ```go
 func ExecuteQueryWithPagination[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, res Result[T, TPointer], query string, args ...any) error
 ```
 
-ExecuteQueryWithPagination runs a query and populates the result with a list of models and the next offset, if there are more rows to fetch. args can be a QueryParams or a list of arguments followed by the limit and offset.
+ExecuteQueryWithPagination runs a query and populates the result with a list of models and the next offset, if there are more rows to fetch. args can be a QueryParams or a list of arguments followed by the limit and offset. The query runs with limit\+1 bound in place of the limit, and the extra row, which is not returned, tells whether a next page exists; the LIMIT must therefore apply to the final, ordered result. A zero limit reports no next page.
 
 <a name="IDString"></a>
 ## func [IDString](<https://github.com/effective-security/xdb/blob/main/types.go#L130>)
@@ -405,7 +418,7 @@ func Open(dataSource, database string) (*sql.DB, string, string, error)
 Open returns an SQL connection instance, provider name or error
 
 <a name="PageParam"></a>
-## func [PageParam](<https://github.com/effective-security/xdb/blob/main/params.go#L253>)
+## func [PageParam](<https://github.com/effective-security/xdb/blob/main/params.go#L281>)
 
 ```go
 func PageParam(p any) uint32
@@ -423,13 +436,33 @@ func ParseUint(id string) (uint64, error)
 ParseUint returns id from the string
 
 <a name="QueryRow"></a>
-## func [QueryRow](<https://github.com/effective-security/xdb/blob/main/query.go#L22>)
+## func [QueryRow](<https://github.com/effective-security/xdb/blob/main/query.go#L26>)
 
 ```go
 func QueryRow[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) (TPointer, error)
 ```
 
 QueryRow runs a query and returns a single model
+
+<a name="QueryRows"></a>
+## func [QueryRows](<https://github.com/effective-security/xdb/blob/main/query.go#L48>)
+
+```go
+func QueryRows[T any, TPointer RowPointer[T]](ctx context.Context, sql DB, query string, args ...any) iter.Seq2[TPointer, error]
+```
+
+QueryRows runs a query and yields its rows one at a time, each scanned into a new model, without collecting them in a slice:
+
+```
+for m, err := range xdb.QueryRows[model.Event](ctx, db, query, args...) {
+	if err != nil {
+		return err
+	}
+	...
+}
+```
+
+The rows are closed when the loop ends, also on break. A query, scan or iteration error is yielded once, with a nil model, and ends the sequence.
 
 <a name="QuotedIDString"></a>
 ## func [QuotedIDString](<https://github.com/effective-security/xdb/blob/main/types.go#L135>)
@@ -538,6 +571,84 @@ func (v Bool) Value() (driver.Value, error)
 ```
 
 Value implements the driver Valuer interface.
+
+<a name="Cursor"></a>
+## type [Cursor](<https://github.com/effective-security/xdb/blob/main/cursor.go#L31-L33>)
+
+Cursor is the position of a keyset \(seek\) page: the sort key of the last row of the previous page, in ORDER BY order. Its String form is an opaque, URL\-safe token for API clients; ParseCursor reads it back and Scan returns the typed key values, which the next page binds in its WHERE clause:
+
+```
+// ORDER BY created_at DESC, id DESC
+c, err := xdb.NewCursor(last.CreatedAt, last.ID)
+next := c.String()
+
+c, err = xdb.ParseCursor(next)
+var at xdb.Time
+var id xdb.ID
+err = c.Scan(&at, &id) // WHERE (created_at, id) < (?, ?)
+```
+
+The key keeps full precision: integers as decimal digits and times as RFC 3339 with nanoseconds, so rows that differ only in microseconds are not skipped. The zero Cursor is the first page.
+
+```go
+type Cursor struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewCursor"></a>
+### func [NewCursor](<https://github.com/effective-security/xdb/blob/main/cursor.go#L44>)
+
+```go
+func NewCursor(key ...any) (Cursor, error)
+```
+
+NewCursor returns the cursor that continues after a row with the given sort key values, in ORDER BY order. A key value is a Time, time.Time, an encoding.TextMarshaler \(by value or pointer receiver\), a type with an integer, unsigned, float, bool or string kind \(ID, enums, NULLString, ...\), or a pointer to one of them. A key type with custom text methods implements both MarshalText and UnmarshalText. NewCursor fails when MarshalText fails or a value has another type, so no token is issued that Scan cannot read back; keys of Time, integer and string types never fail.
+
+<a name="ParseCursor"></a>
+### func [ParseCursor](<https://github.com/effective-security/xdb/blob/main/cursor.go#L60>)
+
+```go
+func ParseCursor(s string) (Cursor, error)
+```
+
+ParseCursor decodes the String form of a cursor. An empty string is the zero cursor, which starts at the first page.
+
+<a name="Cursor.IsZero"></a>
+### func \(Cursor\) [IsZero](<https://github.com/effective-security/xdb/blob/main/cursor.go#L87>)
+
+```go
+func (c Cursor) IsZero() bool
+```
+
+IsZero returns true for the zero cursor, which starts at the first page.
+
+<a name="Cursor.Len"></a>
+### func \(Cursor\) [Len](<https://github.com/effective-security/xdb/blob/main/cursor.go#L92>)
+
+```go
+func (c Cursor) Len() int
+```
+
+Len returns the number of values in the sort key.
+
+<a name="Cursor.Scan"></a>
+### func \(Cursor\) [Scan](<https://github.com/effective-security/xdb/blob/main/cursor.go#L102>)
+
+```go
+func (c Cursor) Scan(dest ...any) error
+```
+
+Scan copies the sort key into dest, which must match it in number and order. A destination is a non\-nil pointer to Time, time.Time, an encoding.TextUnmarshaler, or a type with an integer, unsigned, float, bool or string kind; text methods take precedence over the kind. A cursor that does not decode into dest returns an error, which a service reports as an invalid argument.
+
+<a name="Cursor.String"></a>
+### func \(Cursor\) [String](<https://github.com/effective-security/xdb/blob/main/cursor.go#L77>)
+
+```go
+func (c Cursor) String() string
+```
+
+String returns the opaque, URL\-safe form of the cursor, or an empty string for the zero cursor.
 
 <a name="DB"></a>
 ## type [DB](<https://github.com/effective-security/xdb/blob/main/db.go#L74-L88>)
@@ -677,7 +788,7 @@ func (v Float) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="HasQueryParams"></a>
-## type [HasQueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L29-L31>)
+## type [HasQueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L30-L32>)
 
 HasQueryParams is an interface for objects with query parameters.
 
@@ -1322,7 +1433,7 @@ func (n Metadata) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="MigrationConfig"></a>
-## type [MigrationConfig](<https://github.com/effective-security/xdb/blob/main/db.go#L166-L170>)
+## type [MigrationConfig](<https://github.com/effective-security/xdb/blob/main/db.go#L179-L183>)
 
 MigrationConfig defines migration configuration
 
@@ -1371,13 +1482,14 @@ func (ns NULLString) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="PageableByCursor"></a>
-## type [PageableByCursor](<https://github.com/effective-security/xdb/blob/main/params.go#L23-L26>)
+## type [PageableByCursor](<https://github.com/effective-security/xdb/blob/main/params.go#L23-L27>)
 
-PageableByCursor is an interface for pagination. The cursor and limit are the last two arguments. The cursor argument is before limit because it's used in WHERE clause.
+PageableByCursor is an interface for pagination. The cursor values and the limit are the last arguments. The cursor values are before limit because they are used in WHERE clause.
 
 ```go
 type PageableByCursor interface {
-    // Cursor returns the limit and cursor for pagination.
+    // Cursor returns the limit and the cursor for pagination: nil without a
+    // cursor, the value of a single-column key, or []any for a multi-column key.
     Cursor() (limit uint32, cursor any)
 }
 ```
@@ -1422,16 +1534,16 @@ type Provider interface {
 ```
 
 <a name="NewProvider"></a>
-### func [NewProvider](<https://github.com/effective-security/xdb/blob/main/db.go#L173>)
+### func [NewProvider](<https://github.com/effective-security/xdb/blob/main/db.go#L189>)
 
 ```go
 func NewProvider(dataSource, dbName string, idGen flake.IDGenerator, migrateCfg *MigrationConfig) (Provider, error)
 ```
 
-NewProvider creates a Provider instance
+NewProvider creates a Provider instance. It runs the migrations of migrateCfg first, when migrateCfg.Source is set. A nil idGen uses flake.DefaultIDGenerator; any type with NextID\(\) uint64, such as a github.com/effective\-security/x/flake generator, also works.
 
 <a name="QueryParams"></a>
-## type [QueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L47-L61>)
+## type [QueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L48-L62>)
 
 QueryParams is an interface for query parameters.
 
@@ -1454,7 +1566,7 @@ type QueryParams interface {
 ```
 
 <a name="GetQueryParams"></a>
-### func [GetQueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L34>)
+### func [GetQueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L35>)
 
 ```go
 func GetQueryParams(args ...any) QueryParams
@@ -1463,7 +1575,7 @@ func GetQueryParams(args ...any) QueryParams
 GetQueryParams returns query parameters from an object.
 
 <a name="QueryParamsBuilder"></a>
-## type [QueryParamsBuilder](<https://github.com/effective-security/xdb/blob/main/params.go#L69-L85>)
+## type [QueryParamsBuilder](<https://github.com/effective-security/xdb/blob/main/params.go#L70-L86>)
 
 QueryParams is a placeholder for query parameters.
 
@@ -1474,7 +1586,7 @@ type QueryParamsBuilder struct {
 ```
 
 <a name="NewQueryParams"></a>
-### func [NewQueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L88>)
+### func [NewQueryParams](<https://github.com/effective-security/xdb/blob/main/params.go#L89>)
 
 ```go
 func NewQueryParams(queryName string) *QueryParamsBuilder
@@ -1483,7 +1595,7 @@ func NewQueryParams(queryName string) *QueryParamsBuilder
 NewQueryParams creates a new query parameters builder.
 
 <a name="QueryParamsBuilder.AddArgs"></a>
-### func \(\*QueryParamsBuilder\) [AddArgs](<https://github.com/effective-security/xdb/blob/main/params.go#L208>)
+### func \(\*QueryParamsBuilder\) [AddArgs](<https://github.com/effective-security/xdb/blob/main/params.go#L237>)
 
 ```go
 func (b *QueryParamsBuilder) AddArgs(v ...any) *QueryParamsBuilder
@@ -1492,7 +1604,7 @@ func (b *QueryParamsBuilder) AddArgs(v ...any) *QueryParamsBuilder
 AddArgs adds an additional query arguments, such as Limit or Offset
 
 <a name="QueryParamsBuilder.Args"></a>
-### func \(\*QueryParamsBuilder\) [Args](<https://github.com/effective-security/xdb/blob/main/params.go#L158>)
+### func \(\*QueryParamsBuilder\) [Args](<https://github.com/effective-security/xdb/blob/main/params.go#L165>)
 
 ```go
 func (b *QueryParamsBuilder) Args() []any
@@ -1501,7 +1613,7 @@ func (b *QueryParamsBuilder) Args() []any
 Args returns a list of query arguments.
 
 <a name="QueryParamsBuilder.Cursor"></a>
-### func \(\*QueryParamsBuilder\) [Cursor](<https://github.com/effective-security/xdb/blob/main/params.go#L203>)
+### func \(\*QueryParamsBuilder\) [Cursor](<https://github.com/effective-security/xdb/blob/main/params.go#L232>)
 
 ```go
 func (b *QueryParamsBuilder) Cursor() (limit uint32, cursor any)
@@ -1510,7 +1622,7 @@ func (b *QueryParamsBuilder) Cursor() (limit uint32, cursor any)
 Cursor returns the limit and cursor for pagination, if supported
 
 <a name="QueryParamsBuilder.GetEnum"></a>
-### func \(\*QueryParamsBuilder\) [GetEnum](<https://github.com/effective-security/xdb/blob/main/params.go#L231>)
+### func \(\*QueryParamsBuilder\) [GetEnum](<https://github.com/effective-security/xdb/blob/main/params.go#L257>)
 
 ```go
 func (b *QueryParamsBuilder) GetEnum(pos uint32) (int32, bool)
@@ -1519,7 +1631,7 @@ func (b *QueryParamsBuilder) GetEnum(pos uint32) (int32, bool)
 GetEnum checks if an enum query parameter is set.
 
 <a name="QueryParamsBuilder.GetFlags"></a>
-### func \(\*QueryParamsBuilder\) [GetFlags](<https://github.com/effective-security/xdb/blob/main/params.go#L248>)
+### func \(\*QueryParamsBuilder\) [GetFlags](<https://github.com/effective-security/xdb/blob/main/params.go#L276>)
 
 ```go
 func (b *QueryParamsBuilder) GetFlags() []int32
@@ -1528,16 +1640,16 @@ func (b *QueryParamsBuilder) GetFlags() []int32
 GetFlags returns additional flags for query parameter.
 
 <a name="QueryParamsBuilder.GetNullColumns"></a>
-### func \(\*QueryParamsBuilder\) [GetNullColumns](<https://github.com/effective-security/xdb/blob/main/params.go#L153>)
+### func \(\*QueryParamsBuilder\) [GetNullColumns](<https://github.com/effective-security/xdb/blob/main/params.go#L160>)
 
 ```go
 func (b *QueryParamsBuilder) GetNullColumns() []string
 ```
 
-GetNullColumns returns a list of columns that should be replaced with NULL.
+GetNullColumns returns the sorted list of columns that should be replaced with NULL.
 
 <a name="QueryParamsBuilder.IsSet"></a>
-### func \(\*QueryParamsBuilder\) [IsSet](<https://github.com/effective-security/xdb/blob/main/params.go#L215>)
+### func \(\*QueryParamsBuilder\) [IsSet](<https://github.com/effective-security/xdb/blob/main/params.go#L244>)
 
 ```go
 func (b *QueryParamsBuilder) IsSet(pos uint32) bool
@@ -1546,16 +1658,16 @@ func (b *QueryParamsBuilder) IsSet(pos uint32) bool
 IsSet checks if a positional query parameter is set.
 
 <a name="QueryParamsBuilder.Name"></a>
-### func \(\*QueryParamsBuilder\) [Name](<https://github.com/effective-security/xdb/blob/main/params.go#L106>)
+### func \(\*QueryParamsBuilder\) [Name](<https://github.com/effective-security/xdb/blob/main/params.go#L111>)
 
 ```go
 func (b *QueryParamsBuilder) Name() string
 ```
 
-Name returns a hash of the query parameters.
+Name returns a hash of the query parameters. It changes with every parameter that changes the SQL: positions, enums, flags, null columns and the pagination mode.
 
 <a name="QueryParamsBuilder.Page"></a>
-### func \(\*QueryParamsBuilder\) [Page](<https://github.com/effective-security/xdb/blob/main/params.go#L189>)
+### func \(\*QueryParamsBuilder\) [Page](<https://github.com/effective-security/xdb/blob/main/params.go#L203>)
 
 ```go
 func (b *QueryParamsBuilder) Page() (limit uint32, offset uint32)
@@ -1564,16 +1676,16 @@ func (b *QueryParamsBuilder) Page() (limit uint32, offset uint32)
 Page returns the limit and offset for pagination, if supported
 
 <a name="QueryParamsBuilder.Reset"></a>
-### func \(\*QueryParamsBuilder\) [Reset](<https://github.com/effective-security/xdb/blob/main/params.go#L94>)
+### func \(\*QueryParamsBuilder\) [Reset](<https://github.com/effective-security/xdb/blob/main/params.go#L96>)
 
 ```go
 func (b *QueryParamsBuilder) Reset()
 ```
 
-
+Reset clears the parameters, keeping the query name.
 
 <a name="QueryParamsBuilder.Set"></a>
-### func \(\*QueryParamsBuilder\) [Set](<https://github.com/effective-security/xdb/blob/main/params.go#L163>)
+### func \(\*QueryParamsBuilder\) [Set](<https://github.com/effective-security/xdb/blob/main/params.go#L170>)
 
 ```go
 func (b *QueryParamsBuilder) Set(pos uint32, v any) *QueryParamsBuilder
@@ -1582,16 +1694,16 @@ func (b *QueryParamsBuilder) Set(pos uint32, v any) *QueryParamsBuilder
 Set sets a positional query parameter, and adds it to the list of arguments.
 
 <a name="QueryParamsBuilder.SetCursor"></a>
-### func \(\*QueryParamsBuilder\) [SetCursor](<https://github.com/effective-security/xdb/blob/main/params.go#L194>)
+### func \(\*QueryParamsBuilder\) [SetCursor](<https://github.com/effective-security/xdb/blob/main/params.go#L214>)
 
 ```go
-func (b *QueryParamsBuilder) SetCursor(limit uint32, pos uint32, cursor any) *QueryParamsBuilder
+func (b *QueryParamsBuilder) SetCursor(limit uint32, pos uint32, key ...any) *QueryParamsBuilder
 ```
 
-SetCursor sets the limit for pagination, and adds it to the list of arguments.
+SetCursor sets keyset pagination as the last parameters: key is the sort key of the last row of the previous page, in ORDER BY order \(for example the values scanned from a Cursor\), recorded at position pos and added to the arguments, followed by the limit. The SQL then filters past the key, for example \`\(created\_at, id\) \< \(?, ?\)\`, and has a LIMIT without OFFSET. Without key values it starts a cursor listing at its first page and is SetPage\(limit, 0\).
 
 <a name="QueryParamsBuilder.SetEnum"></a>
-### func \(\*QueryParamsBuilder\) [SetEnum](<https://github.com/effective-security/xdb/blob/main/params.go#L220>)
+### func \(\*QueryParamsBuilder\) [SetEnum](<https://github.com/effective-security/xdb/blob/main/params.go#L249>)
 
 ```go
 func (b *QueryParamsBuilder) SetEnum(pos uint32, v int32) *QueryParamsBuilder
@@ -1600,25 +1712,25 @@ func (b *QueryParamsBuilder) SetEnum(pos uint32, v int32) *QueryParamsBuilder
 SetEnum sets an enum query parameter, without adding it to the list of arguments.
 
 <a name="QueryParamsBuilder.SetFlags"></a>
-### func \(\*QueryParamsBuilder\) [SetFlags](<https://github.com/effective-security/xdb/blob/main/params.go#L242>)
+### func \(\*QueryParamsBuilder\) [SetFlags](<https://github.com/effective-security/xdb/blob/main/params.go#L269>)
 
 ```go
 func (b *QueryParamsBuilder) SetFlags(v ...int32) *QueryParamsBuilder
 ```
 
-SetFlags sets additional flags for query parameter.
+SetFlags sets additional flags for query parameter, replacing the flags set before; add one with SetFlags\(append\(b.GetFlags\(\), flag\)...\).
 
 <a name="QueryParamsBuilder.SetNullColums"></a>
-### func \(\*QueryParamsBuilder\) [SetNullColums](<https://github.com/effective-security/xdb/blob/main/params.go#L147>)
+### func \(\*QueryParamsBuilder\) [SetNullColums](<https://github.com/effective-security/xdb/blob/main/params.go#L152>)
 
 ```go
 func (b *QueryParamsBuilder) SetNullColums(nullColumns []string) *QueryParamsBuilder
 ```
 
-SetNullColums sets a list of columns that should be replaced with NULL.
+SetNullColums sets a list of columns that should be replaced with NULL, or filtered with IS NULL. The builder keeps a sorted copy of the list.
 
 <a name="QueryParamsBuilder.SetPage"></a>
-### func \(\*QueryParamsBuilder\) [SetPage](<https://github.com/effective-security/xdb/blob/main/params.go#L180>)
+### func \(\*QueryParamsBuilder\) [SetPage](<https://github.com/effective-security/xdb/blob/main/params.go#L193>)
 
 ```go
 func (b *QueryParamsBuilder) SetPage(limit, offset uint32) *QueryParamsBuilder
@@ -1627,7 +1739,7 @@ func (b *QueryParamsBuilder) SetPage(limit, offset uint32) *QueryParamsBuilder
 SetPage sets the limit for pagination, and adds it to the list of arguments.
 
 <a name="Result"></a>
-## type [Result](<https://github.com/effective-security/xdb/blob/main/query.go#L56-L58>)
+## type [Result](<https://github.com/effective-security/xdb/blob/main/query.go#L94-L96>)
 
 Result describes the result of a list query
 
@@ -1638,7 +1750,7 @@ type Result[T any, TPointer RowPointer[T]] interface {
 ```
 
 <a name="ResultWithCursor"></a>
-## type [ResultWithCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L61-L63>)
+## type [ResultWithCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L99-L101>)
 
 ResultWithCursor describes the result of a list query with a cursor
 
@@ -1670,7 +1782,7 @@ type Row interface {
 ```
 
 <a name="RowPointer"></a>
-## type [RowPointer](<https://github.com/effective-security/xdb/blob/main/query.go#L16-L19>)
+## type [RowPointer](<https://github.com/effective-security/xdb/blob/main/query.go#L20-L23>)
 
 RowPointer defines a generic interface to scan a single row
 
@@ -1722,7 +1834,7 @@ type Rows interface {
 ```
 
 <a name="SQLProvider"></a>
-## type [SQLProvider](<https://github.com/effective-security/xdb/blob/main/prov.go#L16-L24>)
+## type [SQLProvider](<https://github.com/effective-security/xdb/blob/main/prov.go#L16-L26>)
 
 SQLProvider represents SQL client instance
 
@@ -1733,7 +1845,7 @@ type SQLProvider struct {
 ```
 
 <a name="New"></a>
-### func [New](<https://github.com/effective-security/xdb/blob/main/prov.go#L27>)
+### func [New](<https://github.com/effective-security/xdb/blob/main/prov.go#L29>)
 
 ```go
 func New(name string, db *sql.DB, idGen flake.IDGenerator) (*SQLProvider, error)
@@ -1742,10 +1854,10 @@ func New(name string, db *sql.DB, idGen flake.IDGenerator) (*SQLProvider, error)
 New creates a Provider instance
 
 <a name="SQLProvider.BeginTx"></a>
-### func \(\*SQLProvider\) [BeginTx](<https://github.com/effective-security/xdb/blob/main/prov.go#L85>)
+### func \(\*SQLProvider\) [BeginTx](<https://github.com/effective-security/xdb/blob/main/prov.go#L93>)
 
 ```go
-func (p *SQLProvider) BeginTx(ctx context.Context, _ *sql.TxOptions) (Provider, error)
+func (p *SQLProvider) BeginTx(ctx context.Context, opts *sql.TxOptions) (Provider, error)
 ```
 
 BeginTx starts a transaction.
@@ -1755,7 +1867,7 @@ The provided context is used until the transaction is committed or rolled back. 
 The provided TxOptions is optional and may be nil if defaults should be used. If a non\-default isolation level is used that the driver doesn't support, an error will be returned.
 
 <a name="SQLProvider.Close"></a>
-### func \(\*SQLProvider\) [Close](<https://github.com/effective-security/xdb/blob/main/prov.go#L105>)
+### func \(\*SQLProvider\) [Close](<https://github.com/effective-security/xdb/blob/main/prov.go#L113>)
 
 ```go
 func (p *SQLProvider) Close() (err error)
@@ -1764,7 +1876,7 @@ func (p *SQLProvider) Close() (err error)
 Close connection and release resources
 
 <a name="SQLProvider.Commit"></a>
-### func \(\*SQLProvider\) [Commit](<https://github.com/effective-security/xdb/blob/main/prov.go#L168>)
+### func \(\*SQLProvider\) [Commit](<https://github.com/effective-security/xdb/blob/main/prov.go#L178>)
 
 ```go
 func (p *SQLProvider) Commit() error
@@ -1773,7 +1885,7 @@ func (p *SQLProvider) Commit() error
 
 
 <a name="SQLProvider.ConnectionString"></a>
-### func \(\*SQLProvider\) [ConnectionString](<https://github.com/effective-security/xdb/blob/main/prov.go#L48>)
+### func \(\*SQLProvider\) [ConnectionString](<https://github.com/effective-security/xdb/blob/main/prov.go#L50>)
 
 ```go
 func (p *SQLProvider) ConnectionString() string
@@ -1782,7 +1894,7 @@ func (p *SQLProvider) ConnectionString() string
 
 
 <a name="SQLProvider.DB"></a>
-### func \(\*SQLProvider\) [DB](<https://github.com/effective-security/xdb/blob/main/prov.go#L127>)
+### func \(\*SQLProvider\) [DB](<https://github.com/effective-security/xdb/blob/main/prov.go#L137>)
 
 ```go
 func (p *SQLProvider) DB() DB
@@ -1791,7 +1903,7 @@ func (p *SQLProvider) DB() DB
 DB returns underlying DB connection
 
 <a name="SQLProvider.ExecContext"></a>
-### func \(\*SQLProvider\) [ExecContext](<https://github.com/effective-security/xdb/blob/main/prov.go#L164>)
+### func \(\*SQLProvider\) [ExecContext](<https://github.com/effective-security/xdb/blob/main/prov.go#L174>)
 
 ```go
 func (p *SQLProvider) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
@@ -1800,7 +1912,7 @@ func (p *SQLProvider) ExecContext(ctx context.Context, query string, args ...any
 ExecContext executes a query without returning any rows. The args are for any placeholder parameters in the query.
 
 <a name="SQLProvider.IDTime"></a>
-### func \(\*SQLProvider\) [IDTime](<https://github.com/effective-security/xdb/blob/main/prov.go#L142>)
+### func \(\*SQLProvider\) [IDTime](<https://github.com/effective-security/xdb/blob/main/prov.go#L152>)
 
 ```go
 func (p *SQLProvider) IDTime(id uint64) time.Time
@@ -1809,7 +1921,7 @@ func (p *SQLProvider) IDTime(id uint64) time.Time
 IDTime returns time when ID was generated
 
 <a name="SQLProvider.Name"></a>
-### func \(\*SQLProvider\) [Name](<https://github.com/effective-security/xdb/blob/main/prov.go#L53>)
+### func \(\*SQLProvider\) [Name](<https://github.com/effective-security/xdb/blob/main/prov.go#L55>)
 
 ```go
 func (p *SQLProvider) Name() string
@@ -1818,7 +1930,7 @@ func (p *SQLProvider) Name() string
 Name returns provider name
 
 <a name="SQLProvider.NextID"></a>
-### func \(\*SQLProvider\) [NextID](<https://github.com/effective-security/xdb/blob/main/prov.go#L137>)
+### func \(\*SQLProvider\) [NextID](<https://github.com/effective-security/xdb/blob/main/prov.go#L147>)
 
 ```go
 func (p *SQLProvider) NextID() ID
@@ -1827,7 +1939,7 @@ func (p *SQLProvider) NextID() ID
 NextID returns unique ID
 
 <a name="SQLProvider.QueryContext"></a>
-### func \(\*SQLProvider\) [QueryContext](<https://github.com/effective-security/xdb/blob/main/prov.go#L148>)
+### func \(\*SQLProvider\) [QueryContext](<https://github.com/effective-security/xdb/blob/main/prov.go#L158>)
 
 ```go
 func (p *SQLProvider) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
@@ -1836,7 +1948,7 @@ func (p *SQLProvider) QueryContext(ctx context.Context, query string, args ...an
 QueryContext executes a query that returns rows, typically a SELECT. The args are for any placeholder parameters in the query.
 
 <a name="SQLProvider.QueryRowContext"></a>
-### func \(\*SQLProvider\) [QueryRowContext](<https://github.com/effective-security/xdb/blob/main/prov.go#L158>)
+### func \(\*SQLProvider\) [QueryRowContext](<https://github.com/effective-security/xdb/blob/main/prov.go#L168>)
 
 ```go
 func (p *SQLProvider) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
@@ -1845,7 +1957,7 @@ func (p *SQLProvider) QueryRowContext(ctx context.Context, query string, args ..
 QueryRowContext executes a query that is expected to return at most one row. QueryRowContext always returns a non\-nil value. Errors are deferred until Row's Scan method is called. If the query selects no rows, the \*Row's Scan will return ErrNoRows. Otherwise, the \*Row's Scan scans the first selected row and discards the rest.
 
 <a name="SQLProvider.Rollback"></a>
-### func \(\*SQLProvider\) [Rollback](<https://github.com/effective-security/xdb/blob/main/prov.go#L175>)
+### func \(\*SQLProvider\) [Rollback](<https://github.com/effective-security/xdb/blob/main/prov.go#L185>)
 
 ```go
 func (p *SQLProvider) Rollback() error
@@ -1854,7 +1966,7 @@ func (p *SQLProvider) Rollback() error
 
 
 <a name="SQLProvider.Tx"></a>
-### func \(\*SQLProvider\) [Tx](<https://github.com/effective-security/xdb/blob/main/prov.go#L132>)
+### func \(\*SQLProvider\) [Tx](<https://github.com/effective-security/xdb/blob/main/prov.go#L142>)
 
 ```go
 func (p *SQLProvider) Tx() Tx
@@ -1863,7 +1975,7 @@ func (p *SQLProvider) Tx() Tx
 Tx returns underlying DB transaction
 
 <a name="SQLProvider.WithConnectionString"></a>
-### func \(\*SQLProvider\) [WithConnectionString](<https://github.com/effective-security/xdb/blob/main/prov.go#L43>)
+### func \(\*SQLProvider\) [WithConnectionString](<https://github.com/effective-security/xdb/blob/main/prov.go#L45>)
 
 ```go
 func (p *SQLProvider) WithConnectionString(connstr string) *SQLProvider
@@ -1872,16 +1984,24 @@ func (p *SQLProvider) WithConnectionString(connstr string) *SQLProvider
 
 
 <a name="SetCursor"></a>
-## type [SetCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L65>)
+## type [SetCursor](<https://github.com/effective-security/xdb/blob/main/query.go#L111>)
 
+SetCursor returns the cursor of the page that follows lastRow, usually NewCursor with the sort key of the row:
 
+```
+func(last *model.Event) string {
+	// a Time and an ID always encode
+	c, _ := xdb.NewCursor(last.CreatedAt, last.ID)
+	return c.String()
+}
+```
 
 ```go
 type SetCursor[T any, TPointer RowPointer[T]] func(lastRow TPointer) string
 ```
 
 <a name="Source"></a>
-## type [Source](<https://github.com/effective-security/xdb/blob/main/db.go#L199-L207>)
+## type [Source](<https://github.com/effective-security/xdb/blob/main/db.go#L217-L225>)
 
 Source describes connection info
 
@@ -1898,7 +2018,7 @@ type Source struct {
 ```
 
 <a name="ParseConnectionString"></a>
-### func [ParseConnectionString](<https://github.com/effective-security/xdb/blob/main/db.go#L211>)
+### func [ParseConnectionString](<https://github.com/effective-security/xdb/blob/main/db.go#L229>)
 
 ```go
 func ParseConnectionString(dataSource string) (*Source, error)

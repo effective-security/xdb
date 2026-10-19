@@ -47,7 +47,8 @@ testdata/e2e/   generated sample models (make gen-sql-schema, gitignored)
 | NULL-aware column types | `types.go`, `time.go` | NULLString, UUID, Int64, Int32, Float, Bool, Metadata, KVSet, Strings, Time, Now, ParseTime |
 | Not-found errors and validation | `types.go` | ErrorNotFound, CheckNotFoundError, IsNotFoundError, Validator, Validate |
 | Query variants, positional args, cache names | `params.go` | QueryParams, NewQueryParams, QueryParamsBuilder (Set, AddArgs, SetPage, SetCursor, SetEnum, SetFlags, SetNullColums, Name), GetQueryParams, PageParam |
-| Run SQL into generated models, pagination | `query.go` | QueryRow, ExecuteQuery, ExecuteQueryWithPagination, ExecuteQueryWithCursor, ExecuteListQuery, Result, ResultWithCursor, EncodeCursor, DecodeCursor |
+| Run SQL into generated models, pagination | `query.go` | QueryRow, QueryRows, ExecuteQuery, ExecuteQueryWithPagination, ExecuteQueryWithCursor, ExecuteListQuery, Result, ResultWithCursor |
+| Cursor (keyset) pagination tokens | `cursor.go`, `params.go` | Cursor, NewCursor, ParseCursor, Cursor.Scan, QueryParamsBuilder.SetCursor; [QUERYBUILDER.md](design/QUERYBUILDER.md#cursor-keyset-pagination) |
 | Merge structs holding xdb types | `merge.go` | Merge, MergeOpts |
 | SQL statement builder and dialects | `xsql/stmt.go`, `xsql/dialect.go` | Builder, Stmt, Postgres, SQLServer, NoDialect, SetDialect, OnConflict, Returning, ForUpdate |
 | Rendered SQL cache | `xsql/cache.go`, `xsql/stmt.go` | GetOrCreateQuery, GetCachedQuery, PutCachedQuery, ClearCache, Stmt.String, SetName |
@@ -101,7 +102,8 @@ Provider, value types, IDs, query params and query execution.
 - types.go: MaxLenForName, MaxLenForEmail, MaxLenForShortURL, ErrorNotFound, NewErrorNotFound, CheckNotFoundError, IsNotFoundError, Validator, Validate, NullTime, TimePtr, String, QuotedString, ParseUint, IDString, QuotedIDString, Strings, Metadata, KVSet, NULLString, UUID, Int64, Int32, Float, Bool
 - time.go: Time, Now, UTC, FromNow, FromUnixMilli, ParseTime, DefaultTimeFormat, DefaultTrucate
 - params.go: PageableByOffset, PageableByCursor, HasQueryParams, GetQueryParams, QueryParams, QueryParamsBuilder, NewQueryParams, PageParam
-- query.go: DefaultPageSize, RowPointer, QueryRow, ExecuteListQuery, Result, ResultWithCursor, SetCursor, ExecuteQueryWithPagination, ExecuteQueryWithCursor, ExecuteQuery, EncodeCursor, DecodeCursor
+- query.go: DefaultPageSize, RowPointer, QueryRow, QueryRows, ExecuteListQuery, Result, ResultWithCursor, SetCursor, ExecuteQueryWithPagination, ExecuteQueryWithCursor, ExecuteQuery, EncodeCursor and DecodeCursor (deprecated)
+- cursor.go: Cursor, NewCursor, ParseCursor, String, IsZero, Len, Scan
 - merge.go: Merge, MergeOpts
 
 Invariants:
@@ -112,19 +114,20 @@ Invariants:
   already have a query string (`?sslmode=disable`). Drivers: `postgres`,
   `sqlserver`. Connection idle time and lifetime are unlimited.
 - NewProvider runs migrations only when `MigrationConfig.Source` is set,
-  then wraps the `*sql.DB` with New. New starts a 60-second keep-alive ping
-  goroutine; Close stops the ticker and closes the DB.
-- BeginTx returns a Provider bound to the transaction; it does not nest
-  ("transaction already started") and currently ignores `TxOptions`. Close
-  on a transaction provider rolls back, which is a no-op after Commit, so
-  `defer tx.Close()` then `tx.Commit()` is the pattern.
+  then wraps the `*sql.DB` with New; on an error it closes the DB. New
+  starts a 60-second keep-alive ping goroutine; Close stops it and closes
+  the DB, and is idempotent.
+- BeginTx returns a Provider bound to the transaction and passes its
+  `TxOptions` to the driver; it does not nest ("transaction already
+  started"). Close on a transaction provider rolls back, which is a no-op
+  after Commit, so `defer tx.Close()` then `tx.Commit()` is the pattern.
 - Two ID generator interfaces exist: `xdb.IDGenerator` (`NextID() ID`, used
-  by providers) and `flake.IDGenerator` (`NextID() uint64`); New and
-  NewProvider take the latter (NewProvider through
-  `github.com/effective-security/x/flake`, New through `pkg/flake`) and use
-  flake.DefaultIDGenerator for nil.
+  by providers) and `pkg/flake.IDGenerator` (`NextID() uint64`), which New
+  and NewProvider take; nil is flake.DefaultIDGenerator, and a
+  `github.com/effective-security/x/flake` generator also fits.
 - ID is `type ID uint64`: zero is invalid and NULL, `String()` of zero is
-  empty, comparable and ordered. IDArray scans and writes a PostgreSQL
+  empty, comparable and ordered; `json:",omitempty"`, the tag of every
+  generated column, omits a zero ID. IDArray scans and writes a PostgreSQL
   int8 array; Add and Concat deduplicate (quadratic), Sort sorts in place.
 - NULL mapping: the zero value of ID, ID32, Int64, Int32, Float, Bool,
   NULLString, UUID and Time writes NULL; empty Metadata and KVSet write NULL
@@ -136,23 +139,48 @@ Invariants:
 - QueryParamsBuilder records set positions (0..63, the generated
   `Column.Position`) in a bit mask; Name is the query name plus the mask,
   enum values, flags, `_c` (cursor) or `_o` (offset > 0) and a hash of the
-  null columns, computed once at the first call. Set, AddArgs and SetEnum
-  after SetPage or SetCursor panic; SetCursor adds the cursor value as a
-  positional argument, then the limit. SetFlags replaces the flags.
-  SetNullColums keeps the caller's slice and Name sorts it in place. Reset
-  keeps the query name and null columns.
+  null columns, recomputed after every change. Set, AddArgs and SetEnum
+  after SetPage or SetCursor panic. SetCursor(limit, pos, key...) adds the
+  key values as positional arguments, then the limit; Cursor() returns the
+  single value or the `[]any` key; without key values SetCursor is
+  SetPage(limit, 0). SetFlags replaces the flags. SetNullColums keeps a
+  sorted copy. Reset keeps only the query name.
+- The query helpers are package functions over `DB`: Go 1.27 allows type
+  parameters on methods of concrete types only, not on interface methods.
+  QueryRows yields rows through `iter.Seq2`, closes them when the loop ends
+  and yields a query, scan or `rows.Err()` error once; the list helpers
+  collect through it, preallocating up to the page limit.
 - ExecuteQueryWithPagination takes limit and offset from QueryParams or the
-  last two positional arguments and reports a next page when the page is
-  full (`rows >= limit`): the page after an exact multiple is empty, and a
-  zero limit always reports a next page. ExecuteQueryWithCursor takes the
-  limit from QueryParams or the last argument. ExecuteQuery does not page.
-  QueryRow returns the driver error with a stack; map `sql.ErrNoRows` with
-  CheckNotFoundError.
+  last two positional arguments, ExecuteQueryWithCursor the limit from
+  QueryParams or the last of two or more arguments; a lone positional
+  argument is not a limit (it can be a filter value), so a limit-only query
+  passes QueryParams. In QueryParams the limit argument is
+  the last one after SetCursor with a key and the one before the offset
+  after SetPage (paramsLimitAt). executePage binds limit+1 on a copy of the
+  arguments, returns at most limit rows and reports a next page only when
+  the extra row exists; the LIMIT must apply to the final ordered result,
+  not to a subquery the outer query reorders. When the argument does not
+  hold the limit (peekLimit: int, uint32 or sql.NamedArg equal to it, below
+  MaxUint32) the query runs as is and a full page reports a next page. A
+  zero limit reports none. ExecuteQuery does not page. QueryRow returns the
+  driver error with a stack; map `sql.ErrNoRows` with CheckNotFoundError.
+- Cursor holds the sort key as text: Time and time.Time as RFC 3339 with
+  nanoseconds, then custom text methods (MarshalText on the value or its
+  pointer), then integer kinds as decimal digits and strings as is; a
+  pointer encodes its value. Its token is base64url (no padding) of a JSON
+  array of strings. NewCursor returns an error for a failing MarshalText or
+  an unsupported type instead of a fallback token. Scan checks for a non-nil
+  pointer first, then decodes
+  in the same order (UnmarshalText before the kind) and fails on a
+  different number of values. Cursors are not signed.
 - Merge overrides dst with src fields; a zero ID, Time or NULLString in src
   never overrides dst.
 
-Tests: db_test.go needs PostgreSQL and SQL Server; id_test.go has the ID
-race tests and the in-memory sqlite round trip (TestIDSQL);
+Tests: db_test.go needs PostgreSQL and SQL Server (TestPGKeyset,
+TestPGTxOptions); query_test.go runs the query helpers and a keyset listing
+on in-memory sqlite; prov_test.go checks with synctest that Close stops the
+keep-alive goroutine; id_test.go has the ID race tests and the in-memory
+sqlite round trip (TestIDSQL);
 internal_test.go reaches unexported fields.
 
 ### xsql
@@ -202,9 +230,8 @@ Table metadata for generated code and schema introspection for xdbcli.
 Invariants:
 
 - TableInfo builders start from `SchemaName` (`schema.table`) on the
-  table's Dialect. AllColumns joins the columns once and caches the result
-  in the struct without a lock, so concurrent first calls race: clients warm
-  every generated table at `init`.
+  table's Dialect. AllColumns joins the columns on every call and writes
+  nothing, so generated tables are safe to share (tableinfo_test.go).
 - ListTables with dependencies adds every table reachable through foreign
   keys, in any schema, and sets Column.Ref. Column.SchemaName is
   `schema.table.column`, Position the 1-based ordinal.
@@ -228,7 +255,10 @@ IsTestRun.
 
 Invariant: 63-bit IDs of 41 bits time (FlakeTimeUnit, 1 ms, since
 DefaultStartTime 2021-01-01), 6 bits sequence and 16 bits machine ID;
-DefaultIDGenerator is created at init and NowFunc is replaced in tests.
+DefaultIDGenerator is created at init and NowFunc is replaced in tests. The
+default machine ID is the lower 16 bits of the first non-loopback address,
+a hash of the program name in test binaries (IsTestRun is
+`testing.Testing()`), or 0 without an address.
 
 ### pkg/notifier
 
@@ -248,7 +278,9 @@ SchemaTables, SchemaTable, SchemaIndexes, SchemaForeingKeys.
 ### cmd/xdbcli
 
 The schema CLI. main.go: realMain parses `internal/cli.Cli` plus
-`schema.Cmd` with kong. The version constant is set by hand.
+`schema.Cmd` with kong. buildVersion returns `main.version` (set with
+`-ldflags` by `make build`), else the module version of a `go install`
+build, else `devel`.
 
 ### internal/cli
 
@@ -278,12 +310,21 @@ Invariants:
   `schema.table.column`, then the `_count` rule, ARRAY rules, then
   typeByColumnType with the ID heuristic (`id`, `*_id`, `*Id`, `*ID` map
   bigint to xdb.ID); an unknown type or array panics.
-- Output is one `model.gen.go` and one `schema.gen.go` per schema
-  (`<schema>_*.gen.go` with several schemas), formatted with go/format;
-  imports are not resolved, so callers run goimports on the files.
+- Output is one `model.gen.go` and one `schema.gen.go` per run, in table
+  order, formatted with go/format; no file when no table matches. Names
+  are not qualified by the schema (TableInfo names, `<Db>Tables` keys), so
+  each schema with clashing table names needs its own output folders.
+  Imports are exact: the model imports errors, xdb and xdbschema, the
+  sibling schema package by the path from the nearest `go.mod`
+  (importPath), and pq, values and the `--imports` packages (userImport)
+  that the parsed column types refer to (typePackages); an `--imports`
+  package replaces the known pq or values of its name, and importSpecs
+  keeps one import per name and path (goImport). The schema file imports
+  xdbschema and xsql.
 - The override maps are process-global and filled from `--types-def`.
 
-Tests: schema_test.go drives the commands through mocks/mockschema and
+Tests: generate_test.go generates two schemas into a module and checks
+imports and declarations; schema_test.go drives the commands through mocks/mockschema and
 testdata/pg_columns.json, pg_tables.json; template_test.go holds the type
 mapping tables.
 
@@ -302,7 +343,8 @@ gomock mocks of `db.go` and `schema/schema.go` interfaces; regenerate with
 - `make test` (`RACE=true` for the race detector), `make testshort`,
   `make covtest`; `make lint` runs fmt, vet and golangci-lint.
 - `make gen-sql-schema` regenerates `testdata/e2e` with the `xdbcli` on
-  `PATH` and runs goimports.
+  `PATH` and runs goimports. `make build` sets the xdbcli version from
+  `GIT_VERSION`; a `go install` build reports its module version.
 - `make build docs` regenerates `Documentation/api/` (gomarkdoc) and
   `Documentation/cli/` (xdbcli help).
 - `.github/workflows/unittest.yml`: on pushes to main and PRs, prepares the

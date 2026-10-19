@@ -34,7 +34,9 @@ Package boundaries and direct internal imports are listed in
    change.
 5. Read `Documentation/FINDINGS.md`, when you have it, before changing
    surprising behavior: it is the local, gitignored list of known defects.
-   [`Documentation/ROADMAP.md`](Documentation/ROADMAP.md) owns planned work.
+   [`Documentation/ROADMAP.md`](Documentation/ROADMAP.md) owns planned work;
+   [`Documentation/RELEASE_NOTES.md`](Documentation/RELEASE_NOTES.md) lists
+   what clients change per release.
 6. Skip `Documentation/api/` and `Documentation/cli/` (`make docs` generates
    them) and `testdata/e2e/` (`make gen-sql-schema` output, gitignored).
    Edit source comments and regenerate instead.
@@ -47,9 +49,10 @@ Package boundaries and direct internal imports are listed in
 ### Library contract
 
 - Exported names, value semantics, rendered SQL and generated code are the
-  contract with clients. A change to any of them is a breaking change: say
-  so in the PR, add the migration steps to `Documentation/ROADMAP.md`, and
-  build at least one client against the change (below).
+  contract with clients. Record every change of them in
+  `Documentation/RELEASE_NOTES.md` under the current `.VERSION`, with the
+  action clients take (or "none"); a breaking change says so in the PR too.
+  Build at least one client against the change (below).
 - Build a client against the working tree without editing it, through a
   workspace file outside both repositories:
 
@@ -59,8 +62,9 @@ Package boundaries and direct internal imports are listed in
   ```
 
 - Generator changes (`internal/cli/schema`) are contract changes: regenerate
-  a client's `model.gen.go` and `schema.gen.go`, run `goimports`, build it
-  and diff the output.
+  a client's `model.gen.go` and `schema.gen.go` into a scratch directory
+  under a `go.mod` with the client's module path, and diff them with the
+  committed files; they must build without goimports.
 - Keep PostgreSQL and SQL Server both working where a package supports both
   (`schema`, `migrate`, `Open`, `xsql` dialects); their tests need the local
   stack.
@@ -74,6 +78,11 @@ Package boundaries and direct internal imports are listed in
   SA1019 yet.
 - Use `any`, not `interface{}`. Define constants instead of repeating
   literal strings or numbers.
+- Interface methods cannot have type parameters (Go 1.27 allows them on
+  methods of concrete types only), and `DB`, `Provider` and the clients'
+  wrappers are interfaces: generic DB helpers stay package functions that
+  take an `xdb.DB` (`query.go`). Stream rows with `iter.Seq2` (`QueryRows`)
+  rather than adding callback APIs.
 - Split struct and map literals one key per line.
 - Match the surrounding code: comment density, naming, receiver names.
 
@@ -189,6 +198,8 @@ Start here instead of grepping the tree.
   regeneration workflow.
 - **[`xsql/README.md`](xsql/README.md)** — `xsql` builder reference.
 - **[`Documentation/ROADMAP.md`](Documentation/ROADMAP.md)** — planned work.
+- **[`Documentation/RELEASE_NOTES.md`](Documentation/RELEASE_NOTES.md)** —
+  changes per release and the actions clients take.
 - **`Documentation/FINDINGS.md`** — local, gitignored list of known defects.
 - **[`Documentation/MCP.md`](Documentation/MCP.md)** — codebase-memory-mcp
   usage.

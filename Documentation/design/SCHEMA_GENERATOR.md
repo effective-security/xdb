@@ -46,16 +46,16 @@ flags take repeated values or a comma-separated list (`--view a,b`).
 
 | Flag | Effect |
 | --- | --- |
-| `--schema` | schemas to read; one schema per service is the supported case |
+| `--schema` | schemas to read; generate each schema into its own `--out-model`/`--out-schema` folders (see [Several schemas](#several-schemas)) |
 | `--table` | tables to generate; default all tables of the schemas |
 | `--view` | views to add; views are never included otherwise |
 | `--dependencies` | also every table reachable through foreign keys, in any schema |
 | `--out-model`, `--out-schema` | output folders; the package name is the folder name |
 | `--pkg-model`, `--pkg-schema` | override the package names |
 | `--types-def` | path to `typesmap.yaml` (YAML or JSON) |
-| `--imports` | extra imports for the types used in `typesmap.yaml` (for example the `pb` package of enums) |
+| `--imports` | packages of the types used in `typesmap.yaml` other than `xdb`, `values` and `pq`, which are known (for example the `pb` package of enums, or `time` for `time.Time`), as a path or `name path`; written to the model file only when a column type refers to the package, also inside `*T`, `[]T` or `map[K]V`. A package named `pq` or `values` here replaces the known one; a package is imported once per name |
 | `--struct-suffix` | suffix for model struct and column-definition names |
-| `--use-schema` | prefix names with the schema, except for `public` and `dbo` |
+| `--use-schema` | prefix model and column-definition names with the schema, except for `public` and `dbo`; `<Model>TableInfo` names and the tables map keep the bare table name |
 
 ## Workflow in a service
 
@@ -78,7 +78,6 @@ gen-sql-schema:
 		--out-model internal/db/model \
 		--out-schema internal/db/schema \
 		--view vw_membership_info,vw_other
-	goimports -w internal/db/model/*.gen.go internal/db/schema/*.gen.go
 ```
 
 1. Recreate the database (drop, create, run the service's migrations or
@@ -87,13 +86,26 @@ gen-sql-schema:
 2. Run the target, then `go build ./...` and review the diff of the
    generated files and of `internal/db/README.md`. Index lists in comments
    can come out in a different order between runs; that is not drift.
-3. **Run goimports**: the generator does not resolve imports. The files
-   reference `xsql` without importing it, may import `values` or `pq`
-   without using them, and the model package refers to its sibling `schema`
-   package. goimports finds the sibling only when the module's `go.mod`
-   resolves; run it from the module, after `go mod tidy` on a new one.
-4. Warm `TableInfo.AllColumns` at `init` in a handwritten file of the schema
-   package (see [QUERYBUILDER.md](QUERYBUILDER.md#layout)).
+3. The files compile as written: the generator imports exactly the packages
+   each file uses, including the sibling `schema` package of the model,
+   whose import path it reads from the nearest `go.mod` above
+   `--out-schema`, and the `--imports` packages the column types refer to.
+   Outside a module the sibling import is left out, and a typesmap type of
+   a package missing from `--imports` is not imported; goimports fixes
+   both. Otherwise running goimports changes nothing and is optional.
+4. When the filters match no table, the command writes no file.
+
+### Several schemas
+
+Generate each schema into its own pair of folders, with one
+`xdbcli schema generate --schema <name>` run per target (for example
+`internal/db/model` + `internal/db/schema` and `internal/db/audit/model` +
+`internal/db/audit/schema`). Names are not qualified by the schema:
+`<Model>TableInfo`, the column definitions and the keys of `<Db>Tables` come
+from the table name, so two schemas with a table of the same name in one
+target do not compile, even with `--use-schema`. Tables of several schemas
+share one target only when their names differ, for example a table of
+another schema that `--dependencies` adds through a foreign key.
 
 ## typesmap.yaml
 
@@ -181,8 +193,8 @@ var MydbTables = map[string]*xdbschema.TableInfo{"org": &OrgTableInfo /* ... */}
 ```
 
 The `db` tag lists the column name, its type, `max:N`, `null`, `index` and
-`primary`. With several schemas the files are `<schema>_model.gen.go` and
-`<schema>_schema.gen.go`.
+`primary`. The tables are in the order of the introspection, sorted by
+`schema.table`, then the views.
 
 ## Views
 
@@ -198,7 +210,8 @@ scanning NULL into a plain `string` fails.
   `internal/cli/schema/types.go`; naming and file output: `schema.go`.
 - Unit tests run the commands on mocked introspection
   (`internal/cli/schema/schema_test.go`, JSON fixtures in `testdata/`);
-  type mapping tests are in `template_test.go`.
+  type mapping tests are in `template_test.go`; `generate_test.go` checks
+  the imports and declarations of files generated into a module.
 - End to end: `make start-localstack start-sql build`, then generate into
   `testdata/e2e` (`make gen-sql-schema` uses the `xdbcli` on `PATH`) and
   build it. Generated code is a client contract: regenerate a service and

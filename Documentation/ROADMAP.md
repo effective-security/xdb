@@ -6,15 +6,15 @@ the local, gitignored `FINDINGS.md`, whose IDs are not cited here.
 
 ## Implemented baseline
 
-- v1.0: `xdb.ID` is `type ID uint64`, an immutable value: comparable with
-  `==`, ordered, a valid map key and safe to share between goroutines.
-  Clients replace `xdb.ID{}` with `xdb.ID(0)`; `Set` and `Reset` on a copy
-  no longer change the original.
+- v1.0: `xdb.ID` as an immutable `uint64` value, typed keyset cursors
+  (`xdb.Cursor`), `QueryRows` iterators and exact imports in generated
+  code; the client changes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Active work
 
 | ID  | Work | Ownership / contract |
 | --- | ---- | -------------------- |
+| RM-001 | Remove the deprecated `EncodeCursor` and `DecodeCursor` once clients use `NewCursor` and `ParseCursor` | `query.go`; breaking: RELEASE_NOTES.md entry of the removing version |
 
 ## Completion policy
 

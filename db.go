@@ -12,8 +12,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/effective-security/x/configloader"
-	"github.com/effective-security/x/flake"
 	"github.com/effective-security/xdb/migrate"
+	"github.com/effective-security/xdb/pkg/flake"
 )
 
 //go:generate mockgen -source=db.go -destination=./mocks/mockxdb/xdb_mock.go -package mockxdb
@@ -131,19 +131,9 @@ func Open(dataSource, database string) (*sql.DB, string, string, error) {
 		return nil, "", "", err
 	}
 
-	if database != "" {
-		switch source.Driver {
-		case "sqlserver":
-			ds = ds + "&database=" + database
-		case "postgres":
-			if strings.Contains(ds, "host=") {
-				ds = ds + " dbname=" + database
-			} else {
-				ds = ds + "&dbname=" + database
-			}
-		default:
-			return nil, source.Driver, ds, errors.Errorf("unsuppoprted driver %q", source.Driver)
-		}
+	ds, err = withDatabase(source.Driver, ds, database)
+	if err != nil {
+		return nil, source.Driver, ds, err
 	}
 
 	d, err := sql.Open(source.Driver, ds)
@@ -156,10 +146,33 @@ func Open(dataSource, database string) (*sql.DB, string, string, error) {
 
 	err = d.Ping()
 	if err != nil {
+		_ = d.Close()
 		return nil, source.Driver, ds, errors.WithMessagef(err, "unable to ping DB")
 	}
 
 	return d, source.Driver, ds, nil
+}
+
+// withDatabase adds the database name to a data source URL as a query
+// parameter: dbname for postgres, database for sqlserver.
+func withDatabase(driver, ds, database string) (string, error) {
+	if database == "" {
+		return ds, nil
+	}
+	var param string
+	switch driver {
+	case "sqlserver":
+		param = "database"
+	case "postgres":
+		param = "dbname"
+	default:
+		return ds, errors.Errorf("unsupported driver %q", driver)
+	}
+	sep := "&"
+	if !strings.Contains(ds, "?") {
+		sep = "?"
+	}
+	return ds + sep + param + "=" + url.QueryEscape(database), nil
 }
 
 // MigrationConfig defines migration configuration
@@ -169,7 +182,10 @@ type MigrationConfig struct {
 	MigrateVersion int
 }
 
-// NewProvider creates a Provider instance
+// NewProvider creates a Provider instance.
+// It runs the migrations of migrateCfg first, when migrateCfg.Source is set.
+// A nil idGen uses flake.DefaultIDGenerator; any type with NextID() uint64,
+// such as a github.com/effective-security/x/flake generator, also works.
 func NewProvider(dataSource, dbName string, idGen flake.IDGenerator, migrateCfg *MigrationConfig) (Provider, error) {
 	d, provider, connstr, err := Open(dataSource, dbName)
 	if err != nil {
@@ -184,11 +200,13 @@ func NewProvider(dataSource, dbName string, idGen flake.IDGenerator, migrateCfg 
 
 		err = migrate.Migrate(provider, dbName, migrationsDir, migrateCfg.ForceVersion, migrateCfg.MigrateVersion, d)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "unable to migrate Orgs DB")
+			_ = d.Close()
+			return nil, errors.WithMessagef(err, "unable to migrate DB")
 		}
 	}
 	p, err := New(provider, d, idGen)
 	if err != nil {
+		_ = d.Close()
 		return nil, errors.WithMessagef(err, "unable to create provider")
 	}
 	p.WithConnectionString(connstr)

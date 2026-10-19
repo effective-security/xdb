@@ -6,8 +6,10 @@
 //     Bool, NULLString, UUID, Time, Metadata, KVSet and Strings.
 //   - QueryParams: the variant name and positional arguments of a query whose
 //     SQL is built once with xsql and cached under that name.
-//   - QueryRow, ExecuteQuery, ExecuteQueryWithPagination and
+//   - QueryRow, QueryRows, ExecuteQuery, ExecuteQueryWithPagination and
 //     ExecuteQueryWithCursor: run SQL into the models that xdbcli generates.
+//   - Cursor: the opaque token of keyset pagination, built with NewCursor
+//     from the sort key of the last row and read back with ParseCursor.
 //
 // In a service, with the generated model and schema packages and a query
 // package of SQL functions:

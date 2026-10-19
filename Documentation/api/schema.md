@@ -48,7 +48,7 @@ Package schema provides helper package to generate schema.
 
 
 <a name="Column"></a>
-## type [Column](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L136-L153>)
+## type [Column](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L134-L151>)
 
 Column definition
 
@@ -71,7 +71,7 @@ type Column struct {
 ```
 
 <a name="Column.IsIndex"></a>
-### func \(\*Column\) [IsIndex](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L166>)
+### func \(\*Column\) [IsIndex](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L164>)
 
 ```go
 func (c *Column) IsIndex() bool
@@ -80,7 +80,7 @@ func (c *Column) IsIndex() bool
 IsIndex returns true if column is part of index
 
 <a name="Column.IsPrimary"></a>
-### func \(\*Column\) [IsPrimary](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L171>)
+### func \(\*Column\) [IsPrimary](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L169>)
 
 ```go
 func (c *Column) IsPrimary() bool
@@ -89,7 +89,7 @@ func (c *Column) IsPrimary() bool
 IsPrimary returns true if column is primary key
 
 <a name="Column.StructString"></a>
-### func \(\*Column\) [StructString](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L155>)
+### func \(\*Column\) [StructString](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L153>)
 
 ```go
 func (c *Column) StructString() string
@@ -98,7 +98,7 @@ func (c *Column) StructString() string
 
 
 <a name="Column.Tag"></a>
-### func \(\*Column\) [Tag](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L180>)
+### func \(\*Column\) [Tag](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L178>)
 
 ```go
 func (c *Column) Tag() string
@@ -107,7 +107,7 @@ func (c *Column) Tag() string
 
 
 <a name="Columns"></a>
-## type [Columns](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L208>)
+## type [Columns](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L206>)
 
 Columns defines slice of Column
 
@@ -116,7 +116,7 @@ type Columns []*Column
 ```
 
 <a name="Columns.Names"></a>
-### func \(Columns\) [Names](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L211>)
+### func \(Columns\) [Names](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L209>)
 
 ```go
 func (c Columns) Names() []string
@@ -140,7 +140,7 @@ type Dialect interface {
 ```
 
 <a name="ForeignKey"></a>
-## type [ForeignKey](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L243-L256>)
+## type [ForeignKey](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L241-L254>)
 
 ForeignKey describes FK
 
@@ -162,7 +162,7 @@ type ForeignKey struct {
 ```
 
 <a name="ForeignKey.ColumnSchemaName"></a>
-### func \(\*ForeignKey\) [ColumnSchemaName](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L259>)
+### func \(\*ForeignKey\) [ColumnSchemaName](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L257>)
 
 ```go
 func (k *ForeignKey) ColumnSchemaName() string
@@ -171,7 +171,7 @@ func (k *ForeignKey) ColumnSchemaName() string
 ColumnSchemaName is FQN in schema.db.column format
 
 <a name="ForeignKey.RefColumnSchemaName"></a>
-### func \(\*ForeignKey\) [RefColumnSchemaName](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L267>)
+### func \(\*ForeignKey\) [RefColumnSchemaName](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L265>)
 
 ```go
 func (k *ForeignKey) RefColumnSchemaName() string
@@ -180,7 +180,7 @@ func (k *ForeignKey) RefColumnSchemaName() string
 RefColumnSchemaName is FQN in schema.db.column format
 
 <a name="ForeignKeys"></a>
-## type [ForeignKeys](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L275>)
+## type [ForeignKeys](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L273>)
 
 ForeignKeys defines slice of ForeingKey
 
@@ -200,7 +200,7 @@ type HasTableInfo interface {
 ```
 
 <a name="Index"></a>
-## type [Index](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L220-L228>)
+## type [Index](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L218-L226>)
 
 Index definition
 
@@ -217,7 +217,7 @@ type Index struct {
 ```
 
 <a name="Indexes"></a>
-## type [Indexes](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L231>)
+## type [Indexes](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L229>)
 
 Indexes defines slice of Index
 
@@ -226,7 +226,7 @@ type Indexes []*Index
 ```
 
 <a name="Indexes.Names"></a>
-### func \(Indexes\) [Names](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L234>)
+### func \(Indexes\) [Names](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L232>)
 
 ```go
 func (c Indexes) Names() []string
@@ -235,7 +235,7 @@ func (c Indexes) Names() []string
 Names returns list of index names
 
 <a name="Provider"></a>
-## type [Provider](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L278-L293>)
+## type [Provider](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L276-L291>)
 
 Provider defines schema provider interface
 
@@ -315,7 +315,7 @@ func (r *SQLServerProvider) Name() string
 Name returns provider name
 
 <a name="Table"></a>
-## type [Table](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L107-L122>)
+## type [Table](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L105-L120>)
 
 Table definition
 
@@ -339,7 +339,7 @@ type Table struct {
 ```
 
 <a name="Table.PrimaryKeyName"></a>
-### func \(\*Table\) [PrimaryKeyName](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L125>)
+### func \(\*Table\) [PrimaryKeyName](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L123>)
 
 ```go
 func (t *Table) PrimaryKeyName() string
@@ -348,7 +348,7 @@ func (t *Table) PrimaryKeyName() string
 PrimaryKeyName returns the name of primary key
 
 <a name="TableInfo"></a>
-## type [TableInfo](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L19-L32>)
+## type [TableInfo](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L19-L30>)
 
 TableInfo defines a table info
 
@@ -364,12 +364,11 @@ type TableInfo struct {
 
     // SchemaName is FQN in schema.name format
     SchemaName string `json:"-" yaml:"-"`
-    // contains filtered or unexported fields
 }
 ```
 
 <a name="TableInfo.AliasedColumns"></a>
-### func \(\*TableInfo\) [AliasedColumns](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L90>)
+### func \(\*TableInfo\) [AliasedColumns](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L88>)
 
 ```go
 func (t *TableInfo) AliasedColumns(prefix string, nullColumns map[string]bool) string
@@ -378,16 +377,16 @@ func (t *TableInfo) AliasedColumns(prefix string, nullColumns map[string]bool) s
 AliasedColumns returns list of columns separated by comma, with prefix a.C1, NULL, a.C2 etc. Columns identified in nullColumns, will be replaced with NULL. If prefix is provided, then columns will be prefixed with prefix: a.C1, NULL, a.C2 etc.
 
 <a name="TableInfo.AllColumns"></a>
-### func \(\*TableInfo\) [AllColumns](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L78>)
+### func \(\*TableInfo\) [AllColumns](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L79>)
 
 ```go
 func (t *TableInfo) AllColumns() string
 ```
 
-AllColumns returns list of all columns separated by comma
+AllColumns returns list of all columns separated by comma. It joins the columns on every call and writes nothing to the table, so generated tables are safe to share between goroutines; build queries once with xsql GetOrCreateQuery to avoid the work on hot paths.
 
 <a name="TableInfo.DeleteFrom"></a>
-### func \(\*TableInfo\) [DeleteFrom](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L40>)
+### func \(\*TableInfo\) [DeleteFrom](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L38>)
 
 ```go
 func (t *TableInfo) DeleteFrom() xsql.Builder
@@ -396,7 +395,7 @@ func (t *TableInfo) DeleteFrom() xsql.Builder
 DeleteFrom starts DELETE FROM expression
 
 <a name="TableInfo.From"></a>
-### func \(\*TableInfo\) [From](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L35>)
+### func \(\*TableInfo\) [From](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L33>)
 
 ```go
 func (t *TableInfo) From() xsql.Builder
@@ -405,7 +404,7 @@ func (t *TableInfo) From() xsql.Builder
 From starts FROM expression
 
 <a name="TableInfo.InsertInto"></a>
-### func \(\*TableInfo\) [InsertInto](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L45>)
+### func \(\*TableInfo\) [InsertInto](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L43>)
 
 ```go
 func (t *TableInfo) InsertInto() xsql.Builder
@@ -414,7 +413,7 @@ func (t *TableInfo) InsertInto() xsql.Builder
 InsertInto starts INSERT expression
 
 <a name="TableInfo.Select"></a>
-### func \(\*TableInfo\) [Select](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L55>)
+### func \(\*TableInfo\) [Select](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L53>)
 
 ```go
 func (t *TableInfo) Select(cols ...string) xsql.Builder
@@ -423,7 +422,7 @@ func (t *TableInfo) Select(cols ...string) xsql.Builder
 Select starts SELECT FROM expression
 
 <a name="TableInfo.SelectAliased"></a>
-### func \(\*TableInfo\) [SelectAliased](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L69>)
+### func \(\*TableInfo\) [SelectAliased](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L67>)
 
 ```go
 func (t *TableInfo) SelectAliased(prefix string, nullColumns map[string]bool) xsql.Builder
@@ -432,7 +431,7 @@ func (t *TableInfo) SelectAliased(prefix string, nullColumns map[string]bool) xs
 Select starts SELECT FROM expression with aliased columns and NULL columns Columns identified in nullColumns, will be replaced with NULL. If prefix is provided, then columns will be prefixed with prefix: a.C1, NULL, a.C2 etc.
 
 <a name="TableInfo.Update"></a>
-### func \(\*TableInfo\) [Update](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L50>)
+### func \(\*TableInfo\) [Update](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L48>)
 
 ```go
 func (t *TableInfo) Update() xsql.Builder
@@ -441,7 +440,7 @@ func (t *TableInfo) Update() xsql.Builder
 Update starts UPDATE expression
 
 <a name="Tables"></a>
-## type [Tables](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L133>)
+## type [Tables](<https://github.com/effective-security/xdb/blob/main/schema/schema.go#L131>)
 
 Tables defines slice of Table
 

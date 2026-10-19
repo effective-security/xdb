@@ -27,8 +27,6 @@ type TableInfo struct {
 
 	// SchemaName is FQN in schema.name format
 	SchemaName string `json:"-" yaml:"-"`
-
-	allColumns string `json:"-" yaml:"-"`
 }
 
 // From starts FROM expression
@@ -74,12 +72,12 @@ func (t *TableInfo) SelectAliased(prefix string, nullColumns map[string]bool) xs
 	return t.Dialect.From(tn).Select(t.AliasedColumns(prefix, nullColumns))
 }
 
-// AllColumns returns list of all columns separated by comma
+// AllColumns returns list of all columns separated by comma.
+// It joins the columns on every call and writes nothing to the table, so
+// generated tables are safe to share between goroutines; build queries once
+// with xsql GetOrCreateQuery to avoid the work on hot paths.
 func (t *TableInfo) AllColumns() string {
-	if t.allColumns == "" {
-		t.allColumns = strings.Join(t.Columns, ", ")
-	}
-	return t.allColumns
+	return strings.Join(t.Columns, ", ")
 }
 
 // AliasedColumns returns list of columns separated by comma,

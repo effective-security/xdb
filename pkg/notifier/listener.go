@@ -28,12 +28,11 @@ type Notification struct {
 	RawPayload string
 }
 
-// Listener interface connects to the database and allows callers to listen to a
-// particular topic by issuing a LISTEN command. WaitForNotification blocks
-// until receiving a notification or until the supplied context expires. The
-// default implementation is tightly coupled to pgx (following River's
-// implementation), but callers may implement their own listeners for any
-// backend they'd like.
+// Listener connects to PostgreSQL and listens to a channel with LISTEN.
+// Listen calls the callback for every notification, with its JSON payload
+// parsed, until the context is done. The default implementation, from
+// NewListener, uses lib/pq; callers may implement Listener for another
+// backend.
 type Listener interface {
 	io.Closer
 	Listen(ctx context.Context, topic string, callback func(n *Notification)) error

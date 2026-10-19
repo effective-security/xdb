@@ -37,13 +37,9 @@ var codeHeaderTemplateText = `// DO NOT EDIT!
 package {{ .Package }}
 
 import (
-	"github.com/effective-security/xdb"
-	xdbschema "github.com/effective-security/xdb/schema"
-	"github.com/effective-security/x/values"
-	"github.com/cockroachdb/errors"
-	{{range .Imports}}{{/*
-		*/}}"{{ . }}"
-	{{ end }}
+{{- range .Imports }}
+	{{ . }}
+{{- end }}
 )
 
 {{ if .Dialect }}
@@ -164,10 +160,9 @@ var codeSchemaHeaderTemplateText = `// DO NOT EDIT!
 package {{ .Package }}
 
 import (
-	xdbschema "github.com/effective-security/xdb/schema"
-	{{range .Imports}}{{/*
-		*/}}"{{ . }}"
-	{{ end }}
+{{- range .Imports }}
+	{{ . }}
+{{- end }}
 )
 
 // Dialect provides Dialect for {{ .DB }}

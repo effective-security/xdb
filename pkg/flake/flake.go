@@ -1,8 +1,8 @@
 // Package flake implements Snowflake, a distributed unique ID generator inspired by Twitter's Snowflake.
 //
-// A Flake ID is composed of
+// A Flake ID is a positive int64 composed of
 //
-//	41 bits for time in units of 10 msec
+//	41 bits for time in units of 1 msec (FlakeTimeUnit) since StartTime
 //	 6 bits for a sequence number
 //	16 bits for a machine id
 package flake
@@ -11,14 +11,14 @@ import (
 	"hash/fnv"
 	"net"
 	"os"
-	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/effective-security/xlog"
 )
 
-var logger = xlog.NewPackageLogger("github.com/effective-security/porto/pkg", "flake")
+var logger = xlog.NewPackageLogger("github.com/effective-security/xdb", "flake")
 
 // IDGenerator defines an interface to generate unique ID across the cluster
 type IDGenerator interface {
@@ -64,7 +64,9 @@ var DefaultStartTime = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC).UTC()
 // MachineID returns the unique ID of the Flake instance.
 // If MachineID returns an error, Flake is not created.
 // If MachineID is nil, default MachineID is used.
-// Default MachineID returns the lower 8 bits of the private IP address,
+// Default MachineID returns the lower 16 bits of the first non-loopback
+// interface address, a hash of the program name in tests, or 0 when the host
+// has no interface address.
 //
 // CheckMachineID validates the uniqueness of the machine ID.
 // If CheckMachineID returns false, Flake is not created.
@@ -197,9 +199,9 @@ func machineIDFromProgram() uint16 {
 	return uint16(h.Sum32())
 }
 
-// IsTestRun returns true if the program is running in the test.
+// IsTestRun returns true if the program is a test binary.
 func IsTestRun() bool {
-	return strings.Contains(os.Args[0], "test") || strings.Contains(os.Args[0], "debug")
+	return testing.Testing()
 }
 
 // NOTE: we don't return error here,

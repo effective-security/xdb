@@ -11,7 +11,7 @@ type transformers struct {
 
 var (
 	typeOfDate       = reflect.TypeOf(Time{})
-	typeOfID         = reflect.TypeOf(ID{})
+	typeOfID         = reflect.TypeOf(ID(0))
 	typeOfNULLString = reflect.TypeOf(NULLString(""))
 )
 

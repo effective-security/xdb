@@ -2,7 +2,7 @@ package xdb
 
 import (
 	"database/sql/driver"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -10,18 +10,15 @@ import (
 	"github.com/lib/pq"
 )
 
-// ID defines a type to convert between internal uint64 and external string representations of ID
-type ID struct {
-	id *idptr
-}
+// ID defines a type to convert between internal uint64 and external string representations of ID.
+// ID is a plain value type: copies are independent, safe for concurrent use,
+// comparable with == and ordered with <.
+// The zero value is invalid ID, and is stored as NULL in DB.
+type ID uint64
 
 // NewID returns ID
 func NewID(id uint64) ID {
-	var v ID
-	if id > 0 {
-		v.id = &idptr{id: id}
-	}
-	return v
+	return ID(id)
 }
 
 // MustID returns ID or panics if the value is invalid
@@ -48,7 +45,7 @@ func TryParseID(val string) ID {
 
 // MarshalJSON implements json.Marshaler interface
 func (v ID) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.FormatUint(v.id.val(), 10)), nil
+	return strconv.AppendUint(nil, uint64(v), 10), nil
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
@@ -63,7 +60,7 @@ func (v *ID) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return errors.Errorf("expected number value to unmarshal ID: %s", s)
 	}
-	*v = ID{id: &idptr{id: f, str: s}}
+	*v = NewID(f)
 	return nil
 }
 
@@ -80,53 +77,54 @@ func (v *ID) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
+// String returns string representation of ID, or empty string if ID is 0
 func (v ID) String() string {
-	return v.id.String()
+	if v == 0 {
+		return ""
+	}
+	return IDString(uint64(v))
 }
 
 // UnderscoreString returns string with underscore prefix.
 // This is useful for logs and metrics, where JS can't handle 64-bit numbers.
 func (v ID) UnderscoreString() string {
-	s := v.id.String()
-	if s == "" {
+	if v == 0 {
 		return ""
 	}
-	return "_" + s
+	return "_" + IDString(uint64(v))
 }
 
 // QuotedString returns string
 func (v ID) QuotedString() string {
-	return v.id.QuotedString()
+	if v == 0 {
+		return ""
+	}
+	return QuotedIDString(uint64(v))
 }
 
 // Invalid returns if ID is invalid
 func (v ID) Invalid() bool {
-	return v.id.val() == 0
+	return v == 0
 }
 
 // IsZero returns if ID is 0
 func (v ID) IsZero() bool {
-	return v.id.val() == 0
+	return v == 0
 }
 
 // Valid returns if ID is valid
 func (v ID) Valid() bool {
-	return v.id.val() != 0
+	return v != 0
 }
 
 // UInt64 returns uint64 value
 func (v ID) UInt64() uint64 {
-	return v.id.val()
+	return uint64(v)
 }
 
 // Reset the value
 func (v *ID) Reset() {
-	if v.id == nil {
-		v.id = &idptr{}
-	} else {
-		v.id.id = 0
-		v.id.str = ""
-	}
+	*v = 0
 }
 
 // Set the value
@@ -139,11 +137,7 @@ func (v *ID) Set(val string) error {
 	if err != nil || id == 0 {
 		return errors.Errorf("invalid ID: '%s'", val)
 	}
-	if v.id == nil {
-		v.id = &idptr{}
-	}
-	v.id.id = id
-	v.id.str = ""
+	*v = NewID(id)
 
 	return nil
 }
@@ -177,12 +171,12 @@ func (v *ID) Scan(value any) error {
 func (v ID) Value() (driver.Value, error) {
 	// this makes sure ID can be used as NULL in SQL
 	// however this also means that ID(0) will be treated as NULL
-	if v.id.val() == 0 {
+	if v == 0 {
 		return nil, nil
 	}
 
 	// driver.Value support only int64
-	return int64(v.id.id), nil
+	return int64(v), nil
 }
 
 // IDArray defines a list of IDArray
@@ -278,10 +272,8 @@ func (n IDArray) List() []uint64 {
 
 // Add returns new list
 func (n IDArray) Add(id ID) IDArray {
-	for _, v := range n {
-		if v.UInt64() == id.UInt64() {
-			return n
-		}
+	if n.Contains(id) {
+		return n
 	}
 	return append(n, id)
 }
@@ -299,13 +291,7 @@ func (n IDArray) Concat(other IDArray) IDArray {
 
 // Sort returns sorted list
 func (n IDArray) Sort() IDArray {
-	if len(n) < 2 {
-		return n
-	}
-
-	sort.Slice(n, func(i, j int) bool {
-		return n[i].UInt64() < n[j].UInt64()
-	})
+	slices.Sort(n)
 	return n
 }
 
@@ -329,22 +315,12 @@ func Int64Array(list []uint64) pq.Int64Array {
 
 // Contains returns true if id is in the list
 func (n IDArray) Contains(id ID) bool {
-	for _, v := range n {
-		if v.UInt64() == id.UInt64() {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(n, id)
 }
 
 // Overlaps returns true if any of the IDs in the list is in the other list
 func (n IDArray) Overlaps(other IDArray) bool {
-	for _, v := range n {
-		if other.Contains(v) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(n, other.Contains)
 }
 
 // ID32 defines a type to convert between internal uint32 and NULL values in DB
@@ -409,36 +385,6 @@ func (v ID32) Value() (driver.Value, error) {
 
 	// driver.Value support only int64
 	return int64(v), nil
-}
-
-type idptr struct {
-	id  uint64
-	str string
-}
-
-func (v *idptr) val() uint64 {
-	if v == nil {
-		return 0
-	}
-	return v.id
-}
-
-func (v *idptr) String() string {
-	if v == nil {
-		return ""
-	}
-	if v.id != 0 && v.str == "" {
-		v.str = IDString(v.id)
-	}
-	return v.str
-}
-
-// QuotedString returns string
-func (v *idptr) QuotedString() string {
-	if v == nil {
-		return ""
-	}
-	return "\"" + v.String() + "\""
 }
 
 // Enum interface for generic enum

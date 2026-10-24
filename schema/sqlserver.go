@@ -73,14 +73,14 @@ FROM sys.objects t
                             and ic.column_id = col.column_id
                     where ic.object_id = t.object_id
                         and ic.index_id = i.index_id
-                            order by col.column_id
+                            order by ic.is_included_column, ic.key_ordinal, ic.index_column_id
                             for xml path ('') ) D (column_names)
 WHERE t.is_ms_shipped <> 1 
     AND index_id > 0
     AND t.[type] = 'U' 
 	AND t.schema_id = SCHEMA_ID(@schema) 
 	AND t.name = @table
-ORDER BY t.[name]
+ORDER BY i.[name]
 `
 
 func (p sqlserver) QueryIndexes(ctx context.Context, schema, table string) (*sql.Rows, error) {

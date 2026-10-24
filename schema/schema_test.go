@@ -116,6 +116,37 @@ func TestListSQLServer(t *testing.T) {
 	assert.Equal(t, 5, len(tr.Indexes))
 	require.NotNil(t, tr.PrimaryKey)
 	assert.Equal(t, "id", tr.PrimaryKeyName())
+	assert.Equal(t, []string{
+		"idx_org_email",
+		"idx_org_name",
+		"idx_org_phone",
+		"idx_org_updated_at",
+		"PK_orgs",
+	}, tr.Indexes.Names())
+
+	// Index columns must follow the index key order, not table column ordinal
+	// (in dbo.org, id is column 1 and name is column 2).
+	_, err = provider.ExecContext(context.Background(), `DROP INDEX IF EXISTS idx_org_name_id ON [dbo].[org]`)
+	require.NoError(t, err)
+	_, err = provider.ExecContext(context.Background(), `CREATE NONCLUSTERED INDEX idx_org_name_id ON [dbo].[org] (name, id)`)
+	require.NoError(t, err)
+	defer func() {
+		_, err := provider.ExecContext(context.Background(), `DROP INDEX IF EXISTS idx_org_name_id ON [dbo].[org]`)
+		assert.NoError(t, err)
+	}()
+
+	tt, err = NewProvider(provider.DB(), provider.Name()).ListTables(context.Background(), []string{"dbo"}, []string{"org"}, false)
+	require.NoError(t, err)
+	require.Len(t, tt, 1)
+	var nameIDIdx *Index
+	for _, idx := range tt[0].Indexes {
+		if idx.Name == "idx_org_name_id" {
+			nameIDIdx = idx
+			break
+		}
+	}
+	require.NotNil(t, nameIDIdx)
+	assert.Equal(t, []string{"name", "id"}, nameIDIdx.ColumnNames)
 
 	tt, err = p.ListViews(context.Background(), []string{"dbo"}, nil)
 	require.NoError(t, err)
@@ -169,6 +200,35 @@ func TestListPostgres(t *testing.T) {
 	assert.Equal(t, 5, len(tr.Indexes))
 	require.NotNil(t, tr.PrimaryKey)
 	assert.Equal(t, "id", tr.PrimaryKeyName())
+	assert.Equal(t, []string{
+		"idx_org_email",
+		"idx_org_phone",
+		"idx_org_updated_at",
+		"orgs_pkey",
+		"unique_orgs_name",
+	}, tr.Indexes.Names())
+
+	// Index columns must follow the index key order, not table column ordinal
+	// (in public.org, id is column 1 and name is column 2).
+	_, err = provider.ExecContext(context.Background(), `CREATE INDEX IF NOT EXISTS idx_org_name_id ON public.org (name, id)`)
+	require.NoError(t, err)
+	defer func() {
+		_, err := provider.ExecContext(context.Background(), `DROP INDEX IF EXISTS public.idx_org_name_id`)
+		assert.NoError(t, err)
+	}()
+
+	tt, err = NewProvider(provider.DB(), provider.Name()).ListTables(context.Background(), []string{"public"}, []string{"org"}, false)
+	require.NoError(t, err)
+	require.Len(t, tt, 1)
+	var nameIDIdx *Index
+	for _, idx := range tt[0].Indexes {
+		if idx.Name == "idx_org_name_id" {
+			nameIDIdx = idx
+			break
+		}
+	}
+	require.NotNil(t, nameIDIdx)
+	assert.Equal(t, []string{"name", "id"}, nameIDIdx.ColumnNames)
 
 	tt, err = p.ListViews(context.Background(), []string{"public"}, nil)
 	require.NoError(t, err)

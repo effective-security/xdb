@@ -84,8 +84,7 @@ gen-sql-schema:
    `--dry-run`). golang-migrate records applied versions: editing an applied
    migration has no effect until the database is recreated.
 2. Run the target, then `go build ./...` and review the diff of the
-   generated files and of `internal/db/README.md`. Index lists in comments
-   can come out in a different order between runs; that is not drift.
+   generated files and of `internal/db/README.md`.
 3. The files compile as written: the generator imports exactly the packages
    each file uses, including the sibling `schema` package of the model,
    whose import path it reads from the nearest `go.mod` above

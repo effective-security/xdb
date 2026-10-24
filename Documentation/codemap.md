@@ -234,7 +234,8 @@ Invariants:
   nothing, so generated tables are safe to share (tableinfo_test.go).
 - ListTables with dependencies adds every table reachable through foreign
   keys, in any schema, and sets Column.Ref. Column.SchemaName is
-  `schema.table.column`, Position the 1-based ordinal.
+  `schema.table.column`, Position the 1-based ordinal. Table.Indexes are
+  sorted by index name and Index.ColumnNames follow the index key order.
 
 Tests need PostgreSQL and SQL Server.
 

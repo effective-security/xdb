@@ -70,7 +70,7 @@ SELECT
 	i.relname as index_name,
 	ix.indisprimary as is_pk,
 	ix.indisunique as is_unique,
-	array_to_string(array_agg(a.attname), ',') as column_names
+	array_to_string(array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)), ',') as column_names
 FROM
 	pg_class t,
 	pg_class i,

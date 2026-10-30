@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/cockroachdb/errors v1.14.0
 	github.com/deckarep/golang-set v1.8.0
-	github.com/effective-security/x v1.0.109
+	github.com/effective-security/x v1.0.110
 	github.com/effective-security/xlog v1.0.69
 	github.com/ettle/strcase v0.2.0
 	github.com/gertd/go-pluralize v0.2.1
@@ -35,7 +35,7 @@ require (
 	github.com/cockroachdb/redact v1.1.8 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/getsentry/sentry-go v0.50.0 // indirect
-	github.com/goccy/go-json v0.11.2 // indirect
+	github.com/goccy/go-json v0.12.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect

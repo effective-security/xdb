@@ -4,7 +4,7 @@ go 1.27.2
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/alecthomas/kong v1.16.1
+	github.com/alecthomas/kong v1.17.0
 	github.com/cockroachdb/errors v1.14.0
 	github.com/deckarep/golang-set v1.8.0
 	github.com/effective-security/x v1.0.110
